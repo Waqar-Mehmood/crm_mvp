@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Companies</title>
+</head>
+<body>
+    <h1>Companies</h1>
+
+    {% if companies %}
+        <ul>
+            {% for company in companies %}
+                <li>
+                    <strong>{{ company.name }}</strong> (ID: {{ company.id }})<br>
+                    Created: {{ company.created_at|date:"Y-m-d H:i" }}<br>
+                    Address: {{ company.address|default:"-" }}<br>
+                    Notes: {{ company.notes|default:"-" }}<br>
+
+                    {% if company.phones.all %}
+                        <em>Phones:</em>
+                        <ul>
+                            {% for phone in company.phones.all %}
+                                <li>{{ phone.label|default:"" }} {{ phone.phone }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if company.emails.all %}
+                        <em>Emails:</em>
+                        <ul>
+                            {% for email in company.emails.all %}
+                                <li>{{ email.label|default:"" }} {{ email.email }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if company.social_links.all %}
+                        <em>Social Links:</em>
+                        <ul>
+                            {% for link in company.social_links.all %}
+                                <li>{{ link.platform|default:link.url }} - <a href="{{ link.url }}" target="_blank">{{ link.url }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+                <hr>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No companies found.</p>
+    {% endif %}
+</body>
+</html>
