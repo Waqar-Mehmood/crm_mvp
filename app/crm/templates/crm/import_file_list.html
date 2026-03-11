@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Imported Files</title>
+</head>
+<body>
+    <h1>Imported Files</h1>
+    <p><a href="{% url 'import_upload' %}">Upload New CSV</a></p>
+    <p><a href="{% url 'company_list' %}">View Companies</a></p>
+    <p><a href="{% url 'contact_list' %}">View Contacts</a></p>
+
+    {% if import_files %}
+        <ul>
+            {% for item in import_files %}
+                <li>
+                    <a href="{% url 'import_file_detail' item.id %}">{{ item.file_name }}</a><br>
+                    Rows: {{ item.total_rows }}<br>
+                    Source Path: {{ item.source_path|default:"-" }}<br>
+                    Updated: {{ item.updated_at|date:"Y-m-d H:i" }}
+                </li>
+                <hr>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No imported files found.</p>
+    {% endif %}
+</body>
+</html>

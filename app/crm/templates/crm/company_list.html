@@ -5,6 +5,8 @@
 </head>
 <body>
     <h1>Companies</h1>
+    <p><a href="{% url 'contact_list' %}">View Contacts</a></p>
+    <p><a href="{% url 'import_file_list' %}">View Imported Files</a></p>
 
     {% if companies %}
         <ul>
@@ -12,7 +14,14 @@
                 <li>
                     <strong>{{ company.name }}</strong> (ID: {{ company.id }})<br>
                     Created: {{ company.created_at|date:"Y-m-d H:i" }}<br>
+                    Industry: {{ company.industry|default:"-" }}<br>
+                    Company Size: {{ company.company_size|default:"-" }}<br>
+                    Revenue: {{ company.revenue|default:"-" }}<br>
                     Address: {{ company.address|default:"-" }}<br>
+                    City: {{ company.city|default:"-" }}<br>
+                    State: {{ company.state|default:"-" }}<br>
+                    Zip Code: {{ company.zip_code|default:"-" }}<br>
+                    Country: {{ company.country|default:"-" }}<br>
                     Notes: {{ company.notes|default:"-" }}<br>
 
                     {% if company.phones.all %}

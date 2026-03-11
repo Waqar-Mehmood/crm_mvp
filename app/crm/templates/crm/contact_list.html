@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Contacts</title>
+</head>
+<body>
+    <h1>Contacts</h1>
+    <p><a href="{% url 'company_list' %}">View Companies</a></p>
+    <p><a href="{% url 'import_file_list' %}">View Imported Files</a></p>
+
+    {% if contacts %}
+        <ul>
+            {% for contact in contacts %}
+                <li>
+                    <strong>{{ contact.full_name }}</strong> (ID: {{ contact.id }})<br>
+                    Created: {{ contact.created_at|date:"Y-m-d H:i" }}<br>
+                    Title: {{ contact.title|default:"-" }}<br>
+                    Notes: {{ contact.notes|default:"-" }}<br>
+
+                    {% if contact.emails.all %}
+                        <em>Emails:</em>
+                        <ul>
+                            {% for email in contact.emails.all %}
+                                <li>{{ email.label|default:"" }} {{ email.email }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% elif contact.email %}
+                        <em>Email:</em> {{ contact.email }}<br>
+                    {% else %}
+                        <em>Email:</em> -<br>
+                    {% endif %}
+
+                    {% if contact.phones.all %}
+                        <em>Phones:</em>
+                        <ul>
+                            {% for phone in contact.phones.all %}
+                                <li>{{ phone.label|default:"" }} {{ phone.phone }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% elif contact.phone %}
+                        <em>Phone:</em> {{ contact.phone }}<br>
+                    {% else %}
+                        <em>Phone:</em> -<br>
+                    {% endif %}
+
+                    {% if contact.social_links.all %}
+                        <em>Social Links:</em>
+                        <ul>
+                            {% for link in contact.social_links.all %}
+                                <li>{{ link.platform|default:link.url }} - <a href="{{ link.url }}" target="_blank">{{ link.url }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if contact.companies.all %}
+                        {% if contact.companies.count == 1 %}
+                            <em>Company:</em>
+                        {% else %}
+                            <em>Companies:</em>
+                        {% endif %}
+                        <ul>
+                            {% for company in contact.companies.all %}
+                                <li>{{ company.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+                <hr>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No contacts found.</p>
+    {% endif %}
+</body>
+</html>

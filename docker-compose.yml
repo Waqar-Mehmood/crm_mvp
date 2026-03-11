@@ -23,5 +23,13 @@ services:
     depends_on:
       - db
 
+  adminer:
+    image: adminer:latest
+    container_name: crm_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
 volumes:
   postgres_data:

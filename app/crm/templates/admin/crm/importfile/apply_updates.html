@@ -1,0 +1,85 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+  <p><strong>Import File:</strong> {{ import_file.file_name }}</p>
+  <p>Select one or more columns to update existing company/contact records in bulk.</p>
+  <p>Use <strong>Preview Changes</strong> first to see if imported rows have values and whether anything will actually change.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul class="errorlist">
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <fieldset class="module aligned">
+      <h2>Field Mapping</h2>
+      <p>Select CSV header for each field you want to update. Leave as <strong>-- Not mapped --</strong> to skip.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Update Field</th>
+            <th>CSV Header</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for field in form.visible_fields %}
+            <tr>
+              <td><label for="{{ field.id_for_label }}">{{ field.label }}</label></td>
+              <td>
+                {{ field }}
+                {% if field.errors %}
+                  <ul class="errorlist">
+                    {% for error in field.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </fieldset>
+
+    {% if preview %}
+      <h2>Preview</h2>
+      <p>
+        Rows processed: {{ preview.rows_processed }} |
+        Company matches: {{ preview.companies_matched }} |
+        Contact matches: {{ preview.contacts_matched }} |
+        Potential field updates: {{ preview.field_updates }}
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Non-empty values</th>
+            <th>Matched records</th>
+            <th>Will change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in preview.fields %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.non_empty }}</td>
+              <td>{{ item.matched }}</td>
+              <td>{{ item.will_change }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+    <div class="submit-row">
+      <button type="submit" name="action" value="preview">Preview Changes</button>
+      <button type="submit" name="action" value="apply" class="default">Apply Updates</button>
+      <a href="{% url 'admin:crm_importfile_change' import_file.pk %}" class="button cancel-link">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

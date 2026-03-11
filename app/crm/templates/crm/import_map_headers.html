@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map CSV Headers</title>
+</head>
+<body>
+    <h1>Map CSV Headers</h1>
+    <p><a href="{% url 'import_upload' %}">Upload Different File</a></p>
+    <p><a href="{% url 'import_file_list' %}">Back to Imported Files</a></p>
+
+    <p>Detected columns:</p>
+    <ul>
+        {% for h in headers %}
+            <li>{{ h }}</li>
+        {% endfor %}
+    </ul>
+
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label for="file_name">File display name</label><br>
+            <input type="text" id="file_name" name="file_name" value="{{ original_name }}" required>
+        </p>
+
+        <table border="1" cellpadding="6" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Database Field</th>
+                    <th>CSV Header</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field in mapping_fields %}
+                    <tr>
+                        <td>{{ field.label }}</td>
+                        <td>
+                            <select name="map_{{ field.key }}">
+                                <option value="">-- Not mapped --</option>
+                                {% for h in headers %}
+                                    <option value="{{ h }}" {% if field.suggested == h %}selected{% endif %}>{{ h }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p>
+            Tip: map either <strong>Contact Full Name</strong> OR map both <strong>Contact First Name</strong> + <strong>Contact Last Name</strong>.
+        </p>
+
+        <button type="submit">Import With Mapping</button>
+    </form>
+</body>
+</html>

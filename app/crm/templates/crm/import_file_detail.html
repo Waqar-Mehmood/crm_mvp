@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ import_file.file_name }}</title>
+</head>
+<body>
+    <h1>{{ import_file.file_name }}</h1>
+    <p><a href="{% url 'import_file_list' %}">Back to Imported Files</a></p>
+    <p><a href="{% url 'company_list' %}">View Companies</a></p>
+    <p><a href="{% url 'contact_list' %}">View Contacts</a></p>
+
+    <p>Source Path: {{ import_file.source_path|default:"-" }}</p>
+    <p>Updated: {{ import_file.updated_at|date:"Y-m-d H:i" }}</p>
+
+    {% if rows %}
+        <table border="1" cellpadding="6" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Row</th>
+                    <th>Company</th>
+                    <th>Website</th>
+                    <th>Contact</th>
+                    <th>Title</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Person Source</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Zip Code</th>
+                    <th>Country</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ row.row_number }}</td>
+                        <td>{{ row.company_name|default:"-" }}</td>
+                        <td>
+                            {% if row.website %}
+                                <a href="{{ row.website }}" target="_blank">{{ row.website }}</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ row.contact_name|default:"-" }}</td>
+                        <td>{{ row.contact_title|default:"-" }}</td>
+                        <td>{{ row.email_address|default:"-" }}</td>
+                        <td>{{ row.phone_number|default:"-" }}</td>
+                        <td>
+                            {% if row.person_source %}
+                                <a href="{{ row.person_source }}" target="_blank">{{ row.person_source }}</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ row.address|default:"-" }}</td>
+                        <td>{{ row.city|default:"-" }}</td>
+                        <td>{{ row.state|default:"-" }}</td>
+                        <td>{{ row.zip_code|default:"-" }}</td>
+                        <td>{{ row.country|default:"-" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No rows stored for this file.</p>
+    {% endif %}
+</body>
+</html>
