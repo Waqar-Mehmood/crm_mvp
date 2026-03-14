@@ -1,56 +1,88 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Map CSV Headers</title>
-</head>
-<body>
-    <h1>Map CSV Headers</h1>
-    <p><a href="{% url 'import_upload' %}">Upload Different File</a></p>
-    <p><a href="{% url 'import_file_list' %}">Back to Imported Files</a></p>
+{% extends "crm/base.html" %}
 
-    <p>Detected columns:</p>
-    <ul>
-        {% for h in headers %}
-            <li>{{ h }}</li>
-        {% endfor %}
-    </ul>
+{% block title %}Map Headers | Northstar Ledger{% endblock %}
+{% block eyebrow %}Import configuration{% endblock %}
+{% block page_title %}Map CSV headers{% endblock %}
+{% block page_description %}Pair each incoming column with the right database field, keep the suggested matches you trust, and import only what belongs.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Detected columns</p>
+            <strong class="metric-value">{{ headers|length }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Display name</p>
+            <strong class="metric-value is-mono">{{ original_name|default:"Pending" }}</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link is-secondary" href="{% url 'import_upload' %}">Swap file</a>
+        <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
+    </div>
+{% endblock %}
 
-    <form method="post">
-        {% csrf_token %}
-        <p>
-            <label for="file_name">File display name</label><br>
-            <input type="text" id="file_name" name="file_name" value="{{ original_name }}" required>
-        </p>
-
-        <table border="1" cellpadding="6" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Database Field</th>
-                    <th>CSV Header</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for field in mapping_fields %}
-                    <tr>
-                        <td>{{ field.label }}</td>
-                        <td>
-                            <select name="map_{{ field.key }}">
-                                <option value="">-- Not mapped --</option>
-                                {% for h in headers %}
-                                    <option value="{{ h }}" {% if field.suggested == h %}selected{% endif %}>{{ h }}</option>
-                                {% endfor %}
-                            </select>
-                        </td>
-                    </tr>
+{% block content %}
+    <section class="split-layout">
+        <article class="column-card">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Detected columns</p>
+                    <h2>CSV preview</h2>
+                </div>
+            </div>
+            <ul class="column-list">
+                {% for h in headers %}
+                    <li>{{ h }}</li>
                 {% endfor %}
-            </tbody>
-        </table>
+            </ul>
+        </article>
 
-        <p>
-            Tip: map either <strong>Contact Full Name</strong> OR map both <strong>Contact First Name</strong> + <strong>Contact Last Name</strong>.
-        </p>
+        <article class="form-card">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Mapping matrix</p>
+                    <h2>Column pairing</h2>
+                </div>
+            </div>
 
-        <button type="submit">Import With Mapping</button>
-    </form>
-</body>
-</html>
+            <form method="post" class="form-layout">
+                {% csrf_token %}
+
+                <div class="field">
+                    <label for="file_name">File display name</label>
+                    <input type="text" id="file_name" name="file_name" value="{{ original_name }}" required>
+                </div>
+
+                <div class="table-shell">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Database field</th>
+                                <th>CSV header</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field in mapping_fields %}
+                                <tr>
+                                    <td>{{ field.label }}</td>
+                                    <td>
+                                        <select name="map_{{ field.key }}">
+                                            <option value="">-- Not mapped --</option>
+                                            {% for h in headers %}
+                                                <option value="{{ h }}" {% if field.suggested == h %}selected{% endif %}>{{ h }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="notice">Tip: map either <strong>Contact Full Name</strong> or map both <strong>Contact First Name</strong> and <strong>Contact Last Name</strong>.</p>
+
+                <button type="submit">Import with mapping</button>
+            </form>
+        </article>
+    </section>
+{% endblock %}

@@ -1,28 +1,71 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Imported Files</title>
-</head>
-<body>
-    <h1>Imported Files</h1>
-    <p><a href="{% url 'import_upload' %}">Upload New CSV</a></p>
-    <p><a href="{% url 'company_list' %}">View Companies</a></p>
-    <p><a href="{% url 'contact_list' %}">View Contacts</a></p>
+{% extends "crm/base.html" %}
 
+{% block title %}Imports | Northstar Ledger{% endblock %}
+{% block eyebrow %}CSV command log{% endblock %}
+{% block page_title %}Import ledger{% endblock %}
+{% block page_description %}Track every uploaded file, watch row counts, and jump straight into the stored import detail behind each dataset.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Import sets</p>
+            <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Visible rows</p>
+            <strong class="metric-value is-mono">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+        <a class="button-link is-secondary" href="{% url 'company_list' %}">Browse records</a>
+    </div>
+{% endblock %}
+
+{% block content %}
     {% if import_files %}
-        <ul>
-            {% for item in import_files %}
-                <li>
-                    <a href="{% url 'import_file_detail' item.id %}">{{ item.file_name }}</a><br>
-                    Rows: {{ item.total_rows }}<br>
-                    Source Path: {{ item.source_path|default:"-" }}<br>
-                    Updated: {{ item.updated_at|date:"Y-m-d H:i" }}
-                </li>
-                <hr>
-            {% endfor %}
-        </ul>
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Import table</p>
+                    <h2>Stored file batches</h2>
+                </div>
+            </div>
+            <div class="table-shell">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>File</th>
+                            <th>Rows</th>
+                            <th>Source path</th>
+                            <th>Updated</th>
+                            <th>Open</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in import_files %}
+                            <tr>
+                                <td>{{ item.id }}</td>
+                                <td><div class="table-primary">{{ item.file_name }}</div></td>
+                                <td>{{ item.total_rows }}</td>
+                                <td><span class="table-secondary">{{ item.source_path|default:"No source path stored" }}</span></td>
+                                <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
+                                <td><a class="text-link" href="{% url 'import_file_detail' item.id %}">Open detail</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "crm/includes/pagination.html" %}
+        </section>
     {% else %}
-        <p>No imported files found.</p>
+        <section class="empty-state">
+            <p class="section-kicker">No uploads yet</p>
+            <h2>Your import ledger is still empty.</h2>
+            <p>Bring in the first CSV to unlock the mapping workflow and start filling companies, contacts, and source rows.</p>
+            <div class="action-stack">
+                <a class="button-link" href="{% url 'import_upload' %}">Upload your first file</a>
+            </div>
+        </section>
     {% endif %}
-</body>
-</html>
+{% endblock %}

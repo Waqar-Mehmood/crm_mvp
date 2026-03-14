@@ -3,51 +3,88 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from .models import Company, Contact, ImportFile
 from .import_utils import TARGET_FIELDS, import_csv_with_mapping, suggest_mapping
 
+PAGE_SIZE = 10
+
+
+def _paginate(request, queryset, per_page=PAGE_SIZE):
+    paginator = Paginator(queryset, per_page)
+    return paginator.get_page(request.GET.get("page"))
+
 
 def company_list(request):
     # include related phone/email/social records for efficiency
-    companies = (
+    companies_qs = (
         Company.objects
         .prefetch_related("phones", "emails", "social_links")
         .order_by("name")
     )
-    return render(request, "crm/company_list.html", {"companies": companies})
+    page_obj = _paginate(request, companies_qs)
+    return render(
+        request,
+        "crm/company_list.html",
+        {
+            "companies": page_obj.object_list,
+            "page_obj": page_obj,
+        },
+    )
 
 
 def contact_list(request):
-    contacts = (
+    contacts_qs = (
         Contact.objects
         .prefetch_related("companies", "phones", "emails", "social_links")
         .order_by("full_name")
     )
-    return render(request, "crm/contact_list.html", {"contacts": contacts})
+    page_obj = _paginate(request, contacts_qs)
+    return render(
+        request,
+        "crm/contact_list.html",
+        {
+            "contacts": page_obj.object_list,
+            "page_obj": page_obj,
+        },
+    )
 
 
 def import_file_list(request):
-    import_files = (
+    import_files_qs = (
         ImportFile.objects
         .annotate(total_rows=Count("rows"))
         .order_by("-updated_at", "-id")
     )
-    return render(request, "crm/import_file_list.html", {"import_files": import_files})
+    page_obj = _paginate(request, import_files_qs)
+    return render(
+        request,
+        "crm/import_file_list.html",
+        {
+            "import_files": page_obj.object_list,
+            "page_obj": page_obj,
+        },
+    )
 
 
 def import_file_detail(request, file_id):
     import_file = get_object_or_404(ImportFile, pk=file_id)
-    rows = (
+    rows_qs = (
         import_file.rows
         .select_related("company", "contact")
         .order_by("row_number")
     )
+    page_obj = _paginate(request, rows_qs)
     return render(
         request,
         "crm/import_file_detail.html",
-        {"import_file": import_file, "rows": rows},
+        {
+            "import_file": import_file,
+            "rows": page_obj.object_list,
+            "page_obj": page_obj,
+        },
     )
 
 

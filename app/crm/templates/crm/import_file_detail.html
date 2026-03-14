@@ -1,70 +1,104 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ import_file.file_name }}</title>
-</head>
-<body>
-    <h1>{{ import_file.file_name }}</h1>
-    <p><a href="{% url 'import_file_list' %}">Back to Imported Files</a></p>
-    <p><a href="{% url 'company_list' %}">View Companies</a></p>
-    <p><a href="{% url 'contact_list' %}">View Contacts</a></p>
+{% extends "crm/base.html" %}
 
-    <p>Source Path: {{ import_file.source_path|default:"-" }}</p>
-    <p>Updated: {{ import_file.updated_at|date:"Y-m-d H:i" }}</p>
+{% block title %}{{ import_file.file_name }} | Import Detail{% endblock %}
+{% block eyebrow %}Stored import detail{% endblock %}
+{% block page_title %}{{ import_file.file_name }}{% endblock %}
+{% block page_description %}Review the raw rows that fed this import file, from source links through address fields, all in one high-density grid.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Stored rows</p>
+            <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Visible rows</p>
+            <strong class="metric-value is-mono">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link" href="{% url 'import_file_list' %}">Back to imports</a>
+        <a class="button-link is-secondary" href="{% url 'contact_list' %}">Open contacts</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="section-kicker">Source path</p>
+                <h2>Import metadata</h2>
+            </div>
+        </div>
+        <div class="path-chip">{{ import_file.source_path|default:"No source path stored" }}</div>
+    </section>
 
     {% if rows %}
-        <table border="1" cellpadding="6" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Row</th>
-                    <th>Company</th>
-                    <th>Website</th>
-                    <th>Contact</th>
-                    <th>Title</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Person Source</th>
-                    <th>Address</th>
-                    <th>City</th>
-                    <th>State</th>
-                    <th>Zip Code</th>
-                    <th>Country</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in rows %}
-                    <tr>
-                        <td>{{ row.row_number }}</td>
-                        <td>{{ row.company_name|default:"-" }}</td>
-                        <td>
-                            {% if row.website %}
-                                <a href="{{ row.website }}" target="_blank">{{ row.website }}</a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>{{ row.contact_name|default:"-" }}</td>
-                        <td>{{ row.contact_title|default:"-" }}</td>
-                        <td>{{ row.email_address|default:"-" }}</td>
-                        <td>{{ row.phone_number|default:"-" }}</td>
-                        <td>
-                            {% if row.person_source %}
-                                <a href="{{ row.person_source }}" target="_blank">{{ row.person_source }}</a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>{{ row.address|default:"-" }}</td>
-                        <td>{{ row.city|default:"-" }}</td>
-                        <td>{{ row.state|default:"-" }}</td>
-                        <td>{{ row.zip_code|default:"-" }}</td>
-                        <td>{{ row.country|default:"-" }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Rows</p>
+                    <h2>Captured import rows</h2>
+                </div>
+            </div>
+            <div class="table-shell">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Row</th>
+                            <th>Company</th>
+                            <th>Website</th>
+                            <th>Contact</th>
+                            <th>Title</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Person Source</th>
+                            <th>Address</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Zip Code</th>
+                            <th>Country</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr style="--stagger: {{ forloop.counter0 }};">
+                                <td>{{ row.row_number }}</td>
+                                <td>{{ row.company_name|default:"-" }}</td>
+                                <td>
+                                    {% if row.website %}
+                                        <a class="text-link" href="{{ row.website }}" target="_blank" rel="noreferrer">{{ row.website }}</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ row.contact_name|default:"-" }}</td>
+                                <td>{{ row.contact_title|default:"-" }}</td>
+                                <td>{{ row.email_address|default:"-" }}</td>
+                                <td>{{ row.phone_number|default:"-" }}</td>
+                                <td>
+                                    {% if row.person_source %}
+                                        <a class="text-link" href="{{ row.person_source }}" target="_blank" rel="noreferrer">Open source</a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ row.address|default:"-" }}</td>
+                                <td>{{ row.city|default:"-" }}</td>
+                                <td>{{ row.state|default:"-" }}</td>
+                                <td>{{ row.zip_code|default:"-" }}</td>
+                                <td>{{ row.country|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "crm/includes/pagination.html" %}
+        </section>
     {% else %}
-        <p>No rows stored for this file.</p>
+        <section class="empty-state">
+            <p class="section-kicker">No stored rows</p>
+            <h2>This file has no persisted row data.</h2>
+            <p>Try another import or revisit the upload flow to populate mapped rows for this file.</p>
+        </section>
     {% endif %}
-</body>
-</html>
+{% endblock %}

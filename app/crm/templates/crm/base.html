@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Northstar Ledger{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'crm/site.css' %}">
+</head>
+<body>
+    <div class="aurora aurora-one"></div>
+    <div class="aurora aurora-two"></div>
+    <div class="site-shell">
+        <header class="masthead">
+            <div class="brand-block">
+                <p class="brand-kicker">CRM database console</p>
+                <a class="brand-mark" href="{% url 'company_list' %}">Northstar Ledger</a>
+            </div>
+            <nav class="nav-strip" aria-label="Primary">
+                <a class="nav-pill{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'company_list' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
+                <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
+                <a class="nav-pill{% if request.resolver_match.url_name == 'import_file_list' or request.resolver_match.url_name == 'import_file_detail' %} is-active{% endif %}" href="{% url 'import_file_list' %}">Imports</a>
+                <a class="nav-pill{% if request.resolver_match.url_name == 'import_upload' or request.resolver_match.url_name == 'import_map_headers' %} is-active{% endif %}" href="{% url 'import_upload' %}">Upload</a>
+            </nav>
+        </header>
+
+        <main class="page-shell">
+            <section class="hero-panel">
+                <div class="hero-copy">
+                    <p class="eyebrow">{% block eyebrow %}Data observatory{% endblock %}</p>
+                    <h1 class="page-title">{% block page_title %}Northstar Ledger{% endblock %}</h1>
+                    <p class="page-copy">{% block page_description %}A sharper view across companies, contacts, and imports.{% endblock %}</p>
+                </div>
+                <div class="hero-side">
+                    {% block hero_side %}{% endblock %}
+                </div>
+            </section>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

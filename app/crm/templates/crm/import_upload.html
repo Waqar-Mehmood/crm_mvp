@@ -1,23 +1,59 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Upload CSV</title>
-</head>
-<body>
-    <h1>Upload CSV File</h1>
-    <p><a href="{% url 'import_file_list' %}">Back to Imported Files</a></p>
+{% extends "crm/base.html" %}
 
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
+{% block title %}Upload CSV | Northstar Ledger{% endblock %}
+{% block eyebrow %}Import intake{% endblock %}
+{% block page_title %}Upload a source file{% endblock %}
+{% block page_description %}Feed the pipeline with a CSV, detect the headers automatically, then walk straight into mapping and import review.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Accepted format</p>
+            <strong class="metric-value is-mono">.csv</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Next step</p>
+            <strong class="metric-value is-mono">Header detection</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
+    </div>
+{% endblock %}
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <p>
-            <label for="csv_file">CSV file</label><br>
-            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
-        </p>
-        <button type="submit">Detect Headers</button>
-    </form>
-</body>
-</html>
+{% block content %}
+    <section class="split-layout">
+        <article class="support-card">
+            <p class="section-kicker">Workflow</p>
+            <h2>Drop in a CSV and stage the import.</h2>
+            <p>The upload step stores the source file, reads its headers, and hands you a guided mapping screen before any rows are committed.</p>
+            <ul class="column-list">
+                <li>Upload the raw spreadsheet export.</li>
+                <li>Confirm the detected headers.</li>
+                <li>Map each column to a target field.</li>
+                <li>Import and review the saved rows.</li>
+            </ul>
+        </article>
+
+        <article class="form-card">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">File intake</p>
+                    <h2>CSV uploader</h2>
+                </div>
+            </div>
+
+            {% if error %}
+                <p class="notice is-error">{{ error }}</p>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="csv_file">CSV file</label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                </div>
+                <button type="submit">Detect headers</button>
+            </form>
+        </article>
+    </section>
+{% endblock %}
