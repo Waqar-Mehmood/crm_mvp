@@ -7,8 +7,11 @@
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
-            <p class="metric-label">Contacts</p>
+            <p class="metric-label">{% if filters_active %}Matching contacts{% else %}Contacts{% endif %}</p>
             <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+            {% if filters_active %}
+                <span class="metric-subtext">of {{ total_contacts }} total</span>
+            {% endif %}
         </article>
         <article class="metric-card">
             <p class="metric-label">Visible rows</p>
@@ -22,6 +25,93 @@
 {% endblock %}
 
 {% block content %}
+    {% if has_contact_records or filters_active %}
+        <section class="form-card filter-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Advanced filters</p>
+                    <h2>Refine contact records</h2>
+                </div>
+                <a class="button-link is-secondary" href="{% url 'contact_list' %}">Clear filters</a>
+            </div>
+            <form method="get" class="form-layout">
+                <div class="filter-grid">
+                    <div class="field field-span-2">
+                        <label for="contact-q">Search</label>
+                        <input id="contact-q" type="text" name="q" value="{{ filters.q }}" placeholder="Search names, titles, company, email, phone">
+                    </div>
+                    <div class="field">
+                        <label for="contact-title">Title</label>
+                        <input id="contact-title" type="text" name="title" value="{{ filters.title }}" placeholder="Contains title">
+                    </div>
+                    <div class="field">
+                        <label for="contact-company">Company</label>
+                        <input id="contact-company" type="text" name="company" value="{{ filters.company }}" placeholder="Contains company name">
+                    </div>
+                    <div class="field">
+                        <label for="contact-has-email">Has email</label>
+                        <select id="contact-has-email" name="has_email">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_email == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_email == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="contact-has-phone">Has phone</label>
+                        <select id="contact-has-phone" name="has_phone">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_phone == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_phone == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="contact-has-company">Has company</label>
+                        <select id="contact-has-company" name="has_company">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_company == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_company == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="contact-has-profile">Has profile</label>
+                        <select id="contact-has-profile" name="has_profile">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_profile == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_profile == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="contact-created-from">Created from</label>
+                        <input id="contact-created-from" type="date" name="created_from" value="{{ filters.created_from }}">
+                    </div>
+                    <div class="field">
+                        <label for="contact-created-to">Created to</label>
+                        <input id="contact-created-to" type="date" name="created_to" value="{{ filters.created_to }}">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <input type="submit" value="Apply filters">
+                    <a class="button-link is-secondary" href="{% url 'contact_list' %}">Reset</a>
+                </div>
+            </form>
+            <div class="filter-summary">
+                <div>
+                    <p class="section-kicker">Current result set</p>
+                    <h2>{{ page_obj.paginator.count }} matching contacts</h2>
+                </div>
+                {% if active_filters %}
+                    <div class="filter-chip-row">
+                        {% for filter in active_filters %}
+                            <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="table-secondary">Showing all {{ total_contacts }} contacts in the CRM roster.</p>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
     {% if contacts %}
         <section class="table-card">
             <div class="table-head">
@@ -154,6 +244,23 @@
                 </table>
             </div>
             {% include "crm/includes/pagination.html" %}
+        </section>
+    {% elif filters_active and has_contact_records %}
+        <section class="empty-state">
+            <p class="section-kicker">No matching results</p>
+            <h2>No contacts matched the current filters.</h2>
+            <p>Change the active filters or clear them to return to the full contact roster.</p>
+            {% if active_filters %}
+                <div class="filter-chip-row">
+                    {% for filter in active_filters %}
+                        <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="action-stack">
+                <a class="button-link" href="{% url 'contact_list' %}">Clear filters</a>
+                <a class="button-link is-secondary" href="{% url 'company_list' %}">Open companies</a>
+            </div>
         </section>
     {% else %}
         <section class="empty-state">

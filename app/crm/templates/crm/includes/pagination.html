@@ -5,7 +5,7 @@
         </div>
         <div class="pagination-links">
             {% if page_obj.has_previous %}
-                <a class="pagination-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                <a class="pagination-link" href="?page={{ page_obj.previous_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Previous</a>
             {% else %}
                 <span class="pagination-link is-disabled">Previous</span>
             {% endif %}
@@ -14,12 +14,12 @@
                 {% if page_number == page_obj.number %}
                     <span class="pagination-link is-active">{{ page_number }}</span>
                 {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
-                    <a class="pagination-link" href="?page={{ page_number }}">{{ page_number }}</a>
+                    <a class="pagination-link" href="?page={{ page_number }}{% if page_query %}&{{ page_query }}{% endif %}">{{ page_number }}</a>
                 {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
-                <a class="pagination-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                <a class="pagination-link" href="?page={{ page_obj.next_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Next</a>
             {% else %}
                 <span class="pagination-link is-disabled">Next</span>
             {% endif %}

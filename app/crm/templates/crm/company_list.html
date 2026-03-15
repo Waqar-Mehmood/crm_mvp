@@ -7,8 +7,11 @@
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
-            <p class="metric-label">Companies</p>
+            <p class="metric-label">{% if filters_active %}Matching companies{% else %}Companies{% endif %}</p>
             <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+            {% if filters_active %}
+                <span class="metric-subtext">of {{ total_companies }} total</span>
+            {% endif %}
         </article>
         <article class="metric-card">
             <p class="metric-label">Visible rows</p>
@@ -22,6 +25,133 @@
 {% endblock %}
 
 {% block content %}
+    {% if has_company_records or filters_active %}
+        <section class="form-card filter-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Advanced filters</p>
+                    <h2>Refine company records</h2>
+                </div>
+                <a class="button-link is-secondary" href="{% url 'company_list' %}">Clear filters</a>
+            </div>
+            <form method="get" class="form-layout">
+                <div class="filter-grid">
+                    <div class="field field-span-2">
+                        <label for="company-q">Search</label>
+                        <input id="company-q" type="text" name="q" value="{{ filters.q }}" placeholder="Search name, industry, city, state, notes">
+                    </div>
+                    <div class="field">
+                        <label for="company-industry">Industry</label>
+                        <select id="company-industry" name="industry">
+                            <option value="">All industries</option>
+                            {% for option in industry_options %}
+                                <option value="{{ option }}" {% if filters.industry == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-state">State</label>
+                        <select id="company-state" name="state">
+                            <option value="">All states</option>
+                            {% for option in state_options %}
+                                <option value="{{ option }}" {% if filters.state == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-country">Country</label>
+                        <select id="company-country" name="country">
+                            <option value="">All countries</option>
+                            {% for option in country_options %}
+                                <option value="{{ option }}" {% if filters.country == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-city">City</label>
+                        <input id="company-city" type="text" name="city" value="{{ filters.city }}" placeholder="Contains city name">
+                    </div>
+                    <div class="field">
+                        <label for="company-size-min">Size from</label>
+                        <input id="company-size-min" type="number" min="0" name="size_min" value="{{ filters.size_min }}" placeholder="Min">
+                    </div>
+                    <div class="field">
+                        <label for="company-size-max">Size to</label>
+                        <input id="company-size-max" type="number" min="0" name="size_max" value="{{ filters.size_max }}" placeholder="Max">
+                    </div>
+                    <div class="field">
+                        <label for="company-revenue">Revenue</label>
+                        <select id="company-revenue" name="revenue">
+                            <option value="">All revenue values</option>
+                            {% for option in revenue_options %}
+                                <option value="{{ option }}" {% if filters.revenue == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-has-revenue">Has revenue</label>
+                        <select id="company-has-revenue" name="has_revenue">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_revenue == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_revenue == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-has-phone">Has phone</label>
+                        <select id="company-has-phone" name="has_phone">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_phone == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_phone == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-has-email">Has email</label>
+                        <select id="company-has-email" name="has_email">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_email == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_email == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-has-profile">Has profile</label>
+                        <select id="company-has-profile" name="has_profile">
+                            <option value="">Any</option>
+                            <option value="yes" {% if filters.has_profile == "yes" %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if filters.has_profile == "no" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="company-created-from">Created from</label>
+                        <input id="company-created-from" type="date" name="created_from" value="{{ filters.created_from }}">
+                    </div>
+                    <div class="field">
+                        <label for="company-created-to">Created to</label>
+                        <input id="company-created-to" type="date" name="created_to" value="{{ filters.created_to }}">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <input type="submit" value="Apply filters">
+                    <a class="button-link is-secondary" href="{% url 'company_list' %}">Reset</a>
+                </div>
+            </form>
+            <div class="filter-summary">
+                <div>
+                    <p class="section-kicker">Current result set</p>
+                    <h2>{{ page_obj.paginator.count }} matching companies</h2>
+                </div>
+                {% if active_filters %}
+                    <div class="filter-chip-row">
+                        {% for filter in active_filters %}
+                            <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="table-secondary">Showing all {{ total_companies }} companies in the CRM directory.</p>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
     {% if companies %}
         <section class="table-card">
             <div class="table-head">
@@ -101,6 +231,23 @@
                 </table>
             </div>
             {% include "crm/includes/pagination.html" %}
+        </section>
+    {% elif filters_active and has_company_records %}
+        <section class="empty-state">
+            <p class="section-kicker">No matching results</p>
+            <h2>No companies matched the current filters.</h2>
+            <p>Adjust the filter combination or clear everything to return to the full directory.</p>
+            {% if active_filters %}
+                <div class="filter-chip-row">
+                    {% for filter in active_filters %}
+                        <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="action-stack">
+                <a class="button-link" href="{% url 'company_list' %}">Clear filters</a>
+                <a class="button-link is-secondary" href="{% url 'contact_list' %}">Open contacts</a>
+            </div>
         </section>
     {% else %}
         <section class="empty-state">

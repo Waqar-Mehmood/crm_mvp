@@ -327,6 +327,13 @@ input[type="submit"]:hover {
     font-weight: 800;
 }
 
+.metric-subtext {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
 .metric-value.is-mono,
 .path-chip {
     font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
@@ -755,6 +762,8 @@ input[type="submit"] {
 }
 
 input[type="text"],
+input[type="number"],
+input[type="date"],
 input[type="password"],
 input[type="file"],
 select {
@@ -803,6 +812,60 @@ select:focus {
     color: #721d14;
     border-color: rgba(211, 110, 95, 0.3);
     background: rgba(211, 110, 95, 0.14);
+}
+
+.filter-card {
+    display: grid;
+    gap: 20px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.field-span-2 {
+    grid-column: span 2;
+}
+
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-summary {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(13, 28, 45, 0.08);
+    background: rgba(255, 255, 255, 0.56);
+}
+
+.filter-summary h2 {
+    margin: 0;
+    color: var(--panel-text);
+}
+
+.filter-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(13, 28, 45, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--panel-text);
+    font-size: 0.92rem;
 }
 
 .empty-state {
@@ -897,6 +960,10 @@ select:focus {
 
     .nav-pill {
         flex: 1 1 calc(50% - 10px);
+    }
+
+    .field-span-2 {
+        grid-column: auto;
     }
 
     .cards-grid,

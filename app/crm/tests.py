@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from crm.auth import (
     CRM_ROLE_ORDER,
@@ -16,7 +19,19 @@ from crm.auth import (
     user_has_minimum_crm_role,
     user_has_valid_crm_role,
 )
-from crm.models import Company, Contact, ImportFile, ImportRow, SiteBranding
+from crm.models import (
+    Company,
+    CompanyEmail,
+    CompanyPhone,
+    CompanySocialLink,
+    Contact,
+    ContactEmail,
+    ContactPhone,
+    ContactSocialLink,
+    ImportFile,
+    ImportRow,
+    SiteBranding,
+)
 
 
 class CRMRoleTestMixin:
@@ -628,6 +643,192 @@ class ManagerScopedAdminRestrictionsTests(CRMRoleTestMixin, TestCase):
                 self.assertIn("SiteBranding", self.app_model_names(index_response, "crm"))
                 self.assertEqual(changelist_response.status_code, 200)
                 self.client.logout()
+
+
+class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.staff_user = self.create_user("staffer", role=ROLE_STAFF)
+        self.client.force_login(self.staff_user)
+
+        self.acme = Company.objects.create(
+            name="Acme Labs",
+            industry="SaaS",
+            company_size="12",
+            revenue="$1M",
+            address="1 Market Street",
+            city="San Francisco",
+            state="CA",
+            country="US",
+            notes="Outbound team",
+        )
+        self.brick = Company.objects.create(
+            name="Brick Health",
+            industry="Medical Facilities",
+            company_size="4",
+            city="Austin",
+            state="TX",
+            country="US",
+        )
+        self.cedar = Company.objects.create(
+            name="Cedar Staffing",
+            industry="Staffing and Recruiting",
+            company_size="30",
+            revenue="$5M",
+            city="Los Angeles",
+            state="CA",
+            country="US",
+        )
+
+        CompanyPhone.objects.create(company=self.acme, phone="111-111", label="office")
+        CompanyEmail.objects.create(company=self.acme, email="hello@acme.com", label="sales")
+        CompanySocialLink.objects.create(company=self.acme, platform="linkedin", url="https://example.com/acme")
+        CompanyEmail.objects.create(company=self.cedar, email="team@cedar.com", label="support")
+
+        self.alice = Contact.objects.create(
+            full_name="Alice Johnson",
+            title="Growth Marketing Manager",
+            notes="Works the SaaS pipeline",
+        )
+        self.bob = Contact.objects.create(
+            full_name="Bob Stone",
+            title="Director",
+            notes="No linked company",
+        )
+        self.carla = Contact.objects.create(
+            full_name="Carla Recruiter",
+            title="Owner / Recruiter",
+            email="carla@example.com",
+            phone="555-0199",
+        )
+
+        ContactEmail.objects.create(contact=self.alice, email="alice@acme.com", label="work")
+        ContactPhone.objects.create(contact=self.alice, phone="555-0101", label="work")
+        ContactSocialLink.objects.create(contact=self.alice, platform="linkedin", url="https://example.com/alice")
+        self.acme.contacts.add(self.alice)
+        self.cedar.contacts.add(self.carla)
+
+        base_time = timezone.now()
+        self._set_created_at(self.acme, base_time - timedelta(days=12))
+        self._set_created_at(self.brick, base_time - timedelta(days=5))
+        self._set_created_at(self.cedar, base_time - timedelta(days=1))
+        self._set_created_at(self.alice, base_time - timedelta(days=11))
+        self._set_created_at(self.bob, base_time - timedelta(days=4))
+        self._set_created_at(self.carla, base_time - timedelta(days=1))
+
+        for index in range(12):
+            company = Company.objects.create(
+                name=f"California Extra {index + 1}",
+                industry="SaaS",
+                company_size="8",
+                city="San Diego",
+                state="CA",
+                country="US",
+            )
+            self._set_created_at(company, base_time - timedelta(days=20))
+
+        for index in range(12):
+            contact = Contact.objects.create(
+                full_name=f"Analyst {index + 1}",
+                title="Analyst",
+            )
+            self.acme.contacts.add(contact)
+            self._set_created_at(contact, base_time - timedelta(days=15))
+
+    def _set_created_at(self, obj, created_at):
+        obj.__class__.objects.filter(pk=obj.pk).update(created_at=created_at)
+        obj.refresh_from_db()
+
+    def test_company_filters_narrow_results_and_keep_form_values(self):
+        response = self.client.get(
+            reverse("company_list"),
+            {
+                "industry": "SaaS",
+                "state": "CA",
+                "size_min": "10",
+                "has_email": "yes",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({company.name for company in response.context["companies"]}, {"Acme Labs"})
+        self.assertEqual(response.context["filters"]["industry"], "SaaS")
+        self.assertEqual(response.context["filters"]["state"], "CA")
+        self.assertEqual(response.context["filters"]["size_min"], "10")
+        self.assertEqual(response.context["filters"]["has_email"], "yes")
+        self.assertContains(response, "Matching companies")
+        self.assertContains(response, "Industry:")
+
+    def test_company_revenue_and_created_date_filters_work(self):
+        response = self.client.get(
+            reverse("company_list"),
+            {
+                "revenue": "$5M",
+                "created_from": str((timezone.now() - timedelta(days=2)).date()),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({company.name for company in response.context["companies"]}, {"Cedar Staffing"})
+
+    def test_company_pagination_preserves_filters(self):
+        response = self.client.get(reverse("company_list"), {"state": "CA", "page": 2})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(response.context["page_query"], "state=CA")
+        self.assertContains(response, "?page=1&state=CA")
+
+    def test_company_filtered_empty_state_appears_when_no_results_match(self):
+        response = self.client.get(reverse("company_list"), {"industry": "Nonexistent"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No companies matched the current filters.")
+        self.assertNotContains(response, "No companies have landed in the ledger.")
+
+    def test_contact_filters_match_related_data_and_presence_rules(self):
+        response = self.client.get(
+            reverse("contact_list"),
+            {
+                "q": "alice@acme.com",
+                "company": "Acme",
+                "has_profile": "yes",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({contact.full_name for contact in response.context["contacts"]}, {"Alice Johnson"})
+        self.assertEqual(response.context["filters"]["company"], "Acme")
+        self.assertEqual(response.context["filters"]["has_profile"], "yes")
+
+    def test_contact_created_and_presence_filters_work(self):
+        response = self.client.get(
+            reverse("contact_list"),
+            {
+                "has_company": "no",
+                "has_email": "no",
+                "has_phone": "no",
+                "created_to": str((timezone.now() - timedelta(days=3)).date()),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({contact.full_name for contact in response.context["contacts"]}, {"Bob Stone"})
+
+    def test_contact_pagination_preserves_filters(self):
+        response = self.client.get(reverse("contact_list"), {"title": "Analyst", "page": 2})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(response.context["page_query"], "title=Analyst")
+        self.assertContains(response, "?page=1&title=Analyst")
+
+    def test_contact_filtered_empty_state_appears_when_no_results_match(self):
+        response = self.client.get(reverse("contact_list"), {"title": "Astronaut"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No contacts matched the current filters.")
+        self.assertNotContains(response, "No contacts are available yet.")
 
 
 @override_settings(
