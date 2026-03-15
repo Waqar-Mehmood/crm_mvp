@@ -10,3 +10,4 @@ __pycache__/
 .idea/
 postgres_data/
 app/data/uploads/
+app/staticfiles/
