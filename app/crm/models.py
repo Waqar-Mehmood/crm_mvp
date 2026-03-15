@@ -1,6 +1,19 @@
 from django.db import models
 
 
+class SiteBranding(models.Model):
+    site_name = models.CharField(max_length=255, blank=True)
+    logo_url = models.URLField(blank=True)
+    logo_alt_text = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "Site Branding"
+        verbose_name_plural = "Site Branding"
+
+    def __str__(self):
+        return self.site_name or "Site Branding"
+
+
 class Company(models.Model):
     name = models.CharField(max_length=255)
     industry = models.CharField(max_length=255, blank=True)

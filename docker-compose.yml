@@ -21,11 +21,16 @@ services:
       - .env
     volumes:
       - ./app:/app
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      default:
+      local_proxy:
+        aliases:
+          - crm-web
 
   adminer:
     image: adminer:latest
@@ -34,6 +39,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+networks:
+  local_proxy:
+    external: true
+    name: local_proxy
 
 volumes:
   postgres_data:

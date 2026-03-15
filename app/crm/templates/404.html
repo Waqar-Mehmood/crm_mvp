@@ -1,0 +1,34 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Page Not Found | {{ site_brand }}{% endblock %}
+{% block eyebrow %}Route lost{% endblock %}
+{% block page_title %}This page does not exist{% endblock %}
+{% block page_description %}The address you requested could not be matched inside {{ site_brand }}. Check the URL or use one of the routes below to recover quickly.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Status</p>
+            <strong class="metric-value is-mono">404</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Missing path</p>
+            <strong class="metric-value is-mono">{{ request_path }}</strong>
+        </article>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="empty-state">
+        <p class="section-kicker">Page unavailable</p>
+        <h2>The route <span class="path-chip">{{ request_path }}</span> was not found.</h2>
+        <p>Use the main navigation if you are already signed in, or return to the login screen to re-enter the CRM workspace.</p>
+        <div class="action-stack">
+            {% if request.user.is_authenticated %}
+                <a class="button-link" href="{% url 'company_list' %}">Back to companies</a>
+            {% else %}
+                <a class="button-link" href="{% url 'login' %}">Go to login</a>
+            {% endif %}
+            <a class="button-link is-secondary" href="/">Open home</a>
+        </div>
+    </section>
+{% endblock %}

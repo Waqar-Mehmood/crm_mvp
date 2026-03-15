@@ -1,6 +1,6 @@
 {% extends "crm/base.html" %}
 
-{% block title %}Contacts | Northstar Ledger{% endblock %}
+{% block title %}Contacts | {{ site_brand }}{% endblock %}
 {% block eyebrow %}People database{% endblock %}
 {% block page_title %}Contact roster{% endblock %}
 {% block page_description %}Every contact record is staged as a dossier, with communication details, company ties, and public profile links surfaced cleanly.{% endblock %}
@@ -57,7 +57,30 @@
                                     {% if contact.emails.all or contact.email %}
                                         <ul class="table-inline-list">
                                             {% for email in contact.emails.all %}
-                                                <li>{{ email.label|default:"Inbox" }}: {{ email.email }}</li>
+                                                {% with email_type=email.label|default:""|lower %}
+                                                    <li class="contact-channel-row">
+                                                        {% if email_type == "work" %}
+                                                            <span class="contact-channel-chip is-work">
+                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                    <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
+                                                                </svg>
+                                                                <span>Work</span>
+                                                            </span>
+                                                        {% elif email_type == "personal" %}
+                                                            <span class="contact-channel-chip is-personal">
+                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                    <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
+                                                                </svg>
+                                                                <span>Personal</span>
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="contact-channel-chip">
+                                                                <span>{{ email.label|default:"Inbox"|title }}</span>
+                                                            </span>
+                                                        {% endif %}
+                                                        <span class="contact-channel-value">{{ email.email }}</span>
+                                                    </li>
+                                                {% endwith %}
                                             {% empty %}
                                                 <li>{{ contact.email }}</li>
                                             {% endfor %}
@@ -70,7 +93,30 @@
                                     {% if contact.phones.all or contact.phone %}
                                         <ul class="table-inline-list">
                                             {% for phone in contact.phones.all %}
-                                                <li>{{ phone.label|default:"Line" }}: {{ phone.phone }}</li>
+                                                {% with phone_type=phone.label|default:""|lower %}
+                                                    <li class="contact-channel-row">
+                                                        {% if phone_type == "work" %}
+                                                            <span class="contact-channel-chip is-work">
+                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                    <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
+                                                                </svg>
+                                                                <span>Work</span>
+                                                            </span>
+                                                        {% elif phone_type == "personal" %}
+                                                            <span class="contact-channel-chip is-personal">
+                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                    <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
+                                                                </svg>
+                                                                <span>Personal</span>
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="contact-channel-chip">
+                                                                <span>{{ phone.label|default:"Line"|title }}</span>
+                                                            </span>
+                                                        {% endif %}
+                                                        <span class="contact-channel-value">{{ phone.phone }}</span>
+                                                    </li>
+                                                {% endwith %}
                                             {% empty %}
                                                 <li>{{ contact.phone }}</li>
                                             {% endfor %}
@@ -115,7 +161,10 @@
             <h2>No contacts are available yet.</h2>
             <p>Once a CSV import lands, this roster becomes a polished people directory with contact channels and company relationships.</p>
             <div class="action-stack">
-                <a class="button-link" href="{% url 'import_upload' %}">Import contacts</a>
+                {% if crm_can_import %}
+                    <a class="button-link" href="{% url 'import_upload' %}">Import contacts</a>
+                {% endif %}
+                <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Review imports</a>
             </div>
         </section>
     {% endif %}

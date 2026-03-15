@@ -6,8 +6,9 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
-from .models import Company, Contact, ImportFile
+from .auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
 from .import_utils import TARGET_FIELDS, import_csv_with_mapping, suggest_mapping
+from .models import Company, Contact, ImportFile
 
 PAGE_SIZE = 10
 
@@ -17,6 +18,7 @@ def _paginate(request, queryset, per_page=PAGE_SIZE):
     return paginator.get_page(request.GET.get("page"))
 
 
+@crm_role_required(ROLE_STAFF)
 def company_list(request):
     # include related phone/email/social records for efficiency
     companies_qs = (
@@ -35,6 +37,7 @@ def company_list(request):
     )
 
 
+@crm_role_required(ROLE_STAFF)
 def contact_list(request):
     contacts_qs = (
         Contact.objects
@@ -52,6 +55,7 @@ def contact_list(request):
     )
 
 
+@crm_role_required(ROLE_STAFF)
 def import_file_list(request):
     import_files_qs = (
         ImportFile.objects
@@ -69,6 +73,7 @@ def import_file_list(request):
     )
 
 
+@crm_role_required(ROLE_STAFF)
 def import_file_detail(request, file_id):
     import_file = get_object_or_404(ImportFile, pk=file_id)
     rows_qs = (
@@ -88,6 +93,7 @@ def import_file_detail(request, file_id):
     )
 
 
+@crm_role_required(ROLE_TEAM_LEAD)
 def import_upload(request):
     if request.method == "POST":
         uploaded = request.FILES.get("csv_file")
@@ -118,6 +124,7 @@ def import_upload(request):
     return render(request, "crm/import_upload.html")
 
 
+@crm_role_required(ROLE_TEAM_LEAD)
 def import_map_headers(request):
     temp_path = request.session.get("import_csv_temp_path")
     original_name = request.session.get("import_csv_original_name", "")

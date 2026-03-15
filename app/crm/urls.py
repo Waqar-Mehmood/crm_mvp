@@ -1,3 +1,4 @@
+from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 from .views import (
     company_list,
@@ -9,6 +10,15 @@ from .views import (
 )
 
 urlpatterns = [
+    path(
+        "login/",
+        LoginView.as_view(
+            template_name="registration/login.html",
+            redirect_authenticated_user=True,
+        ),
+        name="login",
+    ),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("", company_list, name="home"),
     path("companies/", company_list, name="company_list"),
     path("contacts/", contact_list, name="contact_list"),

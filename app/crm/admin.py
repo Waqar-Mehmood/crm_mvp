@@ -7,12 +7,37 @@ from django import forms
 from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.sites import NotRegistered
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+from django.db.models import Q
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
-from django.db.models import Q
 from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
+
+from .auth import (
+    CRM_ROLE_CHOICES,
+    CRM_ROLE_RANK,
+    ROLE_MANAGER,
+    assign_crm_role,
+    clear_crm_roles,
+    get_admin_actor_role,
+    get_admin_assignable_role_choices,
+    get_role_label,
+    get_user_crm_role,
+    get_user_role_status,
+    sync_user_staff_status,
+    user_can_access_site_branding_admin,
+    user_can_change_admin_target,
+    user_can_delete_admin_target,
+    user_can_edit_admin_target_access,
+    user_can_reset_admin_target_password,
+    user_can_view_admin_target,
+)
 from .import_utils import (
     APPLY_UPDATE_FIELDS,
     TARGET_FIELDS,
@@ -33,8 +58,11 @@ from .models import (
     ContactSocialLink,
     ImportFile,
     ImportRow,
+    SiteBranding,
 )
 
+
+User = get_user_model()
 
 TARGET_LABELS = {
     "company_name": "Company Name",
@@ -217,6 +245,224 @@ class ImportFileApplyUpdatesForm(forms.Form):
         return cleaned_data
 
 
+class CRMUserRoleFormMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "crm_role" not in self.fields:
+            return
+        if self.instance and self.instance.pk:
+            current_role = get_user_crm_role(self.instance)
+            if current_role in CRM_ROLE_RANK:
+                self.fields["crm_role"].initial = current_role
+            elif get_user_role_status(self.instance) == "multiple":
+                self.fields["crm_role"].help_text = (
+                    "This user currently has multiple CRM roles. Save with one role to repair access."
+                )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if "crm_role" not in self.fields:
+            return cleaned_data
+        crm_role = (cleaned_data.get("crm_role") or "").strip()
+        is_superuser = cleaned_data.get("is_superuser", getattr(self.instance, "is_superuser", False))
+        if not is_superuser and crm_role not in CRM_ROLE_RANK:
+            self.add_error("crm_role", "Select one CRM role for this user.")
+        return cleaned_data
+
+
+class CRMUserChangeAdminForm(CRMUserRoleFormMixin, UserChangeForm):
+    crm_role = forms.ChoiceField(
+        choices=[("", "---------"), *CRM_ROLE_CHOICES],
+        required=False,
+        label="CRM role",
+        help_text="Exactly one CRM role is required for non-superusers.",
+    )
+
+
+class CRMUserCreationAdminForm(CRMUserRoleFormMixin, UserCreationForm):
+    crm_role = forms.ChoiceField(
+        choices=[("", "---------"), *CRM_ROLE_CHOICES],
+        required=False,
+        label="CRM role",
+        help_text="Exactly one CRM role is required for non-superusers.",
+    )
+
+
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
+
+
+@admin.register(User)
+class CRMUserAdmin(DjangoUserAdmin):
+    form = CRMUserChangeAdminForm
+    add_form = CRMUserCreationAdminForm
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "username",
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "password1",
+                    "password2",
+                    "crm_role",
+                    "is_active",
+                ),
+            },
+        ),
+    )
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "crm_role_display",
+        "is_staff",
+        "is_active",
+    )
+    list_filter = ("is_active", "is_superuser")
+    search_fields = ("username", "first_name", "last_name", "email")
+    ordering = ("username",)
+    filter_horizontal = ("user_permissions",)
+    readonly_fields = ("last_login", "date_joined")
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request).prefetch_related("groups")
+        if request.user.is_superuser:
+            return queryset
+        return queryset.filter(is_superuser=False)
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        if "crm_role" in form.base_fields:
+            available_choices = CRM_ROLE_CHOICES
+            if get_admin_actor_role(request.user) == ROLE_MANAGER and (obj is None or user_can_edit_admin_target_access(request.user, obj)):
+                available_choices = get_admin_assignable_role_choices(request.user)
+            form.base_fields["crm_role"].choices = [("", "---------"), *available_choices]
+        return form
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            return self.add_fieldsets
+
+        identity_fields = ["username"]
+        if user_can_reset_admin_target_password(request.user, obj):
+            identity_fields.append("password")
+
+        fieldsets = [
+            (None, {"fields": tuple(identity_fields)}),
+            ("Personal info", {"fields": ("first_name", "last_name", "email")}),
+            ("CRM Access", {"fields": ("crm_role", "is_active")}),
+            ("Important dates", {"fields": ("last_login", "date_joined")}),
+        ]
+        if request.user.is_superuser:
+            fieldsets.insert(3, ("Permissions", {"fields": ("is_superuser", "user_permissions")}))
+        return tuple(fieldsets)
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if obj and not request.user.is_superuser and not user_can_edit_admin_target_access(request.user, obj):
+            readonly_fields.extend(["username", "crm_role", "is_active"])
+        return tuple(dict.fromkeys(readonly_fields))
+
+    def has_view_permission(self, request, obj=None):
+        if not super().has_view_permission(request, obj):
+            return False
+        if obj is None:
+            return True
+        return user_can_view_admin_target(request.user, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if not super().has_change_permission(request, obj):
+            return False
+        if obj is None:
+            return True
+        return user_can_change_admin_target(request.user, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is None and get_admin_actor_role(request.user) == ROLE_MANAGER:
+            return False
+        if not super().has_delete_permission(request, obj):
+            return False
+        if obj is None:
+            return True
+        return user_can_delete_admin_target(request.user, obj)
+
+    @admin.display(description="CRM Role")
+    def crm_role_display(self, obj):
+        role_status = get_user_role_status(obj)
+        if role_status == "missing":
+            return "Missing role"
+        if role_status == "multiple":
+            return "Multiple roles"
+        return get_role_label(get_user_crm_role(obj))
+
+    @admin.display(description="CRM Role")
+    def crm_role(self, obj):
+        return self.crm_role_display(obj)
+
+    def save_model(self, request, obj, form, change):
+        original = None
+        can_edit_access = True
+        if change and not request.user.is_superuser:
+            original = User.objects.get(pk=obj.pk)
+            obj.is_superuser = original.is_superuser
+            if not user_can_change_admin_target(request.user, original):
+                raise PermissionDenied("You do not have permission to edit this user.")
+            can_edit_access = user_can_edit_admin_target_access(request.user, original)
+            if not can_edit_access:
+                obj.username = original.username
+                obj.is_active = original.is_active
+
+        allowed_role_names = {role_name for role_name, _label in get_admin_assignable_role_choices(request.user)}
+        crm_role = (form.cleaned_data.get("crm_role") or "").strip() if "crm_role" in form.cleaned_data else None
+        if (
+            get_admin_actor_role(request.user) == ROLE_MANAGER
+            and can_edit_access
+            and crm_role
+            and crm_role not in allowed_role_names
+        ):
+            raise PermissionDenied("Managers can assign only staff or team lead roles.")
+
+        super().save_model(request, obj, form, change)
+
+        if obj.is_superuser:
+            clear_crm_roles(obj)
+            sync_user_staff_status(obj)
+            return
+
+        if change and not can_edit_access:
+            sync_user_staff_status(obj)
+            return
+
+        if crm_role is None:
+            return
+
+        if crm_role:
+            assign_crm_role(obj, crm_role)
+        else:
+            clear_crm_roles(obj)
+
+    def user_change_password(self, request, id, form_url=""):
+        user = self.get_object(request, id)
+        if user is None:
+            raise PermissionDenied("This user does not exist.")
+        if not user_can_reset_admin_target_password(request.user, user):
+            raise PermissionDenied("You do not have permission to change this password.")
+        return super().user_change_password(request, id, form_url=form_url)
+
+    def delete_queryset(self, request, queryset):
+        for user in queryset:
+            if not user_can_delete_admin_target(request.user, user):
+                raise PermissionDenied("You do not have permission to delete one or more selected users.")
+        return super().delete_queryset(request, queryset)
+
+
 class CompanyPhoneInline(admin.TabularInline):
     model = CompanyPhone
     extra = 1
@@ -271,6 +517,49 @@ class ImportRowInline(admin.TabularInline):
     )
     can_delete = False
     show_change_link = True
+
+
+@admin.register(SiteBranding)
+class SiteBrandingAdmin(admin.ModelAdmin):
+    list_display = ("site_name", "logo_preview")
+    fields = ("site_name", "logo_url", "logo_alt_text", "logo_preview")
+    readonly_fields = ("logo_preview",)
+
+    def _has_branding_access(self, request):
+        return user_can_access_site_branding_admin(request.user)
+
+    def get_model_perms(self, request):
+        if not self._has_branding_access(request):
+            return {}
+        return super().get_model_perms(request)
+
+    def has_module_permission(self, request):
+        return self._has_branding_access(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._has_branding_access(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._has_branding_access(request)
+
+    def has_add_permission(self, request):
+        if not self._has_branding_access(request):
+            return False
+        if SiteBranding.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Logo Preview")
+    def logo_preview(self, obj):
+        if not obj or not obj.logo_url:
+            return "-"
+        return mark_safe(
+            f'<img src="{obj.logo_url}" alt="{obj.logo_alt_text or obj.site_name or "Logo"}" '
+            'style="max-height:48px; width:auto; border-radius:8px; background:#fff; padding:6px;">'
+        )
 
 
 @admin.register(Company)

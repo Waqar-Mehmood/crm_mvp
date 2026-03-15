@@ -1,6 +1,6 @@
 {% extends "crm/base.html" %}
 
-{% block title %}Companies | Northstar Ledger{% endblock %}
+{% block title %}Companies | {{ site_brand }}{% endblock %}
 {% block eyebrow %}Company directory{% endblock %}
 {% block page_title %}Company atlas{% endblock %}
 {% block page_description %}Browse organizations, territories, and every signal collected across your CRM database from one polished command deck.{% endblock %}
@@ -108,7 +108,10 @@
             <h2>No companies have landed in the ledger.</h2>
             <p>Import a CSV to start turning raw lead data into a searchable portfolio of companies and relationships.</p>
             <div class="action-stack">
-                <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+                {% if crm_can_import %}
+                    <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+                {% endif %}
+                <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Review imports</a>
             </div>
         </section>
     {% endif %}

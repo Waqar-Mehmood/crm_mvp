@@ -1,0 +1,57 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Log In | {{ site_brand }}{% endblock %}
+{% block eyebrow %}Secure access{% endblock %}
+{% block page_title %}Sign in to {{ site_brand }}{% endblock %}
+{% block page_description %}Use your existing Django account to access the CRM workspace. Companies, contacts, and imports are available only after login.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Access mode</p>
+            <strong class="metric-value is-mono">Session login</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Protected areas</p>
+            <strong class="metric-value is-mono">All CRM pages</strong>
+        </article>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="split-layout auth-layout">
+        <article class="support-card">
+            <p class="section-kicker">Access policy</p>
+            <h2>Authenticated users can browse the CRM.</h2>
+            <p>Team leads and above can also upload and map imports. Django admin remains available separately at <span class="path-chip">/admin/</span>.</p>
+            {% if form.errors %}
+                <p class="notice is-error">Your username or password did not match. Try again.</p>
+            {% endif %}
+        </article>
+
+        <article class="form-card">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Account login</p>
+                    <h2>Welcome back</h2>
+                </div>
+            </div>
+
+            <form method="post" class="form-layout">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="field">
+                    <label for="id_username">Username</label>
+                    <input type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required>
+                </div>
+
+                <div class="field">
+                    <label for="id_password">Password</label>
+                    <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+                </div>
+
+                <button type="submit">Log in</button>
+            </form>
+        </article>
+    </section>
+{% endblock %}

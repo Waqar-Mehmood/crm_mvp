@@ -1,6 +1,6 @@
 {% extends "crm/base.html" %}
 
-{% block title %}Imports | Northstar Ledger{% endblock %}
+{% block title %}Imports | {{ site_brand }}{% endblock %}
 {% block eyebrow %}CSV command log{% endblock %}
 {% block page_title %}Import ledger{% endblock %}
 {% block page_description %}Track every uploaded file, watch row counts, and jump straight into the stored import detail behind each dataset.{% endblock %}
@@ -16,7 +16,9 @@
         </article>
     </div>
     <div class="action-stack">
-        <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+        {% if crm_can_import %}
+            <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+        {% endif %}
         <a class="button-link is-secondary" href="{% url 'company_list' %}">Browse records</a>
     </div>
 {% endblock %}
@@ -64,7 +66,9 @@
             <h2>Your import ledger is still empty.</h2>
             <p>Bring in the first CSV to unlock the mapping workflow and start filling companies, contacts, and source rows.</p>
             <div class="action-stack">
-                <a class="button-link" href="{% url 'import_upload' %}">Upload your first file</a>
+                {% if crm_can_import %}
+                    <a class="button-link" href="{% url 'import_upload' %}">Upload your first file</a>
+                {% endif %}
             </div>
         </section>
     {% endif %}

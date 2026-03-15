@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Northstar Ledger{% endblock %}</title>
+    <title>{% block title %}{{ site_brand }}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'crm/site.css' %}">
 </head>
 <body>
@@ -14,21 +14,42 @@
         <header class="masthead">
             <div class="brand-block">
                 <p class="brand-kicker">CRM database console</p>
-                <a class="brand-mark" href="{% url 'company_list' %}">Northstar Ledger</a>
+                <a class="brand-mark" href="{% if request.user.is_authenticated %}{% url 'company_list' %}{% else %}{% url 'login' %}{% endif %}">
+                    {% if site_logo_url %}
+                        <img class="brand-logo" src="{{ site_logo_url }}" alt="{{ site_logo_alt }}">
+                    {% else %}
+                        {{ site_brand }}
+                    {% endif %}
+                </a>
             </div>
-            <nav class="nav-strip" aria-label="Primary">
-                <a class="nav-pill{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'company_list' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
-                <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
-                <a class="nav-pill{% if request.resolver_match.url_name == 'import_file_list' or request.resolver_match.url_name == 'import_file_detail' %} is-active{% endif %}" href="{% url 'import_file_list' %}">Imports</a>
-                <a class="nav-pill{% if request.resolver_match.url_name == 'import_upload' or request.resolver_match.url_name == 'import_map_headers' %} is-active{% endif %}" href="{% url 'import_upload' %}">Upload</a>
-            </nav>
+            {% if request.user.is_authenticated %}
+                <div class="masthead-tools">
+                    {% if crm_can_browse %}
+                        <nav class="nav-strip" aria-label="Primary">
+                            <a class="nav-pill{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'company_list' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
+                            <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
+                            <a class="nav-pill{% if request.resolver_match.url_name == 'import_file_list' or request.resolver_match.url_name == 'import_file_detail' %} is-active{% endif %}" href="{% url 'import_file_list' %}">Imports</a>
+                            {% if crm_can_import %}
+                                <a class="nav-pill{% if request.resolver_match.url_name == 'import_upload' or request.resolver_match.url_name == 'import_map_headers' %} is-active{% endif %}" href="{% url 'import_upload' %}">Upload</a>
+                            {% endif %}
+                        </nav>
+                    {% endif %}
+                    <div class="auth-strip">
+                        <span class="user-chip">{{ request.user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button class="button-link is-secondary auth-button" type="submit">Log out</button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
         </header>
 
         <main class="page-shell">
             <section class="hero-panel">
                 <div class="hero-copy">
                     <p class="eyebrow">{% block eyebrow %}Data observatory{% endblock %}</p>
-                    <h1 class="page-title">{% block page_title %}Northstar Ledger{% endblock %}</h1>
+                    <h1 class="page-title">{% block page_title %}{{ site_brand }}{% endblock %}</h1>
                     <p class="page-copy">{% block page_description %}A sharper view across companies, contacts, and imports.{% endblock %}</p>
                 </div>
                 <div class="hero-side">
