@@ -1,10 +1,15 @@
+from io import BytesIO
+import shutil
+import tempfile
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from crm.auth import (
     CRM_ROLE_ORDER,
@@ -32,6 +37,12 @@ from crm.models import (
     ImportRow,
     SiteBranding,
 )
+
+
+def make_logo_file(name="logo.png"):
+    buffer = BytesIO()
+    Image.new("RGBA", (1, 1), (209, 125, 47, 255)).save(buffer, format="PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
 
 
 class CRMRoleTestMixin:
@@ -829,6 +840,82 @@ class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No contacts matched the current filters.")
         self.assertNotContains(response, "No contacts are available yet.")
+
+
+class BrandingMediaTests(CRMRoleTestMixin, TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.owner_user = self.create_user("owner", role=ROLE_OWNER)
+        self.temp_media_root = tempfile.mkdtemp()
+        self.settings_override = override_settings(
+            DEBUG=False,
+            ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"],
+            MEDIA_ROOT=self.temp_media_root,
+            MEDIA_URL="/media/",
+        )
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.addCleanup(shutil.rmtree, self.temp_media_root, ignore_errors=True)
+
+    def test_branding_falls_back_to_site_name_when_no_logo_exists(self):
+        SiteBranding.objects.create(site_name="The Zulfis CRM")
+
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The Zulfis CRM")
+        self.assertNotContains(response, 'class="brand-logo"')
+
+    def test_branding_image_renders_on_login_page(self):
+        SiteBranding.objects.create(
+            site_name="The Zulfis CRM",
+            logo_image=make_logo_file(),
+            logo_alt_text="The Zulfis logo",
+        )
+
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="brand-logo"')
+        self.assertContains(response, "/media/branding/logo")
+        self.assertContains(response, 'alt="The Zulfis logo"')
+
+    def test_site_branding_admin_accepts_uploaded_logo_and_shows_preview(self):
+        branding = SiteBranding.objects.create(site_name="The Zulfis CRM")
+        self.client.force_login(self.owner_user)
+
+        response = self.client.post(
+            reverse("admin:crm_sitebranding_change", args=[branding.pk]),
+            {
+                "site_name": "The Zulfis CRM",
+                "logo_alt_text": "The Zulfis logo",
+                "logo_image": make_logo_file("uploaded-logo.png"),
+                "_save": "Save",
+            },
+            follow=True,
+        )
+        branding.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(branding.logo_image.name.startswith("branding/"))
+        self.assertContains(response, "/media/branding/")
+        self.assertContains(response, "Logo Preview")
+
+    def test_uploaded_logo_media_url_is_served_with_debug_false(self):
+        branding = SiteBranding.objects.create(
+            site_name="The Zulfis CRM",
+            logo_image=make_logo_file(),
+        )
+
+        response = self.client.get(branding.logo_image.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Content-Type"], "image/png")
+
+    def test_missing_branding_media_returns_not_found(self):
+        response = self.client.get("/media/branding/missing-logo.png")
+
+        self.assertEqual(response.status_code, 404)
 
 
 @override_settings(

@@ -21,6 +21,7 @@ services:
       - .env
     volumes:
       - ./app:/app
+      - media_data:/app/media
     expose:
       - "8000"
     depends_on:
@@ -48,3 +49,5 @@ networks:
 volumes:
   postgres_data:
     name: crm_mvp_postgres_data
+  media_data:
+    name: crm_mvp_media_data

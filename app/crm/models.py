@@ -3,7 +3,7 @@ from django.db import models
 
 class SiteBranding(models.Model):
     site_name = models.CharField(max_length=255, blank=True)
-    logo_url = models.URLField(blank=True)
+    logo_image = models.ImageField(upload_to="branding/", blank=True)
     logo_alt_text = models.CharField(max_length=255, blank=True)
 
     class Meta:

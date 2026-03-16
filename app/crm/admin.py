@@ -522,7 +522,7 @@ class ImportRowInline(admin.TabularInline):
 @admin.register(SiteBranding)
 class SiteBrandingAdmin(admin.ModelAdmin):
     list_display = ("site_name", "logo_preview")
-    fields = ("site_name", "logo_url", "logo_alt_text", "logo_preview")
+    fields = ("site_name", "logo_image", "logo_alt_text", "logo_preview")
     readonly_fields = ("logo_preview",)
 
     def _has_branding_access(self, request):
@@ -554,10 +554,10 @@ class SiteBrandingAdmin(admin.ModelAdmin):
 
     @admin.display(description="Logo Preview")
     def logo_preview(self, obj):
-        if not obj or not obj.logo_url:
+        if not obj or not obj.logo_image:
             return "-"
         return mark_safe(
-            f'<img src="{obj.logo_url}" alt="{obj.logo_alt_text or obj.site_name or "Logo"}" '
+            f'<img src="{obj.logo_image.url}" alt="{obj.logo_alt_text or obj.site_name or "Logo"}" '
             'style="max-height:48px; width:auto; border-radius:8px; background:#fff; padding:6px;">'
         )
 

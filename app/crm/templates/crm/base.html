@@ -13,11 +13,11 @@
     <div class="site-shell">
         <header class="masthead">
             <div class="brand-block">
-                <p class="brand-kicker">CRM database console</p>
                 <a class="brand-mark" href="{% if request.user.is_authenticated %}{% url 'company_list' %}{% else %}{% url 'login' %}{% endif %}">
                     {% if site_logo_url %}
                         <img class="brand-logo" src="{{ site_logo_url }}" alt="{{ site_logo_alt }}">
                     {% else %}
+                        <p class="brand-kicker">CRM database console</p>
                         {{ site_brand }}
                     {% endif %}
                 </a>

@@ -26,7 +26,8 @@ def branding(request):
     if branding_settings:
         if branding_settings.site_name:
             site_brand = branding_settings.site_name
-        site_logo_url = branding_settings.logo_url
+        if branding_settings.logo_image:
+            site_logo_url = branding_settings.logo_image.url
         site_logo_alt = branding_settings.logo_alt_text or site_brand
 
     crm_role = get_user_crm_role(getattr(request, "user", None))
