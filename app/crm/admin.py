@@ -1,10 +1,7 @@
 import csv
 import shlex
-import uuid
-from pathlib import Path
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.admin.sites import NotRegistered
@@ -60,6 +57,7 @@ from .models import (
     ImportRow,
     SiteBranding,
 )
+from .upload_storage import save_import_upload
 
 
 User = get_user_model()
@@ -970,13 +968,7 @@ class ImportFileAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         csv_file = form.cleaned_data.get("csv_file")
         if csv_file:
-            uploads_dir = Path(settings.BASE_DIR) / "data" / "uploads"
-            uploads_dir.mkdir(parents=True, exist_ok=True)
-            temp_name = f"{uuid.uuid4().hex}_{csv_file.name}"
-            temp_path = uploads_dir / temp_name
-            with temp_path.open("wb") as out:
-                for chunk in csv_file.chunks():
-                    out.write(chunk)
+            temp_path = save_import_upload(csv_file)
 
             headers = form.cleaned_data.get("_csv_headers") or detect_headers(temp_path)
             suggested_mapping = suggest_mapping(headers)

@@ -1,8 +1,11 @@
+import importlib
 from io import BytesIO
+from pathlib import Path
 import shutil
 import tempfile
 from datetime import timedelta
 
+from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -43,6 +46,10 @@ def make_logo_file(name="logo.png"):
     buffer = BytesIO()
     Image.new("RGBA", (1, 1), (209, 125, 47, 255)).save(buffer, format="PNG")
     return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+def make_csv_file(name="contacts.csv", content="Company Name,Email\nAcme Labs,person@example.com\n"):
+    return SimpleUploadedFile(name, content.encode("utf-8"), content_type="text/csv")
 
 
 class CRMRoleTestMixin:
@@ -916,6 +923,105 @@ class BrandingMediaTests(CRMRoleTestMixin, TestCase):
         response = self.client.get("/media/branding/missing-logo.png")
 
         self.assertEqual(response.status_code, 404)
+
+
+class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.team_lead_user = self.create_user("teamlead", role=ROLE_TEAM_LEAD)
+        self.owner_user = self.create_user("owner", role=ROLE_OWNER)
+        self.temp_root = Path(tempfile.mkdtemp())
+        self.temp_base_dir = self.temp_root / "base"
+        self.temp_media_root = self.temp_root / "media"
+        self.temp_base_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_media_root.mkdir(parents=True, exist_ok=True)
+        self.settings_override = override_settings(
+            BASE_DIR=self.temp_base_dir,
+            MEDIA_ROOT=self.temp_media_root,
+            MEDIA_URL="/media/",
+        )
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.addCleanup(shutil.rmtree, self.temp_root, ignore_errors=True)
+
+    def test_frontend_import_upload_and_mapping_store_files_under_media_imports(self):
+        self.client.force_login(self.team_lead_user)
+
+        upload_response = self.client.post(
+            reverse("import_upload"),
+            {"csv_file": make_csv_file("frontend-import.csv")},
+        )
+
+        self.assertRedirects(upload_response, reverse("import_map_headers"))
+        session = self.client.session
+        temp_path = Path(session["import_csv_temp_path"])
+        self.assertEqual(temp_path.parent, self.temp_media_root / "imports")
+        self.assertTrue(temp_path.exists())
+
+        map_response = self.client.post(
+            reverse("import_map_headers"),
+            {
+                "file_name": "frontend-import.csv",
+                "map_company_name": "Company Name",
+                "map_email": "Email",
+            },
+            follow=True,
+        )
+        import_file = ImportFile.objects.get(file_name="frontend-import.csv")
+
+        self.assertEqual(map_response.status_code, 200)
+        self.assertEqual(import_file.source_path, str(temp_path))
+        self.assertTrue(Path(import_file.source_path).exists())
+
+    def test_admin_import_upload_stores_file_under_media_imports(self):
+        self.client.force_login(self.owner_user)
+
+        response = self.client.post(
+            reverse("admin:crm_importfile_add"),
+            {
+                "file_name": "admin-import.csv",
+                "csv_file": make_csv_file("admin-import.csv"),
+                "rows-TOTAL_FORMS": "0",
+                "rows-INITIAL_FORMS": "0",
+                "rows-MIN_NUM_FORMS": "0",
+                "rows-MAX_NUM_FORMS": "1000",
+                "_save": "Save",
+            },
+            follow=True,
+        )
+        import_file = ImportFile.objects.get(file_name="admin-import.csv")
+        source_path = Path(import_file.source_path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(source_path.parent, self.temp_media_root / "imports")
+        self.assertTrue(source_path.exists())
+
+    def test_legacy_import_uploads_are_copied_to_media_and_paths_are_updated(self):
+        legacy_uploads_dir = self.temp_base_dir / "data" / "uploads"
+        legacy_uploads_dir.mkdir(parents=True, exist_ok=True)
+        legacy_file = legacy_uploads_dir / "legacy-import.csv"
+        legacy_file.write_text("Company Name\nAcme Labs\n", encoding="utf-8")
+        orphan_file = legacy_uploads_dir / "orphan-import.csv"
+        orphan_file.write_text("Company Name\nOrphan Co\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="legacy-import.csv",
+            source_path=str(legacy_file),
+        )
+
+        migration_module = importlib.import_module("crm.migrations.0011_move_import_uploads_to_media")
+        migration_module.move_legacy_import_uploads(django_apps, None)
+        import_file.refresh_from_db()
+
+        migrated_file = self.temp_media_root / "imports" / legacy_file.name
+        migrated_orphan = self.temp_media_root / "imports" / orphan_file.name
+
+        self.assertEqual(import_file.source_path, str(migrated_file))
+        self.assertTrue(migrated_file.exists())
+        self.assertEqual(
+            migrated_file.read_text(encoding="utf-8"),
+            legacy_file.read_text(encoding="utf-8"),
+        )
+        self.assertTrue(migrated_orphan.exists())
 
 
 @override_settings(

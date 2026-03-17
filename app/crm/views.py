@@ -1,8 +1,5 @@
 import csv
-import uuid
-from pathlib import Path
 
-from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import (
     BooleanField,
@@ -32,6 +29,7 @@ from .models import (
     ContactSocialLink,
     ImportFile,
 )
+from .upload_storage import save_import_upload
 
 PAGE_SIZE = 10
 BOOLEAN_FILTER_LABELS = {
@@ -440,13 +438,7 @@ def import_upload(request):
                 {"error": "Please choose a CSV file."},
             )
 
-        uploads_dir = Path(settings.BASE_DIR) / "data" / "uploads"
-        uploads_dir.mkdir(parents=True, exist_ok=True)
-        temp_name = f"{uuid.uuid4().hex}_{uploaded.name}"
-        temp_path = uploads_dir / temp_name
-        with temp_path.open("wb") as out:
-            for chunk in uploaded.chunks():
-                out.write(chunk)
+        temp_path = save_import_upload(uploaded)
 
         with temp_path.open(newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
