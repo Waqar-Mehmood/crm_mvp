@@ -79,7 +79,7 @@ def import_google_sheets_preview(request: HttpRequest) -> HttpResponse:
             error = "Please enter a Google Sheets URL."
         else:
             try:
-                from crm.services.google_sheets import fetch_google_sheet_rows
+                from crm.services.google_sheets import extract_sheet_id, fetch_google_sheet_rows
             except ModuleNotFoundError as exc:
                 if exc.name == "requests":
                     error = (
@@ -94,7 +94,9 @@ def import_google_sheets_preview(request: HttpRequest) -> HttpResponse:
                     total_rows = len(rows)
                     headers, preview_rows = _build_preview_rows(rows)
                     if action == "import":
-                        uploaded = rows_to_uploaded_csv(rows)
+                        sheet_id = extract_sheet_id(sheet_url)
+                        filename = f"Google Sheet - {sheet_id}.csv"
+                        uploaded = rows_to_uploaded_csv(rows, filename=filename)
                         return _stage_import_upload(request, uploaded)
                 except (ValueError, RuntimeError) as exc:
                     error = str(exc)
@@ -186,6 +188,7 @@ def import_map_headers(request):
         }
         for key in TARGET_FIELDS
     ]
+    mapping_fields = sorted(mapping_fields, key=lambda field: (field["suggested"] == "",))
     if request.method == "POST":
         file_name = (request.POST.get("file_name") or original_name).strip() or original_name
         mapping = {}

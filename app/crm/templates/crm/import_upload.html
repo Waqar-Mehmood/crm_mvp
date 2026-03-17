@@ -1,14 +1,14 @@
 {% extends "crm/base.html" %}
 
-{% block title %}Upload CSV | {{ site_brand }}{% endblock %}
+{% block title %}Import Sources | {{ site_brand }}{% endblock %}
 {% block eyebrow %}Import intake{% endblock %}
 {% block page_title %}Upload a source file{% endblock %}
-{% block page_description %}Feed the pipeline with a CSV, detect the headers automatically, then walk straight into mapping and import review.{% endblock %}
+{% block page_description %}Feed the pipeline with a CSV upload or a Google Sheet, detect the headers automatically, then walk straight into mapping and import review.{% endblock %}
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
-            <p class="metric-label">Accepted format</p>
-            <strong class="metric-value is-mono">.csv</strong>
+            <p class="metric-label">Source options</p>
+            <strong class="metric-value is-mono">CSV + Sheets</strong>
         </article>
         <article class="metric-card">
             <p class="metric-label">Next step</p>
@@ -16,6 +16,7 @@
         </article>
     </div>
     <div class="action-stack">
+        <a class="button-link" href="{% url 'import_google_sheets' %}">Import Google Sheet</a>
         <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
@@ -24,10 +25,11 @@
     <section class="split-layout">
         <article class="support-card">
             <p class="section-kicker">Workflow</p>
-            <h2>Drop in a CSV and stage the import.</h2>
+            <h2>Drop in a CSV or pull from Google Sheets.</h2>
             <p>The upload step stores the source file, reads its headers, and hands you a guided mapping screen before any rows are committed.</p>
             <ul class="column-list">
                 <li>Upload the raw spreadsheet export.</li>
+                <li>Or open the Google Sheets intake flow.</li>
                 <li>Confirm the detected headers.</li>
                 <li>Map each column to a target field.</li>
                 <li>Import and review the saved rows.</li>

@@ -1195,7 +1195,7 @@ class GoogleSheetsImportFlowTests(CRMRoleTestMixin, TestCase):
         temp_path = Path(session["import_csv_temp_path"])
         self.addCleanup(temp_path.unlink, missing_ok=True)
         self.assertTrue(temp_path.exists())
-        self.assertEqual(session["import_csv_original_name"], "google_sheet_import.csv")
+        self.assertEqual(session["import_csv_original_name"], "Google Sheet - test-sheet.csv")
         self.assertEqual(session["import_csv_headers"], ["Company Name", "Email"])
 
     @patch("crm.services.google_sheets.fetch_google_sheet_rows")
