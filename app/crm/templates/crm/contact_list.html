@@ -95,9 +95,18 @@
                 </div>
             </form>
             <div class="filter-summary">
-                <div>
-                    <p class="section-kicker">Current result set</p>
-                    <h2>{{ page_obj.paginator.count }} matching contacts</h2>
+                <div class="filter-summary-head">
+                    <div>
+                        <p class="section-kicker">Current result set</p>
+                        <h2>{{ page_obj.paginator.count }} matching contacts</h2>
+                    </div>
+                    <details class="export-menu">
+                        <summary class="button-link is-secondary export-menu-toggle">Export</summary>
+                        <div class="export-menu-panel">
+                            <a class="export-menu-link" href="?{{ export_csv_query }}">Export as CSV</a>
+                            <a class="export-menu-link" href="?{{ export_xlsx_query }}">Export as Excel</a>
+                        </div>
+                    </details>
                 </div>
                 {% if active_filters %}
                     <div class="filter-chip-row">

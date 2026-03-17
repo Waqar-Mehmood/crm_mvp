@@ -1,3 +1,4 @@
+import csv
 import importlib
 from io import BytesIO
 from pathlib import Path
@@ -12,6 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
 from PIL import Image
 
 from crm.auth import (
@@ -177,6 +179,13 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
         for url in protected_urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(f"{reverse('login')}?next=", response["Location"])
+
+    def test_anonymous_export_requests_are_redirected_to_login(self):
+        for url in (reverse("company_list"), reverse("contact_list")):
+            with self.subTest(url=url):
+                response = self.client.get(url, {"export": "csv"})
                 self.assertEqual(response.status_code, 302)
                 self.assertIn(f"{reverse('login')}?next=", response["Location"])
 
@@ -757,6 +766,16 @@ class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
         obj.__class__.objects.filter(pk=obj.pk).update(created_at=created_at)
         obj.refresh_from_db()
 
+    def parse_csv_response(self, response):
+        rows = list(csv.reader(response.content.decode("utf-8").splitlines()))
+        return rows[0], rows[1:]
+
+    def parse_xlsx_response(self, response):
+        workbook = load_workbook(BytesIO(response.content))
+        worksheet = workbook.active
+        rows = list(worksheet.iter_rows(values_only=True))
+        return rows[0], rows[1:]
+
     def test_company_filters_narrow_results_and_keep_form_values(self):
         response = self.client.get(
             reverse("company_list"),
@@ -804,6 +823,93 @@ class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "No companies matched the current filters.")
         self.assertNotContains(response, "No companies have landed in the ledger.")
 
+    def test_company_csv_export_uses_filtered_rows_and_full_columns(self):
+        response = self.client.get(
+            reverse("company_list"),
+            {
+                "industry": "SaaS",
+                "has_email": "yes",
+                "export": "csv",
+            },
+        )
+        headers, rows = self.parse_csv_response(response)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn('attachment; filename="companies-export-', response["Content-Disposition"])
+        self.assertEqual(
+            headers,
+            [
+                "ID",
+                "Company Name",
+                "Industry",
+                "Company Size",
+                "Revenue",
+                "Address",
+                "City",
+                "State",
+                "Zip Code",
+                "Country",
+                "Notes",
+                "Phones",
+                "Emails",
+                "Profiles",
+                "Created At",
+            ],
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][1], "Acme Labs")
+        self.assertEqual(rows[0][10], "Outbound team")
+        self.assertIn("Office: 111-111", rows[0][11])
+        self.assertIn("Sales: hello@acme.com", rows[0][12])
+        self.assertIn("Linkedin: https://example.com/acme", rows[0][13])
+
+    def test_company_export_ignores_pagination_and_invalid_export_falls_back_to_html(self):
+        export_response = self.client.get(
+            reverse("company_list"),
+            {"state": "CA", "page": 2, "export": "csv"},
+        )
+        _headers, rows = self.parse_csv_response(export_response)
+
+        self.assertEqual(export_response.status_code, 200)
+        self.assertEqual(len(rows), 14)
+        self.assertEqual({row[1] for row in rows}, {"Acme Labs", "Cedar Staffing", *{f"California Extra {index + 1}" for index in range(12)}})
+
+        html_response = self.client.get(reverse("company_list"), {"export": "pdf"})
+        self.assertEqual(html_response.status_code, 200)
+        self.assertContains(html_response, "Company records")
+        self.assertNotIn("Content-Disposition", html_response)
+
+    def test_company_xlsx_export_and_empty_export_behave_correctly(self):
+        response = self.client.get(
+            reverse("company_list"),
+            {
+                "revenue": "$5M",
+                "created_from": str((timezone.now() - timedelta(days=2)).date()),
+                "export": "xlsx",
+            },
+        )
+        headers, rows = self.parse_xlsx_response(response)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn('attachment; filename="companies-export-', response["Content-Disposition"])
+        self.assertEqual(headers[1], "Company Name")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][1], "Cedar Staffing")
+        self.assertEqual(rows[0][4], "$5M")
+
+        empty_response = self.client.get(
+            reverse("company_list"),
+            {"industry": "Nonexistent", "export": "csv"},
+        )
+        empty_headers, empty_rows = self.parse_csv_response(empty_response)
+        self.assertEqual(empty_headers[1], "Company Name")
+        self.assertEqual(empty_rows, [])
+
     def test_contact_filters_match_related_data_and_presence_rules(self):
         response = self.client.get(
             reverse("contact_list"),
@@ -847,6 +953,67 @@ class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No contacts matched the current filters.")
         self.assertNotContains(response, "No contacts are available yet.")
+
+    def test_contact_csv_export_uses_filtered_rows_and_joined_columns(self):
+        response = self.client.get(
+            reverse("contact_list"),
+            {
+                "q": "alice@acme.com",
+                "company": "Acme",
+                "has_profile": "yes",
+                "export": "csv",
+            },
+        )
+        headers, rows = self.parse_csv_response(response)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn('attachment; filename="contacts-export-', response["Content-Disposition"])
+        self.assertEqual(
+            headers,
+            [
+                "ID",
+                "Full Name",
+                "Title",
+                "Notes",
+                "Primary Email",
+                "Primary Phone",
+                "Emails",
+                "Phones",
+                "Companies",
+                "Profiles",
+                "Created At",
+            ],
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][1], "Alice Johnson")
+        self.assertIn("Work: alice@acme.com", rows[0][6])
+        self.assertIn("Work: 555-0101", rows[0][7])
+        self.assertEqual(rows[0][8], "Acme Labs")
+        self.assertIn("Linkedin: https://example.com/alice", rows[0][9])
+
+    def test_contact_export_ignores_pagination_and_xlsx_returns_filtered_rows(self):
+        csv_response = self.client.get(
+            reverse("contact_list"),
+            {"title": "Analyst", "page": 2, "export": "csv"},
+        )
+        _headers, csv_rows = self.parse_csv_response(csv_response)
+        self.assertEqual(csv_response.status_code, 200)
+        self.assertEqual(len(csv_rows), 12)
+
+        xlsx_response = self.client.get(
+            reverse("contact_list"),
+            {
+                "has_company": "no",
+                "has_email": "no",
+                "created_to": str((timezone.now() - timedelta(days=3)).date()),
+                "export": "xlsx",
+            },
+        )
+        headers, xlsx_rows = self.parse_xlsx_response(xlsx_response)
+        self.assertEqual(headers[1], "Full Name")
+        self.assertEqual(len(xlsx_rows), 1)
+        self.assertEqual(xlsx_rows[0][1], "Bob Stone")
 
 
 class BrandingMediaTests(CRMRoleTestMixin, TestCase):

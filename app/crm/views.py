@@ -17,6 +17,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
 from .auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
+from .export_utils import (
+    COMPANY_EXPORT_COLUMNS,
+    CONTACT_EXPORT_COLUMNS,
+    export_rows_to_csv_response,
+    export_rows_to_xlsx_response,
+    serialize_company_export_row,
+    serialize_contact_export_row,
+)
 from .import_utils import TARGET_FIELDS, import_csv_with_mapping, suggest_mapping
 from .models import (
     Company,
@@ -43,14 +51,37 @@ def _paginate(request, queryset, per_page=PAGE_SIZE):
     return paginator.get_page(request.GET.get("page"))
 
 
+def _query_string(request, remove_keys=None, extra=None):
+    query = request.GET.copy()
+    for key in remove_keys or ():
+        query.pop(key, None)
+    for key, value in (extra or {}).items():
+        if value in (None, ""):
+            query.pop(key, None)
+        else:
+            query[key] = value
+    return query.urlencode()
+
+
 def _page_query(request):
-    page_query = request.GET.copy()
-    page_query.pop("page", None)
-    return page_query.urlencode()
+    return _query_string(request, remove_keys={"page", "export"})
+
+
+def _export_query(request, export_format):
+    return _query_string(
+        request,
+        remove_keys={"page", "export"},
+        extra={"export": export_format},
+    )
 
 
 def _clean_text(value):
     return (value or "").strip()
+
+
+def _clean_export_format(value):
+    value = _clean_text(value).lower()
+    return value if value in {"csv", "xlsx"} else ""
 
 
 def _clean_toggle(value):
@@ -94,8 +125,13 @@ def _apply_toggle_filter(queryset, field_name, toggle_value):
     return queryset
 
 
-@crm_role_required(ROLE_STAFF)
-def company_list(request):
+def _export_response(export_format, base_name, sheet_name, columns, rows):
+    if export_format == "csv":
+        return export_rows_to_csv_response(base_name, columns, rows)
+    return export_rows_to_xlsx_response(base_name, sheet_name, columns, rows)
+
+
+def _company_list_state(request):
     company_filters = {
         "q": _clean_text(request.GET.get("q")),
         "industry": _clean_text(request.GET.get("industry")),
@@ -191,7 +227,6 @@ def company_list(request):
         companies_qs, "has_profile_data", company_filters["has_profile"]
     )
 
-    page_obj = _paginate(request, companies_qs)
     active_filters = []
     _add_active_filter(active_filters, "Search", company_filters["q"])
     _add_active_filter(active_filters, "Industry", company_filters["industry"])
@@ -228,28 +263,21 @@ def company_list(request):
     if created_to:
         _add_active_filter(active_filters, "Created to", company_filters["created_to"])
 
-    return render(
-        request,
-        "crm/company_list.html",
-        {
-            "companies": page_obj.object_list,
-            "page_obj": page_obj,
-            "page_query": _page_query(request),
-            "filters": company_filters,
-            "filters_active": bool(active_filters),
-            "active_filters": active_filters,
-            "total_companies": total_companies,
-            "has_company_records": has_company_records,
-            "industry_options": _distinct_nonempty_values(Company.objects, "industry"),
-            "state_options": _distinct_nonempty_values(Company.objects, "state"),
-            "country_options": _distinct_nonempty_values(Company.objects, "country"),
-            "revenue_options": _distinct_nonempty_values(Company.objects, "revenue"),
-        },
-    )
+    return {
+        "queryset": companies_qs,
+        "filters": company_filters,
+        "filters_active": bool(active_filters),
+        "active_filters": active_filters,
+        "total_companies": total_companies,
+        "has_company_records": has_company_records,
+        "industry_options": _distinct_nonempty_values(Company.objects, "industry"),
+        "state_options": _distinct_nonempty_values(Company.objects, "state"),
+        "country_options": _distinct_nonempty_values(Company.objects, "country"),
+        "revenue_options": _distinct_nonempty_values(Company.objects, "revenue"),
+    }
 
 
-@crm_role_required(ROLE_STAFF)
-def contact_list(request):
+def _contact_list_state(request):
     contact_filters = {
         "q": _clean_text(request.GET.get("q")),
         "title": _clean_text(request.GET.get("title")),
@@ -341,7 +369,6 @@ def contact_list(request):
         contacts_qs = contacts_qs.distinct()
 
     contacts_qs = contacts_qs.order_by("full_name")
-    page_obj = _paginate(request, contacts_qs)
     active_filters = []
     _add_active_filter(active_filters, "Search", contact_filters["q"])
     _add_active_filter(active_filters, "Title", contact_filters["title"])
@@ -371,18 +398,70 @@ def contact_list(request):
     if created_to:
         _add_active_filter(active_filters, "Created to", contact_filters["created_to"])
 
+    return {
+        "queryset": contacts_qs,
+        "filters": contact_filters,
+        "filters_active": bool(active_filters),
+        "active_filters": active_filters,
+        "total_contacts": total_contacts,
+        "has_contact_records": has_contact_records,
+    }
+
+
+@crm_role_required(ROLE_STAFF)
+def company_list(request):
+    state = _company_list_state(request)
+    export_format = _clean_export_format(request.GET.get("export"))
+    if export_format:
+        rows = [serialize_company_export_row(company) for company in state["queryset"]]
+        return _export_response(
+            export_format,
+            "companies",
+            "Companies",
+            COMPANY_EXPORT_COLUMNS,
+            rows,
+        )
+
+    page_obj = _paginate(request, state["queryset"])
+    return render(
+        request,
+        "crm/company_list.html",
+        {
+            **state,
+            "companies": page_obj.object_list,
+            "page_obj": page_obj,
+            "page_query": _page_query(request),
+            "export_csv_query": _export_query(request, "csv"),
+            "export_xlsx_query": _export_query(request, "xlsx"),
+        },
+    )
+
+
+@crm_role_required(ROLE_STAFF)
+def contact_list(request):
+    state = _contact_list_state(request)
+    export_format = _clean_export_format(request.GET.get("export"))
+    if export_format:
+        rows = [serialize_contact_export_row(contact) for contact in state["queryset"]]
+        return _export_response(
+            export_format,
+            "contacts",
+            "Contacts",
+            CONTACT_EXPORT_COLUMNS,
+            rows,
+        )
+
+    page_obj = _paginate(request, state["queryset"])
     return render(
         request,
         "crm/contact_list.html",
         {
+            **state,
             "contacts": page_obj.object_list,
             "page_obj": page_obj,
             "page_query": _page_query(request),
-            "filters": contact_filters,
-            "filters_active": bool(active_filters),
-            "active_filters": active_filters,
-            "total_contacts": total_contacts,
-            "has_contact_records": has_contact_records,
+            "export_csv_query": _export_query(request, "csv"),
+            "export_xlsx_query": _export_query(request, "xlsx"),
         },
     )
 
