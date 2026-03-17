@@ -5,6 +5,7 @@ from .views import (
     contact_list,
     import_file_detail,
     import_file_list,
+    import_google_sheets_preview,
     import_map_headers,
     import_upload,
 )
@@ -22,6 +23,7 @@ urlpatterns = [
     path("", company_list, name="home"),
     path("companies/", company_list, name="company_list"),
     path("contacts/", contact_list, name="contact_list"),
+    path("import/google-sheets/", import_google_sheets_preview, name="import_google_sheets"),
     path("imports/", import_file_list, name="import_file_list"),
     path("imports/upload/", import_upload, name="import_upload"),
     path("imports/map/", import_map_headers, name="import_map_headers"),

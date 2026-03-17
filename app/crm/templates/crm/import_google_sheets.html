@@ -1,0 +1,110 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Google Sheets Preview | {{ site_brand }}{% endblock %}
+{% block eyebrow %}Import intake{% endblock %}
+{% block page_title %}Preview a Google Sheet{% endblock %}
+{% block page_description %}Paste a Google Sheets URL, fetch the CSV export, and inspect the first rows in the same CRM table language before any import logic is added.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Source</p>
+            <strong class="metric-value is-mono">Google Sheets</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Preview limit</p>
+            <strong class="metric-value is-mono">{{ preview_limit }}</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link" href="{% url 'import_upload' %}">Open CSV upload</a>
+        <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="split-layout">
+        <article class="support-card">
+            <p class="section-kicker">Preview flow</p>
+            <h2>Check the source before any import step exists.</h2>
+            <p>This preview only fetches the Google Sheet, converts it to CSV, and shows the first {{ preview_limit }} rows using the same table treatment already used across the CRM.</p>
+            <ul class="column-list">
+                <li>Paste a public or accessible Google Sheets URL.</li>
+                <li>Fetch the CSV export through the existing helper service.</li>
+                <li>Review the detected headers and the first rows.</li>
+                <li>No companies, contacts, or imports are saved yet.</li>
+            </ul>
+        </article>
+
+        <article class="form-card">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Sheet intake</p>
+                    <h2>Google Sheets URL</h2>
+                </div>
+            </div>
+
+            {% if error %}
+                <p class="notice is-error">{{ error }}</p>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="sheet_url">Google Sheets URL</label>
+                    <input
+                        id="sheet_url"
+                        type="url"
+                        name="sheet_url"
+                        value="{{ sheet_url }}"
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        required
+                    >
+                </div>
+                <button type="submit" name="action" value="preview">Preview sheet</button>
+            </form>
+        </article>
+    </section>
+
+    {% if headers and preview_rows %}
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Preview table</p>
+                    <h2>Google Sheets rows</h2>
+                    <p class="table-secondary">Showing the first {{ preview_rows|length }} of {{ total_rows }} rows.</p>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="sheet_url" value="{{ sheet_url }}">
+                    <button type="submit" name="action" value="import">Continue to mapping</button>
+                </form>
+            </div>
+            <div class="table-shell">
+                <table class="data-table data-table-wide">
+                    <thead>
+                        <tr>
+                            {% for header in headers %}
+                                <th>{{ header }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in preview_rows %}
+                            <tr>
+                                {% for key, value in row.items %}
+                                    <td>{{ value|default:"-" }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% elif sheet_url and not error %}
+        <section class="empty-state">
+            <p class="section-kicker">No preview rows</p>
+            <h2>The sheet did not return any data rows.</h2>
+            <p>Check that the sheet contains a header row and at least one populated data row, then try again.</p>
+        </section>
+    {% endif %}
+{% endblock %}

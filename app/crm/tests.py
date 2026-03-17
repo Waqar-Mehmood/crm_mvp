@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import tempfile
 from datetime import timedelta
+from unittest.mock import Mock, patch
 
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
@@ -15,6 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
 from PIL import Image
+import requests
 
 from crm.auth import (
     CRM_ROLE_ORDER,
@@ -41,6 +43,17 @@ from crm.models import (
     ImportFile,
     ImportRow,
     SiteBranding,
+)
+from crm.services.google_sheets import (
+    build_csv_export_url,
+    extract_gid,
+    extract_sheet_id,
+    fetch_google_sheet_rows,
+)
+from crm.services.import_service import (
+    get_row_headers,
+    rows_to_temporary_csv,
+    rows_to_uploaded_csv,
 )
 
 
@@ -1014,6 +1027,191 @@ class AdvancedFilterTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(headers[1], "Full Name")
         self.assertEqual(len(xlsx_rows), 1)
         self.assertEqual(xlsx_rows[0][1], "Bob Stone")
+
+
+class GoogleSheetsServiceTests(TestCase):
+    def test_extract_helpers_build_expected_export_url(self):
+        sheet_url = (
+            "https://docs.google.com/spreadsheets/d/"
+            "1ngu9sB-ZtIFoA3BqBnd2AwBroIZL9_c_8ZdREHTe8NM/edit?gid=0#gid=0"
+        )
+
+        self.assertEqual(
+            extract_sheet_id(sheet_url),
+            "1ngu9sB-ZtIFoA3BqBnd2AwBroIZL9_c_8ZdREHTe8NM",
+        )
+        self.assertEqual(extract_gid(sheet_url), "0")
+        self.assertEqual(
+            build_csv_export_url(sheet_url),
+            "https://docs.google.com/spreadsheets/d/"
+            "1ngu9sB-ZtIFoA3BqBnd2AwBroIZL9_c_8ZdREHTe8NM/export?format=csv&gid=0",
+        )
+
+    def test_extract_gid_defaults_to_zero_when_missing(self):
+        sheet_url = "https://docs.google.com/spreadsheets/d/test-sheet-id/edit"
+
+        self.assertEqual(extract_gid(sheet_url), "0")
+
+    @patch("crm.services.google_sheets.requests.get")
+    def test_fetch_google_sheet_rows_parses_csv_into_dicts(self, mock_get):
+        mock_response = Mock()
+        mock_response.text = "Name,Email\nAlice,alice@example.com\nBob,bob@example.com\n"
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        rows = fetch_google_sheet_rows(
+            "https://docs.google.com/spreadsheets/d/test-sheet-id/edit?gid=0#gid=0"
+        )
+
+        self.assertEqual(
+            rows,
+            [
+                {"Name": "Alice", "Email": "alice@example.com"},
+                {"Name": "Bob", "Email": "bob@example.com"},
+            ],
+        )
+        mock_get.assert_called_once()
+
+    @patch("crm.services.google_sheets.requests.get")
+    def test_fetch_google_sheet_rows_raises_runtime_error_on_request_failure(self, mock_get):
+        mock_get.side_effect = requests.RequestException("network down")
+
+        with self.assertRaises(RuntimeError):
+            fetch_google_sheet_rows(
+                "https://docs.google.com/spreadsheets/d/test-sheet-id/edit?gid=0#gid=0"
+            )
+
+    def test_fetch_google_sheet_rows_raises_value_error_for_invalid_url(self):
+        with self.assertRaises(ValueError):
+            fetch_google_sheet_rows("https://example.com/not-a-sheet")
+
+
+class ImportServiceTests(TestCase):
+    def test_get_row_headers_preserves_first_seen_order(self):
+        rows = [
+            {"Company Name": "Acme", "Email": "hello@acme.com"},
+            {"Company Name": "Beta", "Phone": "555-0101"},
+        ]
+
+        self.assertEqual(get_row_headers(rows), ["Company Name", "Email", "Phone"])
+
+    def test_rows_to_temporary_csv_writes_csv_file(self):
+        rows = [
+            {"Company Name": "Acme", "Email": "hello@acme.com"},
+            {"Company Name": "Beta", "Phone": "555-0101"},
+        ]
+
+        temp_path = Path(rows_to_temporary_csv(rows))
+        self.addCleanup(temp_path.unlink, missing_ok=True)
+
+        self.assertTrue(temp_path.exists())
+        self.assertEqual(
+            temp_path.read_text(encoding="utf-8"),
+            "Company Name,Email,Phone\nAcme,hello@acme.com,\nBeta,,555-0101\n",
+        )
+
+    def test_rows_to_uploaded_csv_returns_simple_uploaded_file(self):
+        rows = [{"Company Name": "Acme", "Email": "hello@acme.com"}]
+
+        uploaded = rows_to_uploaded_csv(rows)
+
+        self.assertEqual(uploaded.name, "google_sheet_import.csv")
+        self.assertEqual(uploaded.content_type, "text/csv")
+        self.assertEqual(
+            uploaded.read().decode("utf-8"),
+            "Company Name,Email\r\nAcme,hello@acme.com\r\n",
+        )
+
+    def test_rows_to_uploaded_csv_rejects_empty_rows(self):
+        with self.assertRaises(ValueError):
+            rows_to_uploaded_csv([])
+
+
+class GoogleSheetsImportFlowTests(CRMRoleTestMixin, TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.team_lead_user = self.create_user("teamlead", role=ROLE_TEAM_LEAD)
+        self.client.force_login(self.team_lead_user)
+        self.temp_root = Path(tempfile.mkdtemp())
+        self.temp_base_dir = self.temp_root / "base"
+        self.temp_media_root = self.temp_root / "media"
+        self.temp_base_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_media_root.mkdir(parents=True, exist_ok=True)
+        self.settings_override = override_settings(
+            BASE_DIR=self.temp_base_dir,
+            MEDIA_ROOT=self.temp_media_root,
+            MEDIA_URL="/media/",
+        )
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.addCleanup(shutil.rmtree, self.temp_root, ignore_errors=True)
+
+    def test_google_sheets_preview_page_renders(self):
+        response = self.client.get(reverse("import_google_sheets"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Google Sheets URL")
+        self.assertContains(response, "Preview sheet")
+
+    @patch("crm.services.google_sheets.fetch_google_sheet_rows")
+    def test_google_sheets_preview_post_shows_headers_and_first_rows(self, mock_fetch):
+        mock_fetch.return_value = [
+            {"Company Name": "Acme", "Email": "hello@acme.com"},
+            {"Company Name": "Beta", "Email": "team@beta.com"},
+            {"Company Name": "Cedar", "Email": "ops@cedar.com"},
+        ]
+
+        response = self.client.post(
+            reverse("import_google_sheets"),
+            {
+                "sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0",
+                "action": "preview",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["headers"], ["Company Name", "Email"])
+        self.assertEqual(len(response.context["preview_rows"]), 3)
+        self.assertEqual(response.context["total_rows"], 3)
+        self.assertContains(response, "Continue to mapping")
+
+    @patch("crm.services.google_sheets.fetch_google_sheet_rows")
+    def test_google_sheets_import_action_reuses_mapping_session_flow(self, mock_fetch):
+        mock_fetch.return_value = [
+            {"Company Name": "Acme", "Email": "hello@acme.com"},
+            {"Company Name": "Beta", "Email": "team@beta.com"},
+        ]
+
+        response = self.client.post(
+            reverse("import_google_sheets"),
+            {
+                "sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0",
+                "action": "import",
+            },
+        )
+
+        self.assertRedirects(response, reverse("import_map_headers"))
+        session = self.client.session
+        temp_path = Path(session["import_csv_temp_path"])
+        self.addCleanup(temp_path.unlink, missing_ok=True)
+        self.assertTrue(temp_path.exists())
+        self.assertEqual(session["import_csv_original_name"], "google_sheet_import.csv")
+        self.assertEqual(session["import_csv_headers"], ["Company Name", "Email"])
+
+    @patch("crm.services.google_sheets.fetch_google_sheet_rows")
+    def test_google_sheets_preview_shows_user_friendly_fetch_error(self, mock_fetch):
+        mock_fetch.side_effect = RuntimeError("Failed to fetch CSV data from Google Sheets: boom")
+
+        response = self.client.post(
+            reverse("import_google_sheets"),
+            {
+                "sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0",
+                "action": "preview",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Failed to fetch CSV data from Google Sheets: boom")
 
 
 class BrandingMediaTests(CRMRoleTestMixin, TestCase):
