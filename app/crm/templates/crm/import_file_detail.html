@@ -32,6 +32,70 @@
         <div class="path-chip">{{ import_file.source_path|default:"No source path stored" }}</div>
     </section>
 
+    {% if import_result %}
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Import review</p>
+                    <h2>Import result</h2>
+                    <p class="table-secondary">Review the latest import outcome before drilling into the stored row data.</p>
+                </div>
+            </div>
+            <div class="metric-grid">
+                <article class="metric-card">
+                    <p class="metric-label">Rows processed</p>
+                    <strong class="metric-value is-mono">{{ import_result.rows_processed }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Companies created</p>
+                    <strong class="metric-value is-mono">{{ import_result.companies_created }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Contacts created</p>
+                    <strong class="metric-value is-mono">{{ import_result.contacts_created }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Rows skipped</p>
+                    <strong class="metric-value is-mono">{{ import_result.rows_skipped }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Failed rows</p>
+                    <strong class="metric-value is-mono">{{ import_result.failed_rows_count }}</strong>
+                </article>
+            </div>
+        </section>
+
+        {% if import_result.failed_rows %}
+            <section class="table-card">
+                <div class="table-head">
+                    <div>
+                        <p class="section-kicker">Exceptions</p>
+                        <h2>Failed rows</h2>
+                        <p class="table-secondary">These rows were skipped or could not be imported cleanly.</p>
+                    </div>
+                </div>
+                <div class="table-shell">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Row</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for failed_row in import_result.failed_rows %}
+                                <tr style="--stagger: {{ forloop.counter0 }};">
+                                    <td>{{ failed_row.row_number }}</td>
+                                    <td>{{ failed_row.reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endif %}
+    {% endif %}
+
     {% if rows %}
         <section class="table-card">
             <div class="table-head">

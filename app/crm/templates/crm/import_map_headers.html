@@ -1,14 +1,18 @@
 {% extends "crm/base.html" %}
 
-{% block title %}Map Headers | {{ site_brand }}{% endblock %}
+{% block title %}Map Import Columns | {{ site_brand }}{% endblock %}
 {% block eyebrow %}Import configuration{% endblock %}
-{% block page_title %}Map CSV headers{% endblock %}
-{% block page_description %}Pair each incoming column with the right database field, keep the suggested matches you trust, and import only what belongs.{% endblock %}
+{% block page_title %}Map import columns{% endblock %}
+{% block page_description %}Pair each incoming source column with the right CRM field, keep the suggested matches you trust, and import only what belongs.{% endblock %}
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
             <p class="metric-label">Detected columns</p>
             <strong class="metric-value">{{ headers|length }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Source type</p>
+            <strong class="metric-value is-mono">{{ source_type_label }}</strong>
         </article>
         <article class="metric-card">
             <p class="metric-label">Display name</p>
@@ -27,7 +31,7 @@
             <div class="panel-head">
                 <div>
                     <p class="section-kicker">Detected columns</p>
-                    <h2>CSV preview</h2>
+                    <h2>{{ source_type_label }} preview</h2>
                 </div>
             </div>
             <ul class="column-list column-list-compact">
@@ -53,23 +57,32 @@
                     <input type="text" id="file_name" name="file_name" value="{{ original_name }}" required>
                 </div>
 
+                <p class="notice">Suggested matches are preselected. Review the highlighted fields first, then adjust any optional mappings before import.</p>
+
                 <div class="table-shell">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Database field</th>
-                                <th>CSV header</th>
+                                <th>CRM field</th>
+                                <th>Status</th>
+                                <th>Source column</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for field in mapping_fields %}
                                 <tr>
-                                    <td>{{ field.label }}</td>
+                                    <td>
+                                        <div class="table-primary">{{ field.label }}</div>
+                                        <div class="table-secondary">{{ field.requirement }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="path-chip">{{ field.status_label }}</span>
+                                    </td>
                                     <td>
                                         <select name="map_{{ field.key }}">
                                             <option value="">-- Not mapped --</option>
                                             {% for h in headers %}
-                                                <option value="{{ h }}" {% if field.suggested == h %}selected{% endif %}>{{ h }}</option>
+                                                <option value="{{ h }}" {% if field.selected == h %}selected{% endif %}>{{ h }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>

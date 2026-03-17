@@ -215,6 +215,7 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
         import_file.save(update_fields=["source_path", "updated_at"])
 
     stats = {
+        "rows_processed": 0,
         "created_companies": 0,
         "created_contacts": 0,
         "links_created": 0,
@@ -227,12 +228,14 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
         "skipped_rows": 0,
         "skipped_empty_rows": 0,
         "skipped_duplicate_rows": 0,
+        "failed_rows": [],
     }
     seen_signatures = set()
 
     with csv_path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row_index, row in enumerate(reader, start=2):
+            stats["rows_processed"] += 1
             company_name = mapped_value(row, mapping, "company_name")
             industry = mapped_value(row, mapping, "industry")
             company_size = mapped_value(row, mapping, "company_size")
@@ -274,11 +277,17 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
 
             if not any(row_values.values()):
                 stats["skipped_empty_rows"] += 1
+                stats["failed_rows"].append(
+                    {"row_number": row_index, "reason": "Row was empty after mapping."}
+                )
                 continue
 
             signature = _row_signature(row_values)
             if signature in seen_signatures:
                 stats["skipped_duplicate_rows"] += 1
+                stats["failed_rows"].append(
+                    {"row_number": row_index, "reason": "Duplicate mapped row in this import."}
+                )
                 continue
             seen_signatures.add(signature)
 
@@ -410,8 +419,33 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
 
             if not company and not contact:
                 stats["skipped_rows"] += 1
+                stats["failed_rows"].append(
+                    {
+                        "row_number": row_index,
+                        "reason": "Row did not create or match a company or contact.",
+                    }
+                )
 
     return import_file, stats
+
+
+def build_import_result_summary(stats):
+    """Normalize raw import stats into a UI-friendly summary payload."""
+    failed_rows = list(stats.get("failed_rows", []))
+    rows_skipped = (
+        stats.get("skipped_rows", 0)
+        + stats.get("skipped_empty_rows", 0)
+        + stats.get("skipped_duplicate_rows", 0)
+    )
+    return {
+        "rows_processed": stats.get("rows_processed", 0),
+        "companies_created": stats.get("created_companies", 0),
+        "contacts_created": stats.get("created_contacts", 0),
+        "rows_skipped": rows_skipped,
+        "failed_rows_count": len(failed_rows),
+        "failed_rows": failed_rows,
+        "error_messages": [f'Row {row["row_number"]}: {row["reason"]}' for row in failed_rows],
+    }
 
 
 @transaction.atomic

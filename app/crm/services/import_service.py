@@ -2,36 +2,54 @@
 
 from __future__ import annotations
 
-import csv
-from io import StringIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Callable
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from crm.services.import_parsers import (
+    derive_csv_headers,
+    parse_csv_file,
+    parse_google_sheet,
+    parse_json_file,
+    parse_xlsx_file,
+    serialize_rows_to_csv_content,
+)
+from crm.services.google_sheets import extract_sheet_id
+
+
+ImportParser = Callable[[str | Path], list[dict[str, str]]]
+
+_PARSER_BY_SOURCE_TYPE: dict[str, ImportParser] = {
+    "csv": parse_csv_file,
+    "xlsx": parse_xlsx_file,
+    "json": parse_json_file,
+    "google_sheets": parse_google_sheet,
+}
+
+_SOURCE_TYPE_BY_SUFFIX = {
+    ".csv": "csv",
+    ".xlsx": "xlsx",
+    ".json": "json",
+}
+
+
+def _looks_like_google_sheets_source(source: str | Path | None) -> bool:
+    """Return True when the source looks like a Google Sheets URL."""
+    if source is None:
+        return False
+
+    try:
+        extract_sheet_id(str(source))
+    except ValueError:
+        return False
+    return True
+
 
 def get_row_headers(rows: list[dict[str, str]]) -> list[str]:
-    """Return CSV headers derived from a list of row dictionaries.
-
-    Headers are collected in first-seen order across all rows so the generated
-    CSV remains stable even when later rows contain additional keys.
-
-    Args:
-        rows: Parsed row dictionaries, typically from a Google Sheet.
-
-    Returns:
-        A list of header names in write order.
-    """
-    headers: list[str] = []
-    seen: set[str] = set()
-
-    for row in rows:
-        for key in row.keys():
-            if key not in seen:
-                seen.add(key)
-                headers.append(key)
-
-    return headers
+    """Return CSV headers derived from row dictionaries."""
+    return derive_csv_headers(rows)
 
 
 def _validate_rows(rows: list[dict[str, str]]) -> list[str]:
@@ -48,15 +66,56 @@ def _validate_rows(rows: list[dict[str, str]]) -> list[str]:
 
 def _serialize_rows_to_csv_content(rows: list[dict[str, str]]) -> str:
     """Serialize row dictionaries into CSV text."""
-    headers = _validate_rows(rows)
-    buffer = StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=headers)
-    writer.writeheader()
-    for row in rows:
-        writer.writerow(
-            {header: "" if row.get(header) is None else row.get(header, "") for header in headers}
+    _validate_rows(rows)
+    return serialize_rows_to_csv_content(rows)
+
+
+def detect_import_source_type(
+    source: str | Path | None = None,
+    source_type: str | None = None,
+    filename: str | None = None,
+) -> str:
+    """Resolve the normalized source type from a source hint or filename."""
+    resolved_source_type = (source_type or "").strip().lower()
+    if not resolved_source_type and _looks_like_google_sheets_source(source):
+        resolved_source_type = "google_sheets"
+    if not resolved_source_type and source is not None:
+        resolved_source_type = _SOURCE_TYPE_BY_SUFFIX.get(Path(str(source)).suffix.lower(), "")
+    if not resolved_source_type and filename:
+        resolved_source_type = _SOURCE_TYPE_BY_SUFFIX.get(Path(filename).suffix.lower(), "")
+
+    return resolved_source_type
+
+
+def select_import_parser(
+    source: str | Path | None = None,
+    source_type: str | None = None,
+    filename: str | None = None,
+) -> ImportParser:
+    """Return the parser function that matches a source type or filename."""
+    resolved_source_type = detect_import_source_type(
+        source=source,
+        source_type=source_type,
+        filename=filename,
+    )
+
+    parser = _PARSER_BY_SOURCE_TYPE.get(resolved_source_type)
+    if parser is None:
+        raise ValueError(
+            "Unsupported import source type. Expected one of: csv, xlsx, json, google_sheets."
         )
-    return buffer.getvalue()
+    return parser
+
+
+def parse_rows_from_source(
+    source: str | Path,
+    *,
+    source_type: str | None = None,
+    filename: str | None = None,
+) -> list[dict[str, str]]:
+    """Parse an import source into row dictionaries via the parser registry."""
+    parser = select_import_parser(source=source, source_type=source_type, filename=filename)
+    return parser(source)
 
 
 def rows_to_temporary_csv(rows: list[dict[str, str]]) -> str:
