@@ -26,7 +26,7 @@ from crm.services.import_service import (
     select_import_parser,
 )
 from crm.upload_storage import save_import_upload
-from .misc_views import PAGE_SIZE, _clean_text, _page_query, _paginate
+from ._shared import PAGE_SIZE, _clean_text, _page_query, _paginate
 
 SOURCE_TYPE_LABELS = {
     "csv": "CSV file",

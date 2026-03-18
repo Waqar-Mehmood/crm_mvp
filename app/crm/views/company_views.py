@@ -18,7 +18,7 @@ from django.shortcuts import render
 from crm.auth import ROLE_STAFF, crm_role_required
 from crm.export_utils import COMPANY_EXPORT_COLUMNS, serialize_company_export_row
 from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink
-from .misc_views import (
+from ._shared import (
     BOOLEAN_FILTER_LABELS,
     _add_active_filter,
     _apply_toggle_filter,

@@ -1,7 +1,8 @@
 """Public CRM view exports.
 
-This package preserves the old ``crm.views`` import surface while splitting
-the implementation into smaller feature-based modules.
+Only route-facing view callables are exported here. Internal helper modules in
+``crm.views`` are implementation details and should be imported directly only
+within the package.
 """
 
 from .company_views import company_list
