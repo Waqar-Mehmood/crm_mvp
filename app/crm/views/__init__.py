@@ -5,6 +5,7 @@ Only route-facing view callables are exported here. Internal helper modules in
 within the package.
 """
 
+from .dashboard_views import dashboard_home
 from .company_views import company_list
 from .contact_views import contact_list
 from .import_views import (
@@ -16,6 +17,7 @@ from .import_views import (
 )
 
 __all__ = [
+    "dashboard_home",
     "company_list",
     "contact_list",
     "import_file_detail",

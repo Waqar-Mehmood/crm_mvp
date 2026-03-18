@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     company_list,
     contact_list,
+    dashboard_home,
     import_file_detail,
     import_file_list,
     import_google_sheets_preview,
@@ -20,7 +21,7 @@ urlpatterns = [
         name="login",
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
-    path("", company_list, name="home"),
+    path("", dashboard_home, name="home"),
     path("companies/", company_list, name="company_list"),
     path("contacts/", contact_list, name="contact_list"),
     path("import/google-sheets/", import_google_sheets_preview, name="import_google_sheets"),
