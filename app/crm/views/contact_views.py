@@ -171,7 +171,7 @@ def contact_list(request):
     page_obj = _paginate(request, state["queryset"])
     return render(
         request,
-        "crm/contact_list.html",
+        "crm/contacts/contact_list.html",
         {
             **state,
             "contacts": page_obj.object_list,

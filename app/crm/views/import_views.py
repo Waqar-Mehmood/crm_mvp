@@ -162,7 +162,7 @@ def import_file_list(request):
     page_obj = _paginate(request, import_files_qs)
     return render(
         request,
-        "crm/import_file_list.html",
+        "crm/imports/import_file_list.html",
         {
             "import_files": page_obj.object_list,
             "page_obj": page_obj,
@@ -205,7 +205,7 @@ def import_google_sheets_preview(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "crm/import_google_sheets.html",
+        "crm/imports/import_google_sheets.html",
         {
             "headers": headers,
             "preview_rows": preview_rows,
@@ -234,7 +234,7 @@ def import_file_detail(request, file_id):
     page_obj = _paginate(request, rows_qs)
     return render(
         request,
-        "crm/import_file_detail.html",
+        "crm/imports/import_file_detail.html",
         {
             "import_file": import_file,
             "import_result": import_result,
@@ -254,7 +254,7 @@ def import_upload(request):
         if not uploaded and not sheet_url:
             return render(
                 request,
-                "crm/import_upload.html",
+                "crm/imports/import_upload.html",
                 {
                     "error": "Choose an import file or enter a Google Sheets URL.",
                     "sheet_url": sheet_url,
@@ -263,7 +263,7 @@ def import_upload(request):
         if uploaded and sheet_url:
             return render(
                 request,
-                "crm/import_upload.html",
+                "crm/imports/import_upload.html",
                 {
                     "error": "Choose either an import file or a Google Sheets URL, not both.",
                     "sheet_url": sheet_url,
@@ -287,14 +287,14 @@ def import_upload(request):
         except (ValueError, RuntimeError, UnicodeDecodeError) as exc:
             return render(
                 request,
-                "crm/import_upload.html",
+                "crm/imports/import_upload.html",
                 {
                     "error": str(exc),
                     "sheet_url": sheet_url,
                 },
             )
 
-    return render(request, "crm/import_upload.html")
+    return render(request, "crm/imports/import_upload.html")
 
 
 @crm_role_required(ROLE_TEAM_LEAD)
@@ -335,7 +335,7 @@ def import_map_headers(request):
 
     return render(
         request,
-        "crm/import_map_headers.html",
+        "crm/imports/import_map_headers.html",
         {
             "original_name": original_name,
             "headers": headers,

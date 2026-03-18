@@ -198,7 +198,7 @@ def company_list(request):
     page_obj = _paginate(request, state["queryset"])
     return render(
         request,
-        "crm/company_list.html",
+        "crm/companies/company_list.html",
         {
             **state,
             "companies": page_obj.object_list,
