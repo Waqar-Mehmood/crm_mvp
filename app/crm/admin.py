@@ -35,7 +35,7 @@ from .auth import (
     user_can_reset_admin_target_password,
     user_can_view_admin_target,
 )
-from .import_utils import (
+from .services.import_workflow import (
     APPLY_UPDATE_FIELDS,
     TARGET_FIELDS,
     analyze_updates_from_import_file,

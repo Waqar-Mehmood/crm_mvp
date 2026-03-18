@@ -16,7 +16,10 @@ from django.db.models.functions import Cast
 from django.shortcuts import render
 
 from crm.auth import ROLE_STAFF, crm_role_required
-from crm.export_utils import COMPANY_EXPORT_COLUMNS, serialize_company_export_row
+from crm.services.export_service import (
+    COMPANY_EXPORT_COLUMNS,
+    serialize_company_export_row,
+)
 from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink
 from ._shared import (
     BOOLEAN_FILTER_LABELS,

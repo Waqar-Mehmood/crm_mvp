@@ -10,7 +10,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
-from crm.import_utils import (
+from crm.services.import_workflow import (
     TARGET_FIELDS,
     build_import_result_summary,
     import_csv_with_mapping,

@@ -32,7 +32,6 @@ from crm.auth import (
     user_has_minimum_crm_role,
     user_has_valid_crm_role,
 )
-from crm.import_utils import build_import_result_summary
 from crm.models import (
     Company,
     CompanyEmail,
@@ -52,6 +51,7 @@ from crm.services.google_sheets import (
     extract_sheet_id,
     fetch_google_sheet_rows,
 )
+from crm.services.import_workflow import build_import_result_summary
 from crm.services.import_parsers import (
     parse_csv_file,
     parse_google_sheet,

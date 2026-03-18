@@ -2,7 +2,11 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from crm.import_utils import import_csv_with_mapping, suggest_mapping, detect_headers
+from crm.services.import_workflow import (
+    detect_headers,
+    import_csv_with_mapping,
+    suggest_mapping,
+)
 
 
 class Command(BaseCommand):

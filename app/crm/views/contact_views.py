@@ -6,7 +6,10 @@ from django.db.models import BooleanField, Case, Exists, OuterRef, Q, Value, Whe
 from django.shortcuts import render
 
 from crm.auth import ROLE_STAFF, crm_role_required
-from crm.export_utils import CONTACT_EXPORT_COLUMNS, serialize_contact_export_row
+from crm.services.export_service import (
+    CONTACT_EXPORT_COLUMNS,
+    serialize_contact_export_row,
+)
 from crm.models import Contact, ContactEmail, ContactPhone, ContactSocialLink
 from ._shared import (
     BOOLEAN_FILTER_LABELS,
