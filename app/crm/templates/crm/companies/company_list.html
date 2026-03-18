@@ -19,6 +19,9 @@
         </article>
     </div>
     <div class="action-stack">
+        {% if crm_can_manage_records %}
+            <a class="button-link" href="{% url 'company_create' %}">New company</a>
+        {% endif %}
         <a class="button-link" href="{% url 'contact_list' %}">Open contacts</a>
         <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Review imports</a>
     </div>
@@ -190,7 +193,7 @@
                             <tr>
                                 <td>{{ company.id }}</td>
                                 <td>
-                                    <div class="table-primary">{{ company.name }}</div>
+                                    <div class="table-primary"><a class="text-link" href="{% url 'company_detail' company.id %}">{{ company.name }}</a></div>
                                     <div class="table-secondary">{{ company.address|default:"No street address" }}</div>
                                 </td>
                                 <td>{{ company.industry|default:"Not tagged" }}</td>

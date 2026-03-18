@@ -41,5 +41,9 @@ def branding(request):
         "crm_role_status": get_user_role_status(getattr(request, "user", None)),
         "crm_can_browse": user_has_minimum_crm_role(getattr(request, "user", None), ROLE_STAFF),
         "crm_can_import": user_has_minimum_crm_role(getattr(request, "user", None), ROLE_TEAM_LEAD),
+        "crm_can_manage_records": user_has_minimum_crm_role(
+            getattr(request, "user", None),
+            ROLE_TEAM_LEAD,
+        ),
         "crm_can_admin": user_has_minimum_crm_role(getattr(request, "user", None), ROLE_MANAGER),
     }

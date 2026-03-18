@@ -1,0 +1,178 @@
+{% extends "crm/base.html" %}
+
+{% block title %}{{ company.name }} | Companies | {{ site_brand }}{% endblock %}
+{% block eyebrow %}Company profile{% endblock %}
+{% block page_title %}{{ company.name }}{% endblock %}
+{% block page_description %}Review the company profile, linked contacts, and every captured channel from one record page.{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Linked contacts</p>
+            <strong class="metric-value">{{ contact_count }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Channels</p>
+            <strong class="metric-value">{{ phone_count|add:email_count|add:profile_count }}</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link" href="{% url 'company_list' %}">Back to companies</a>
+        {% if crm_can_manage_records %}
+            <a class="button-link is-secondary" href="{% url 'company_edit' company.id %}">Edit company</a>
+        {% endif %}
+        <a class="button-link is-secondary" href="{% url 'contact_list' %}">Open contacts</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <section class="cards-grid">
+        <article class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Profile summary</p>
+                    <h2>Company snapshot</h2>
+                </div>
+            </div>
+            <dl class="info-grid">
+                <div>
+                    <dt>Industry</dt>
+                    <dd>{{ company.industry|default:"Not tagged" }}</dd>
+                </div>
+                <div>
+                    <dt>Company Size</dt>
+                    <dd>{{ company.company_size|default:"Unknown" }}</dd>
+                </div>
+                <div>
+                    <dt>Revenue</dt>
+                    <dd>{{ company.revenue|default:"Undisclosed" }}</dd>
+                </div>
+                <div>
+                    <dt>Created</dt>
+                    <dd>{{ company.created_at|date:"Y-m-d H:i" }}</dd>
+                </div>
+                <div>
+                    <dt>City</dt>
+                    <dd>{{ company.city|default:"No city" }}</dd>
+                </div>
+                <div>
+                    <dt>State</dt>
+                    <dd>{{ company.state|default:"No state" }}</dd>
+                </div>
+                <div>
+                    <dt>Zip Code</dt>
+                    <dd>{{ company.zip_code|default:"No zip code" }}</dd>
+                </div>
+                <div>
+                    <dt>Country</dt>
+                    <dd>{{ company.country|default:"No country" }}</dd>
+                </div>
+            </dl>
+            <div class="detail-card">
+                <p class="section-kicker">Street address</p>
+                <p>{{ company.address|default:"No street address stored." }}</p>
+            </div>
+            {% if company.notes %}
+                <p class="notes">{{ company.notes }}</p>
+            {% else %}
+                <p class="muted">No internal notes are stored for this company yet.</p>
+            {% endif %}
+        </article>
+
+        <article class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Relationships</p>
+                    <h2>Linked contacts</h2>
+                </div>
+            </div>
+            {% if company.contacts.all %}
+                <div class="detail-strip">
+                    {% for contact in company.contacts.all %}
+                        <article class="detail-card">
+                            <div class="record-header">
+                                <div>
+                                    <p class="section-kicker">Contact</p>
+                                    <h3><a class="text-link" href="{% url 'contact_detail' contact.id %}">{{ contact.full_name }}</a></h3>
+                                </div>
+                            </div>
+                            <p class="muted">{{ contact.title|default:"No title captured" }}</p>
+                            {% if contact.email or contact.phone %}
+                                <ul class="table-inline-list">
+                                    {% if contact.email %}
+                                        <li>{{ contact.email }}</li>
+                                    {% endif %}
+                                    {% if contact.phone %}
+                                        <li>{{ contact.phone }}</li>
+                                    {% endif %}
+                                </ul>
+                            {% else %}
+                                <p class="table-secondary">No primary email or phone stored.</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">No contacts are linked to this company yet.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="cards-grid">
+        <article class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Channels</p>
+                    <h2>Phone lines</h2>
+                </div>
+            </div>
+            {% if company.phones.all %}
+                <ul class="table-inline-list">
+                    {% for phone in company.phones.all %}
+                        <li><strong>{{ phone.label|default:"Direct" }}:</strong> {{ phone.phone }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted">No company phone numbers are stored yet.</p>
+            {% endif %}
+        </article>
+
+        <article class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Channels</p>
+                    <h2>Email inboxes</h2>
+                </div>
+            </div>
+            {% if company.emails.all %}
+                <ul class="table-inline-list">
+                    {% for email in company.emails.all %}
+                        <li><strong>{{ email.label|default:"Inbox" }}:</strong> {{ email.email }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted">No company email addresses are stored yet.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="section-kicker">Channels</p>
+                <h2>Public profiles</h2>
+            </div>
+        </div>
+        {% if company.social_links.all %}
+            <div class="detail-strip">
+                {% for link in company.social_links.all %}
+                    <article class="detail-card">
+                        <p class="section-kicker">{{ link.platform|default:"Website" }}</p>
+                        <a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.url }}</a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted">No public profile links are stored yet.</p>
+        {% endif %}
+    </section>
+{% endblock %}

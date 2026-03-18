@@ -19,6 +19,9 @@
         </article>
     </div>
     <div class="action-stack">
+        {% if crm_can_manage_records %}
+            <a class="button-link" href="{% url 'contact_create' %}">New contact</a>
+        {% endif %}
         <a class="button-link" href="{% url 'company_list' %}">Open companies</a>
         <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Import ledger</a>
     </div>
@@ -148,7 +151,7 @@
                             <tr>
                                 <td>{{ contact.id }}</td>
                                 <td>
-                                    <div class="table-primary">{{ contact.full_name }}</div>
+                                    <div class="table-primary"><a class="text-link" href="{% url 'contact_detail' contact.id %}">{{ contact.full_name }}</a></div>
                                     <div class="table-secondary">{{ contact.notes|default:"No notes stored" }}</div>
                                 </td>
                                 <td>{{ contact.title|default:"No title captured" }}</td>
@@ -228,7 +231,7 @@
                                     {% if contact.companies.all %}
                                         <ul class="table-inline-list">
                                             {% for company in contact.companies.all %}
-                                                <li>{{ company.name }}</li>
+                                                <li><a class="text-link" href="{% url 'company_detail' company.id %}">{{ company.name }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

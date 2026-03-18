@@ -96,8 +96,9 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
         self.invalid_user = self.create_user("invalid-user")
         self.superuser = self.create_superuser(username="waqar")
 
-        Company.objects.create(name="Acme Labs")
-        Contact.objects.create(full_name="Jane Example")
+        self.company = Company.objects.create(name="Acme Labs")
+        self.contact = Contact.objects.create(full_name="Jane Example")
+        self.company.contacts.add(self.contact)
         self.import_file = ImportFile.objects.create(file_name="seed.csv")
         ImportRow.objects.create(
             import_file=self.import_file,
@@ -117,7 +118,13 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
         protected_urls = [
             reverse("home"),
             reverse("company_list"),
+            reverse("company_detail", args=[self.company.pk]),
+            reverse("company_create"),
+            reverse("company_edit", args=[self.company.pk]),
             reverse("contact_list"),
+            reverse("contact_detail", args=[self.contact.pk]),
+            reverse("contact_create"),
+            reverse("contact_edit", args=[self.contact.pk]),
             reverse("import_file_list"),
             reverse("import_file_detail", args=[self.import_file.pk]),
             reverse("import_upload"),
@@ -137,12 +144,14 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertIn(f"{reverse('login')}?next=", response["Location"])
 
-    def test_staff_can_browse_but_not_access_import_mutations(self):
+    def test_staff_can_browse_detail_pages_but_not_access_write_mutations(self):
         self.client.login(username="staffer", password=self.default_password)
 
         for url in [
             reverse("company_list"),
+            reverse("company_detail", args=[self.company.pk]),
             reverse("contact_list"),
+            reverse("contact_detail", args=[self.contact.pk]),
             reverse("import_file_list"),
             reverse("import_file_detail", args=[self.import_file.pk]),
         ]:
@@ -150,7 +159,14 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
 
-        for url in [reverse("import_upload"), reverse("import_map_headers")]:
+        for url in [
+            reverse("company_create"),
+            reverse("company_edit", args=[self.company.pk]),
+            reverse("contact_create"),
+            reverse("contact_edit", args=[self.contact.pk]),
+            reverse("import_upload"),
+            reverse("import_map_headers"),
+        ]:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 403)
@@ -167,13 +183,29 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
                 self.assertEqual(mapping_response.status_code, 200)
                 self.client.logout()
 
+    def test_team_lead_and_above_can_access_record_management_pages(self):
+        for username in ("teamlead", "manager", "owner", "waqar"):
+            with self.subTest(username=username):
+                self.client.force_login(get_user_model().objects.get(username=username))
+                for url in [
+                    reverse("company_create"),
+                    reverse("company_edit", args=[self.company.pk]),
+                    reverse("contact_create"),
+                    reverse("contact_edit", args=[self.contact.pk]),
+                ]:
+                    response = self.client.get(url)
+                    self.assertEqual(response.status_code, 200)
+                self.client.logout()
+
     def test_invalid_role_user_gets_forbidden_on_crm_pages(self):
         self.client.login(username="invalid-user", password=self.default_password)
 
         browse_response = self.client.get(reverse("company_list"))
+        company_create_response = self.client.get(reverse("company_create"))
         upload_response = self.client.get(reverse("import_upload"))
 
         self.assertEqual(browse_response.status_code, 403)
+        self.assertEqual(company_create_response.status_code, 403)
         self.assertEqual(upload_response.status_code, 403)
 
     def test_multiple_role_user_gets_forbidden_on_crm_pages(self):
@@ -196,6 +228,28 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
         lead_response = self.client.get(reverse("import_file_list"))
         self.assertEqual(lead_response.status_code, 200)
         self.assertContains(lead_response, 'href="/imports/upload/"')
+
+    def test_record_management_navigation_is_role_aware(self):
+        self.client.login(username="staffer", password=self.default_password)
+        staff_company_list = self.client.get(reverse("company_list"))
+        staff_contact_list = self.client.get(reverse("contact_list"))
+        staff_company_detail = self.client.get(reverse("company_detail", args=[self.company.pk]))
+        staff_contact_detail = self.client.get(reverse("contact_detail", args=[self.contact.pk]))
+        self.assertNotContains(staff_company_list, 'href="/companies/new/"')
+        self.assertNotContains(staff_contact_list, 'href="/contacts/new/"')
+        self.assertNotContains(staff_company_detail, f'href="/companies/{self.company.pk}/edit/"')
+        self.assertNotContains(staff_contact_detail, f'href="/contacts/{self.contact.pk}/edit/"')
+        self.client.logout()
+
+        self.client.login(username="teamlead", password=self.default_password)
+        lead_company_list = self.client.get(reverse("company_list"))
+        lead_contact_list = self.client.get(reverse("contact_list"))
+        lead_company_detail = self.client.get(reverse("company_detail", args=[self.company.pk]))
+        lead_contact_detail = self.client.get(reverse("contact_detail", args=[self.contact.pk]))
+        self.assertContains(lead_company_list, 'href="/companies/new/"')
+        self.assertContains(lead_contact_list, 'href="/contacts/new/"')
+        self.assertContains(lead_company_detail, f'href="/companies/{self.company.pk}/edit/"')
+        self.assertContains(lead_contact_detail, f'href="/contacts/{self.contact.pk}/edit/"')
 
     def test_login_redirects_authenticated_users_to_companies(self):
         self.client.login(username="staffer", password=self.default_password)

@@ -1,16 +1,25 @@
-"""Contact list and filtering views."""
+"""Contact list, detail, and form views."""
 
 from __future__ import annotations
 
-from django.db.models import BooleanField, Case, Exists, OuterRef, Q, Value, When
-from django.shortcuts import render
+from django.contrib import messages
+from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Value, When
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
-from crm.auth import ROLE_STAFF, crm_role_required
+from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
+from crm.forms.contacts import (
+    ContactEmailFormSet,
+    ContactForm,
+    ContactPhoneFormSet,
+    ContactSocialLinkFormSet,
+)
+from crm.models import Company, Contact, ContactEmail, ContactPhone, ContactSocialLink
+from crm.services.contacts import save_contact_bundle
 from crm.services.export_service import (
     CONTACT_EXPORT_COLUMNS,
     serialize_contact_export_row,
 )
-from crm.models import Contact, ContactEmail, ContactPhone, ContactSocialLink
 from ._shared import (
     BOOLEAN_FILTER_LABELS,
     _add_active_filter,
@@ -24,6 +33,60 @@ from ._shared import (
     _paginate,
     _parse_date_value,
 )
+
+
+def _contact_detail_queryset():
+    return Contact.objects.prefetch_related(
+        Prefetch("companies", queryset=Company.objects.order_by("name")),
+        "phones",
+        "emails",
+        "social_links",
+    )
+
+
+def _contact_form_bundle(request, contact):
+    data = request.POST if request.method == "POST" else None
+    return {
+        "form": ContactForm(data=data, instance=contact),
+        "phone_formset": ContactPhoneFormSet(
+            data=data,
+            instance=contact,
+            prefix="phones",
+        ),
+        "email_formset": ContactEmailFormSet(
+            data=data,
+            instance=contact,
+            prefix="emails",
+        ),
+        "social_link_formset": ContactSocialLinkFormSet(
+            data=data,
+            instance=contact,
+            prefix="social_links",
+        ),
+    }
+
+
+def _contact_form_context(contact, bundle, is_edit_mode):
+    return {
+        "contact": contact,
+        "form": bundle["form"],
+        "phone_formset": bundle["phone_formset"],
+        "email_formset": bundle["email_formset"],
+        "social_link_formset": bundle["social_link_formset"],
+        "is_edit_mode": is_edit_mode,
+        "form_title": "Edit contact" if is_edit_mode else "New contact",
+        "form_description": (
+            "Update the contact profile, related channels, and linked companies from one page."
+            if is_edit_mode
+            else "Create a contact record and capture the companies and channels already known."
+        ),
+        "submit_label": "Save changes" if is_edit_mode else "Create contact",
+        "cancel_url": (
+            reverse("contact_detail", args=[contact.pk])
+            if is_edit_mode
+            else reverse("contact_list")
+        ),
+    }
 
 
 def _contact_list_state(request):
@@ -183,4 +246,64 @@ def contact_list(request):
             "export_csv_query": _export_query(request, "csv"),
             "export_xlsx_query": _export_query(request, "xlsx"),
         },
+    )
+
+
+@crm_role_required(ROLE_STAFF)
+def contact_detail(request, contact_id):
+    contact = get_object_or_404(_contact_detail_queryset(), pk=contact_id)
+    return render(
+        request,
+        "crm/contacts/contact_detail.html",
+        {
+            "contact": contact,
+            "company_count": contact.companies.count(),
+            "phone_count": contact.phones.count(),
+            "email_count": contact.emails.count(),
+            "profile_count": contact.social_links.count(),
+        },
+    )
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def contact_create(request):
+    contact = Contact()
+    bundle = _contact_form_bundle(request, contact)
+    if request.method == "POST":
+        saved_contact = save_contact_bundle(
+            bundle["form"],
+            bundle["phone_formset"],
+            bundle["email_formset"],
+            bundle["social_link_formset"],
+        )
+        if saved_contact is not None:
+            messages.success(request, "Contact created.")
+            return redirect("contact_detail", contact_id=saved_contact.pk)
+
+    return render(
+        request,
+        "crm/contacts/contact_form.html",
+        _contact_form_context(contact, bundle, is_edit_mode=False),
+    )
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def contact_edit(request, contact_id):
+    contact = get_object_or_404(_contact_detail_queryset(), pk=contact_id)
+    bundle = _contact_form_bundle(request, contact)
+    if request.method == "POST":
+        saved_contact = save_contact_bundle(
+            bundle["form"],
+            bundle["phone_formset"],
+            bundle["email_formset"],
+            bundle["social_link_formset"],
+        )
+        if saved_contact is not None:
+            messages.success(request, "Contact updated.")
+            return redirect("contact_detail", contact_id=saved_contact.pk)
+
+    return render(
+        request,
+        "crm/contacts/contact_form.html",
+        _contact_form_context(contact, bundle, is_edit_mode=True),
     )

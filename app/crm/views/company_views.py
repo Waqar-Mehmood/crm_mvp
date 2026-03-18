@@ -1,26 +1,36 @@
-"""Company list and filtering views."""
+"""Company list, detail, and form views."""
 
 from __future__ import annotations
 
+from django.contrib import messages
 from django.db.models import (
     BooleanField,
     Case,
     Exists,
     IntegerField,
     OuterRef,
+    Prefetch,
     Q,
     Value,
     When,
 )
 from django.db.models.functions import Cast
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
-from crm.auth import ROLE_STAFF, crm_role_required
+from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
+from crm.forms.companies import (
+    CompanyEmailFormSet,
+    CompanyForm,
+    CompanyPhoneFormSet,
+    CompanySocialLinkFormSet,
+)
+from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink, Contact
+from crm.services.companies import save_company_bundle
 from crm.services.export_service import (
     COMPANY_EXPORT_COLUMNS,
     serialize_company_export_row,
 )
-from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink
 from ._shared import (
     BOOLEAN_FILTER_LABELS,
     _add_active_filter,
@@ -36,6 +46,60 @@ from ._shared import (
     _parse_date_value,
     _parse_int,
 )
+
+
+def _company_detail_queryset():
+    return Company.objects.prefetch_related(
+        Prefetch("contacts", queryset=Contact.objects.order_by("full_name")),
+        "phones",
+        "emails",
+        "social_links",
+    )
+
+
+def _company_form_bundle(request, company):
+    data = request.POST if request.method == "POST" else None
+    return {
+        "form": CompanyForm(data=data, instance=company),
+        "phone_formset": CompanyPhoneFormSet(
+            data=data,
+            instance=company,
+            prefix="phones",
+        ),
+        "email_formset": CompanyEmailFormSet(
+            data=data,
+            instance=company,
+            prefix="emails",
+        ),
+        "social_link_formset": CompanySocialLinkFormSet(
+            data=data,
+            instance=company,
+            prefix="social_links",
+        ),
+    }
+
+
+def _company_form_context(company, bundle, is_edit_mode):
+    return {
+        "company": company,
+        "form": bundle["form"],
+        "phone_formset": bundle["phone_formset"],
+        "email_formset": bundle["email_formset"],
+        "social_link_formset": bundle["social_link_formset"],
+        "is_edit_mode": is_edit_mode,
+        "form_title": "Edit company" if is_edit_mode else "New company",
+        "form_description": (
+            "Update the company profile, related channels, and linked contacts from one page."
+            if is_edit_mode
+            else "Create a company record and capture the contacts and channels already known."
+        ),
+        "submit_label": "Save changes" if is_edit_mode else "Create company",
+        "cancel_url": (
+            reverse("company_detail", args=[company.pk])
+            if is_edit_mode
+            else reverse("company_list")
+        ),
+    }
 
 
 def _company_list_state(request):
@@ -210,4 +274,64 @@ def company_list(request):
             "export_csv_query": _export_query(request, "csv"),
             "export_xlsx_query": _export_query(request, "xlsx"),
         },
+    )
+
+
+@crm_role_required(ROLE_STAFF)
+def company_detail(request, company_id):
+    company = get_object_or_404(_company_detail_queryset(), pk=company_id)
+    return render(
+        request,
+        "crm/companies/company_detail.html",
+        {
+            "company": company,
+            "contact_count": company.contacts.count(),
+            "phone_count": company.phones.count(),
+            "email_count": company.emails.count(),
+            "profile_count": company.social_links.count(),
+        },
+    )
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def company_create(request):
+    company = Company()
+    bundle = _company_form_bundle(request, company)
+    if request.method == "POST":
+        saved_company = save_company_bundle(
+            bundle["form"],
+            bundle["phone_formset"],
+            bundle["email_formset"],
+            bundle["social_link_formset"],
+        )
+        if saved_company is not None:
+            messages.success(request, "Company created.")
+            return redirect("company_detail", company_id=saved_company.pk)
+
+    return render(
+        request,
+        "crm/companies/company_form.html",
+        _company_form_context(company, bundle, is_edit_mode=False),
+    )
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def company_edit(request, company_id):
+    company = get_object_or_404(_company_detail_queryset(), pk=company_id)
+    bundle = _company_form_bundle(request, company)
+    if request.method == "POST":
+        saved_company = save_company_bundle(
+            bundle["form"],
+            bundle["phone_formset"],
+            bundle["email_formset"],
+            bundle["social_link_formset"],
+        )
+        if saved_company is not None:
+            messages.success(request, "Company updated.")
+            return redirect("company_detail", company_id=saved_company.pk)
+
+    return render(
+        request,
+        "crm/companies/company_form.html",
+        _company_form_context(company, bundle, is_edit_mode=True),
     )

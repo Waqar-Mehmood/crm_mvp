@@ -28,8 +28,8 @@
                     {% if crm_can_browse %}
                         <nav class="nav-strip" aria-label="Primary">
                             <a class="nav-pill{% if request.resolver_match.url_name == 'home' %} is-active{% endif %}" href="{% url 'home' %}">Dashboard</a>
-                            <a class="nav-pill{% if request.resolver_match.url_name == 'company_list' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
-                            <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
+                            <a class="nav-pill{% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_detail' or request.resolver_match.url_name == 'company_create' or request.resolver_match.url_name == 'company_edit' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
+                            <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' or request.resolver_match.url_name == 'contact_detail' or request.resolver_match.url_name == 'contact_create' or request.resolver_match.url_name == 'contact_edit' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
                             <a class="nav-pill{% if request.resolver_match.url_name == 'import_file_list' or request.resolver_match.url_name == 'import_file_detail' %} is-active{% endif %}" href="{% url 'import_file_list' %}">Imports</a>
                             {% if crm_can_import %}
                                 <a class="nav-pill{% if request.resolver_match.url_name == 'import_upload' or request.resolver_match.url_name == 'import_map_headers' %} is-active{% endif %}" href="{% url 'import_upload' %}">Upload</a>
@@ -58,6 +58,14 @@
                     {% block hero_side %}{% endblock %}
                 </div>
             </section>
+
+            {% if messages %}
+                <section class="messages-stack" aria-label="Notifications">
+                    {% for message in messages %}
+                        <p class="notice{% if message.tags == 'error' %} is-error{% elif message.tags == 'success' %} is-success{% endif %}">{{ message }}</p>
+                    {% endfor %}
+                </section>
+            {% endif %}
 
             {% block content %}{% endblock %}
         </main>

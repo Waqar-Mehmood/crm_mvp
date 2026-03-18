@@ -1,4 +1,19 @@
-from . import AdvancedFilterTestMixin, TestCase, reverse, timedelta, timezone
+from . import (
+    AdvancedFilterTestMixin,
+    CRMRoleTestMixin,
+    Client,
+    Company,
+    Contact,
+    ContactEmail,
+    ContactPhone,
+    ContactSocialLink,
+    ROLE_STAFF,
+    ROLE_TEAM_LEAD,
+    TestCase,
+    reverse,
+    timedelta,
+    timezone,
+)
 
 
 class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
@@ -106,3 +121,227 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
         self.assertEqual(headers[1], "Full Name")
         self.assertEqual(len(xlsx_rows), 1)
         self.assertEqual(xlsx_rows[0][1], "Bob Stone")
+
+
+class ContactCrudTests(CRMRoleTestMixin, TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.staff_user = self.create_user("staffer", role=ROLE_STAFF)
+        self.team_lead_user = self.create_user("teamlead", role=ROLE_TEAM_LEAD)
+
+        self.primary_company = Company.objects.create(
+            name="Acme Labs",
+            industry="Software",
+            city="San Francisco",
+            state="CA",
+            country="US",
+        )
+        self.secondary_company = Company.objects.create(
+            name="Blue Orbit",
+            industry="Aerospace",
+            city="Houston",
+            state="TX",
+            country="US",
+        )
+        self.contact = Contact.objects.create(
+            full_name="Jane Example",
+            title="Operations Lead",
+            email="jane@example.com",
+            phone="555-0100",
+            notes="Main buying contact",
+        )
+        self.contact.companies.add(self.primary_company)
+        self.contact_phone = ContactPhone.objects.create(
+            contact=self.contact,
+            label="Work",
+            phone="111-111",
+        )
+        self.contact_email = ContactEmail.objects.create(
+            contact=self.contact,
+            label="Work",
+            email="work@example.com",
+        )
+        self.contact_profile = ContactSocialLink.objects.create(
+            contact=self.contact,
+            platform="LinkedIn",
+            url="https://example.com/jane",
+        )
+
+    def _management_form(self, prefix, total_forms, initial_forms):
+        return {
+            f"{prefix}-TOTAL_FORMS": str(total_forms),
+            f"{prefix}-INITIAL_FORMS": str(initial_forms),
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1000",
+        }
+
+    def _contact_create_payload(self, **overrides):
+        payload = {
+            "full_name": "Chris Vector",
+            "email": "chris@example.com",
+            "phone": "555-2222",
+            "title": "Revenue Operations",
+            "notes": "New stakeholder",
+            "companies": [str(self.primary_company.pk), str(self.secondary_company.pk)],
+            **self._management_form("phones", 1, 0),
+            "phones-0-label": "Mobile",
+            "phones-0-phone": "555-3000",
+            **self._management_form("emails", 1, 0),
+            "emails-0-label": "Work",
+            "emails-0-email": "chris.vector@example.com",
+            **self._management_form("social_links", 1, 0),
+            "social_links-0-platform": "LinkedIn",
+            "social_links-0-url": "https://example.com/chris",
+        }
+        payload.update(overrides)
+        return payload
+
+    def _contact_edit_payload(self, **overrides):
+        payload = {
+            "full_name": "Jane Example-Smith",
+            "email": "jane.smith@example.com",
+            "phone": "555-0200",
+            "title": "VP Operations",
+            "notes": "Expanded executive contact",
+            "companies": [str(self.secondary_company.pk)],
+            **self._management_form("phones", 2, 1),
+            "phones-0-id": str(self.contact_phone.pk),
+            "phones-0-label": "Work",
+            "phones-0-phone": "222-222",
+            "phones-0-DELETE": "",
+            "phones-1-id": "",
+            "phones-1-label": "Mobile",
+            "phones-1-phone": "333-333",
+            "phones-1-DELETE": "",
+            **self._management_form("emails", 2, 1),
+            "emails-0-id": str(self.contact_email.pk),
+            "emails-0-label": "Work",
+            "emails-0-email": "ops@example.com",
+            "emails-0-DELETE": "",
+            "emails-1-id": "",
+            "emails-1-label": "Personal",
+            "emails-1-email": "jane.personal@example.com",
+            "emails-1-DELETE": "",
+            **self._management_form("social_links", 2, 1),
+            "social_links-0-id": str(self.contact_profile.pk),
+            "social_links-0-platform": "LinkedIn",
+            "social_links-0-url": "https://example.com/jane-smith",
+            "social_links-0-DELETE": "",
+            "social_links-1-id": "",
+            "social_links-1-platform": "Website",
+            "social_links-1-url": "https://jane.example.com",
+            "social_links-1-DELETE": "",
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_contact_detail_renders_profile_channels_and_linked_companies_for_staff(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.get(reverse("contact_detail", args=[self.contact.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "crm/contacts/contact_detail.html")
+        self.assertContains(response, "Contact snapshot")
+        self.assertContains(response, "Acme Labs")
+        self.assertContains(response, "111-111")
+        self.assertContains(response, "work@example.com")
+        self.assertContains(response, "https://example.com/jane")
+
+    def test_contact_create_succeeds_for_team_lead_and_redirects_with_message(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_create"),
+            self._contact_create_payload(),
+            follow=True,
+        )
+
+        created_contact = Contact.objects.get(full_name="Chris Vector")
+        self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
+        self.assertContains(response, "Contact created.")
+        self.assertEqual(created_contact.companies.count(), 2)
+        self.assertEqual(created_contact.phones.get().phone, "555-3000")
+        self.assertEqual(created_contact.emails.get().email, "chris.vector@example.com")
+        self.assertEqual(created_contact.social_links.get().url, "https://example.com/chris")
+
+    def test_contact_edit_updates_core_fields_related_data_and_links(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_edit", args=[self.contact.pk]),
+            self._contact_edit_payload(),
+            follow=True,
+        )
+
+        self.contact.refresh_from_db()
+        self.assertRedirects(response, reverse("contact_detail", args=[self.contact.pk]))
+        self.assertContains(response, "Contact updated.")
+        self.assertEqual(self.contact.full_name, "Jane Example-Smith")
+        self.assertEqual(self.contact.email, "jane.smith@example.com")
+        self.assertEqual(
+            list(self.contact.companies.values_list("name", flat=True)),
+            ["Blue Orbit"],
+        )
+        self.assertEqual(set(self.contact.phones.values_list("phone", flat=True)), {"222-222", "333-333"})
+        self.assertEqual(
+            set(self.contact.emails.values_list("email", flat=True)),
+            {"ops@example.com", "jane.personal@example.com"},
+        )
+        self.assertEqual(
+            set(self.contact.social_links.values_list("url", flat=True)),
+            {"https://example.com/jane-smith", "https://jane.example.com"},
+        )
+
+        linked_company_response = self.client.get(reverse("company_detail", args=[self.secondary_company.pk]))
+        self.assertContains(linked_company_response, "Jane Example-Smith")
+
+    def test_contact_edit_can_delete_existing_inline_child_rows(self):
+        self.client.force_login(self.team_lead_user)
+
+        payload = self._contact_edit_payload(
+            **{
+                "phones-0-DELETE": "on",
+                "phones-1-label": "",
+                "phones-1-phone": "",
+                "emails-1-label": "",
+                "emails-1-email": "",
+                "social_links-1-platform": "",
+                "social_links-1-url": "",
+            }
+        )
+        response = self.client.post(
+            reverse("contact_edit", args=[self.contact.pk]),
+            payload,
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("contact_detail", args=[self.contact.pk]))
+        self.assertFalse(ContactPhone.objects.filter(pk=self.contact_phone.pk).exists())
+
+    def test_contact_invalid_create_preserves_submitted_values_and_writes_nothing(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_create"),
+            self._contact_create_payload(
+                full_name="",
+                title="Finance Lead",
+                **{"phones-0-phone": "555-4444"},
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Contact.objects.filter(full_name="Chris Vector").count(), 0)
+        self.assertContains(response, "This field is required.")
+        self.assertContains(response, 'value="Finance Lead"', html=False)
+        self.assertContains(response, 'value="555-4444"', html=False)
+
+    def test_staff_cannot_access_contact_create_or_edit(self):
+        self.client.force_login(self.staff_user)
+
+        create_response = self.client.get(reverse("contact_create"))
+        edit_response = self.client.get(reverse("contact_edit", args=[self.contact.pk]))
+
+        self.assertEqual(create_response.status_code, 403)
+        self.assertEqual(edit_response.status_code, 403)

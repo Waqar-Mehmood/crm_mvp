@@ -1,0 +1,206 @@
+{% extends "crm/base.html" %}
+
+{% block title %}{{ form_title }} | Contacts | {{ site_brand }}{% endblock %}
+{% block eyebrow %}Contact workspace{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+{% block page_description %}{{ form_description }}{% endblock %}
+{% block hero_side %}
+    <div class="metric-grid">
+        <article class="metric-card">
+            <p class="metric-label">Mode</p>
+            <strong class="metric-value">{% if is_edit_mode %}Edit{% else %}Create{% endif %}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Related forms</p>
+            <strong class="metric-value">3</strong>
+        </article>
+    </div>
+    <div class="action-stack">
+        <a class="button-link" href="{{ cancel_url }}">{% if is_edit_mode %}Back to contact{% else %}Back to contacts{% endif %}</a>
+        {% if is_edit_mode %}
+            <a class="button-link is-secondary" href="{% url 'contact_detail' contact.id %}">View detail</a>
+        {% endif %}
+        <a class="button-link is-secondary" href="{% url 'company_list' %}">Open companies</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <form method="post" class="form-layout">
+        {% csrf_token %}
+
+        <section class="form-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Core record</p>
+                    <h2>Contact profile</h2>
+                </div>
+            </div>
+
+            {% for error in form.non_field_errors %}
+                <p class="notice is-error">{{ error }}</p>
+            {% endfor %}
+
+            <div class="filter-grid">
+                {% for field in form %}
+                    <div class="field{% if field.name == 'notes' or field.name == 'companies' %} field-span-2{% endif %}">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}
+                            <p class="field-help">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="notice is-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="filter-actions">
+                <input type="submit" value="{{ submit_label }}">
+                <a class="button-link is-secondary" href="{{ cancel_url }}">Cancel</a>
+            </div>
+        </section>
+
+        <section class="cards-grid">
+            <article class="panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="section-kicker">Related channels</p>
+                        <h2>Phone lines</h2>
+                    </div>
+                </div>
+                {{ phone_formset.management_form }}
+                {% for error in phone_formset.non_form_errors %}
+                    <p class="notice is-error">{{ error }}</p>
+                {% endfor %}
+                <div class="detail-strip">
+                    {% for row_form in phone_formset %}
+                        <article class="detail-card inline-formset-card">
+                            {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="record-header">
+                                <div>
+                                    <p class="section-kicker">Phone row</p>
+                                    <h3>{% if row_form.instance.pk %}Existing line{% else %}New line{% endif %}</h3>
+                                </div>
+                            </div>
+                            {% for error in row_form.non_field_errors %}
+                                <p class="notice is-error">{{ error }}</p>
+                            {% endfor %}
+                            <div class="compact-form-grid">
+                                {% for field in row_form.visible_fields %}
+                                    {% if field.name != "DELETE" %}
+                                        <div class="field">
+                                            {{ field.label_tag }}
+                                            {{ field }}
+                                            {% for error in field.errors %}
+                                                <p class="notice is-error">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% if row_form.DELETE %}
+                                <label class="checkbox-field">{{ row_form.DELETE }} Remove this phone row</label>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="section-kicker">Related channels</p>
+                        <h2>Email addresses</h2>
+                    </div>
+                </div>
+                {{ email_formset.management_form }}
+                {% for error in email_formset.non_form_errors %}
+                    <p class="notice is-error">{{ error }}</p>
+                {% endfor %}
+                <div class="detail-strip">
+                    {% for row_form in email_formset %}
+                        <article class="detail-card inline-formset-card">
+                            {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="record-header">
+                                <div>
+                                    <p class="section-kicker">Email row</p>
+                                    <h3>{% if row_form.instance.pk %}Existing inbox{% else %}New inbox{% endif %}</h3>
+                                </div>
+                            </div>
+                            {% for error in row_form.non_field_errors %}
+                                <p class="notice is-error">{{ error }}</p>
+                            {% endfor %}
+                            <div class="compact-form-grid">
+                                {% for field in row_form.visible_fields %}
+                                    {% if field.name != "DELETE" %}
+                                        <div class="field">
+                                            {{ field.label_tag }}
+                                            {{ field }}
+                                            {% for error in field.errors %}
+                                                <p class="notice is-error">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% if row_form.DELETE %}
+                                <label class="checkbox-field">{{ row_form.DELETE }} Remove this email row</label>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="section-kicker">Related channels</p>
+                    <h2>Public profiles</h2>
+                </div>
+            </div>
+            {{ social_link_formset.management_form }}
+            {% for error in social_link_formset.non_form_errors %}
+                <p class="notice is-error">{{ error }}</p>
+            {% endfor %}
+            <div class="detail-strip">
+                {% for row_form in social_link_formset %}
+                    <article class="detail-card inline-formset-card">
+                        {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        <div class="record-header">
+                            <div>
+                                <p class="section-kicker">Profile row</p>
+                                <h3>{% if row_form.instance.pk %}Existing profile{% else %}New profile{% endif %}</h3>
+                            </div>
+                        </div>
+                        {% for error in row_form.non_field_errors %}
+                            <p class="notice is-error">{{ error }}</p>
+                        {% endfor %}
+                        <div class="compact-form-grid">
+                            {% for field in row_form.visible_fields %}
+                                {% if field.name != "DELETE" %}
+                                    <div class="field">
+                                        {{ field.label_tag }}
+                                        {{ field }}
+                                        {% for error in field.errors %}
+                                            <p class="notice is-error">{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if row_form.DELETE %}
+                            <label class="checkbox-field">{{ row_form.DELETE }} Remove this profile row</label>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="filter-actions">
+            <input type="submit" value="{{ submit_label }}">
+            <a class="button-link is-secondary" href="{{ cancel_url }}">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

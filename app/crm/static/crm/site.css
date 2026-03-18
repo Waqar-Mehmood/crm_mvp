@@ -498,6 +498,7 @@ input[type="submit"] {
 }
 
 .info-grid div {
+    min-width: 0;
     padding: 12px 14px;
     border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.46);
@@ -517,6 +518,17 @@ input[type="submit"] {
     margin: 0;
     font-weight: 700;
     line-height: 1.45;
+}
+
+.info-card.is-span-2 {
+    grid-column: span 2;
+}
+
+.info-value.is-nowrap {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .detail-strip {
@@ -819,10 +831,13 @@ input[type="submit"] {
 }
 
 input[type="text"],
+input[type="email"],
 input[type="number"],
 input[type="date"],
 input[type="password"],
 input[type="file"],
+input[type="url"],
+textarea,
 select {
     width: 100%;
     min-height: 50px;
@@ -838,6 +853,12 @@ input[type="file"] {
     padding: 12px 16px;
 }
 
+textarea {
+    min-height: 140px;
+    padding: 14px 16px;
+    resize: vertical;
+}
+
 select {
     appearance: none;
     background-image:
@@ -850,7 +871,14 @@ select {
     background-repeat: no-repeat;
 }
 
+select[multiple] {
+    min-height: 176px;
+    padding: 12px 16px;
+    background-image: none;
+}
+
 input:focus,
+textarea:focus,
 select:focus {
     outline: 2px solid rgba(29, 139, 138, 0.36);
     outline-offset: 2px;
@@ -869,6 +897,17 @@ select:focus {
     color: #721d14;
     border-color: rgba(211, 110, 95, 0.3);
     background: rgba(211, 110, 95, 0.14);
+}
+
+.notice.is-success {
+    color: #15544a;
+    border-color: rgba(29, 139, 138, 0.28);
+    background: rgba(29, 139, 138, 0.12);
+}
+
+.messages-stack {
+    display: grid;
+    gap: 12px;
 }
 
 .filter-card {
@@ -890,6 +929,38 @@ select:focus {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+}
+
+.field-help {
+    margin: 0;
+    color: var(--panel-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.compact-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.inline-formset-card {
+    gap: 14px;
+}
+
+.checkbox-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--panel-text);
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.checkbox-field input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
 }
 
 .filter-summary {
@@ -1115,6 +1186,10 @@ select:focus {
     }
 
     .field-span-2 {
+        grid-column: auto;
+    }
+
+    .info-card.is-span-2 {
         grid-column: auto;
     }
 
