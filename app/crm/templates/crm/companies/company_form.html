@@ -40,18 +40,109 @@
                 <p class="notice is-error">{{ error }}</p>
             {% endfor %}
 
-            <div class="filter-grid">
+            <div class="core-form-grid">
                 {% for field in form %}
-                    <div class="field{% if field.name == 'notes' or field.name == 'contacts' %} field-span-2{% endif %}">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {% if field.help_text %}
-                            <p class="field-help">{{ field.help_text }}</p>
-                        {% endif %}
-                        {% for error in field.errors %}
-                            <p class="notice is-error">{{ error }}</p>
-                        {% endfor %}
-                    </div>
+                    {% if field.name == "industry" %}
+                        <div class="form-field-row">
+                            <div class="form-field-meta">
+                                {{ field.label_tag }}
+                                {% if field.help_text %}
+                                    <p class="field-help">{{ field.help_text }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="form-field-input">
+                                <div
+                                    class="relationship-picker"
+                                    data-single-autocomplete
+                                    data-search-url="{% url 'company_industry_search' %}"
+                                    data-empty-text="Start typing to search industries."
+                                    data-no-results-text="No existing industries found. Your typed value will be saved."
+                                >
+                                    {{ field }}
+                                    <div class="relationship-picker-results" data-autocomplete-results>
+                                        <p class="field-help" data-autocomplete-results-empty>Start typing to search industries.</p>
+                                    </div>
+                                </div>
+                                {% for error in field.errors %}
+                                    <p class="notice is-error">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% elif field.name == "contacts" %}
+                        <div class="form-field-row">
+                            <div class="form-field-meta">
+                                {{ field.label_tag }}
+                                {% if field.help_text %}
+                                    <p class="field-help">{{ field.help_text }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="form-field-input">
+                                <div
+                                    class="relationship-picker"
+                                    data-live-relationship-picker
+                                    data-search-url="{% url 'company_contact_search' %}"
+                                    data-field-name="contacts"
+                                    data-empty-text="Start typing to search contacts."
+                                    data-no-results-text="No contacts found."
+                                    data-selected-empty-text="No contacts selected."
+                                >
+                                    <input
+                                        class="relationship-picker-search"
+                                        type="search"
+                                        placeholder="Search contacts"
+                                        aria-label="Search contacts"
+                                        data-relationship-search
+                                    >
+                                    <div class="relationship-hidden-inputs" data-relationship-hidden-inputs>
+                                        {% for contact in selected_contacts %}
+                                            <input type="hidden" name="contacts" value="{{ contact.id }}">
+                                        {% endfor %}
+                                    </div>
+                                    <div class="relationship-selected" data-relationship-selected>
+                                        {% if selected_contacts %}
+                                            <div class="relationship-selected-list">
+                                                {% for contact in selected_contacts %}
+                                                    <button
+                                                        class="relationship-chip"
+                                                        type="button"
+                                                        data-selected-id="{{ contact.id }}"
+                                                        data-selected-label="{{ contact.full_name }}"
+                                                        data-selected-meta="{% if contact.title or contact.email or contact.phone %}{% firstof contact.title '' %}{% if contact.email %} | {{ contact.email }}{% endif %}{% if contact.phone %} | {{ contact.phone }}{% endif %}{% endif %}"
+                                                    >
+                                                        <span>{{ contact.full_name }}</span>
+                                                        <strong>Remove</strong>
+                                                    </button>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <p class="field-help" data-relationship-selected-empty>No contacts selected.</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="relationship-picker-results" data-relationship-results>
+                                        <p class="field-help" data-relationship-results-empty>Start typing to search contacts.</p>
+                                    </div>
+                                </div>
+                                {% for error in field.errors %}
+                                    <p class="notice is-error">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="form-field-row">
+                            <div class="form-field-meta">
+                                {{ field.label_tag }}
+                                {% if field.help_text %}
+                                    <p class="field-help">{{ field.help_text }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="form-field-input">
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <p class="notice is-error">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
 
@@ -62,145 +153,373 @@
         </section>
 
         <section class="cards-grid">
-            <article class="panel">
-                <div class="panel-head">
-                    <div>
-                        <p class="section-kicker">Related channels</p>
-                        <h2>Phone lines</h2>
-                    </div>
-                </div>
-                {{ phone_formset.management_form }}
-                {% for error in phone_formset.non_form_errors %}
-                    <p class="notice is-error">{{ error }}</p>
-                {% endfor %}
-                <div class="detail-strip">
-                    {% for row_form in phone_formset %}
-                        <article class="detail-card inline-formset-card">
-                            {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
-                            <div class="record-header">
-                                <div>
-                                    <p class="section-kicker">Phone row</p>
-                                    <h3>{% if row_form.instance.pk %}Existing line{% else %}New line{% endif %}</h3>
-                                </div>
-                            </div>
-                            {% for error in row_form.non_field_errors %}
-                                <p class="notice is-error">{{ error }}</p>
-                            {% endfor %}
-                            <div class="compact-form-grid">
-                                {% for field in row_form.visible_fields %}
-                                    {% if field.name != "DELETE" %}
-                                        <div class="field">
-                                            {{ field.label_tag }}
-                                            {{ field }}
-                                            {% for error in field.errors %}
-                                                <p class="notice is-error">{{ error }}</p>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                            {% if row_form.DELETE %}
-                                <label class="checkbox-field">{{ row_form.DELETE }} Remove this phone row</label>
-                            {% endif %}
-                        </article>
-                    {% endfor %}
-                </div>
-            </article>
-
-            <article class="panel">
-                <div class="panel-head">
-                    <div>
-                        <p class="section-kicker">Related channels</p>
-                        <h2>Email inboxes</h2>
-                    </div>
-                </div>
-                {{ email_formset.management_form }}
-                {% for error in email_formset.non_form_errors %}
-                    <p class="notice is-error">{{ error }}</p>
-                {% endfor %}
-                <div class="detail-strip">
-                    {% for row_form in email_formset %}
-                        <article class="detail-card inline-formset-card">
-                            {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
-                            <div class="record-header">
-                                <div>
-                                    <p class="section-kicker">Email row</p>
-                                    <h3>{% if row_form.instance.pk %}Existing inbox{% else %}New inbox{% endif %}</h3>
-                                </div>
-                            </div>
-                            {% for error in row_form.non_field_errors %}
-                                <p class="notice is-error">{{ error }}</p>
-                            {% endfor %}
-                            <div class="compact-form-grid">
-                                {% for field in row_form.visible_fields %}
-                                    {% if field.name != "DELETE" %}
-                                        <div class="field">
-                                            {{ field.label_tag }}
-                                            {{ field }}
-                                            {% for error in field.errors %}
-                                                <p class="notice is-error">{{ error }}</p>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                            {% if row_form.DELETE %}
-                                <label class="checkbox-field">{{ row_form.DELETE }} Remove this email row</label>
-                            {% endif %}
-                        </article>
-                    {% endfor %}
-                </div>
-            </article>
+            {% include "crm/includes/channel_formset_section.html" with formset=phone_formset title="Phone lines" row_kicker="Phone row" existing_label="Existing line" new_label="New line" remove_label="phone row" empty_text="No phone lines added yet." add_label="Add phone" only %}
+            {% include "crm/includes/channel_formset_section.html" with formset=email_formset title="Email inboxes" row_kicker="Email row" existing_label="Existing inbox" new_label="New inbox" remove_label="email row" empty_text="No email inboxes added yet." add_label="Add email" only %}
         </section>
 
-        <section class="panel">
-            <div class="panel-head">
-                <div>
-                    <p class="section-kicker">Related channels</p>
-                    <h2>Public profiles</h2>
-                </div>
-            </div>
-            {{ social_link_formset.management_form }}
-            {% for error in social_link_formset.non_form_errors %}
-                <p class="notice is-error">{{ error }}</p>
-            {% endfor %}
-            <div class="detail-strip">
-                {% for row_form in social_link_formset %}
-                    <article class="detail-card inline-formset-card">
-                        {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
-                        <div class="record-header">
-                            <div>
-                                <p class="section-kicker">Profile row</p>
-                                <h3>{% if row_form.instance.pk %}Existing profile{% else %}New profile{% endif %}</h3>
-                            </div>
-                        </div>
-                        {% for error in row_form.non_field_errors %}
-                            <p class="notice is-error">{{ error }}</p>
-                        {% endfor %}
-                        <div class="compact-form-grid">
-                            {% for field in row_form.visible_fields %}
-                                {% if field.name != "DELETE" %}
-                                    <div class="field">
-                                        {{ field.label_tag }}
-                                        {{ field }}
-                                        {% for error in field.errors %}
-                                            <p class="notice is-error">{{ error }}</p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        {% if row_form.DELETE %}
-                            <label class="checkbox-field">{{ row_form.DELETE }} Remove this profile row</label>
-                        {% endif %}
-                    </article>
-                {% endfor %}
-            </div>
-        </section>
+        {% include "crm/includes/channel_formset_section.html" with formset=social_link_formset title="Public profiles" row_kicker="Profile row" existing_label="Existing profile" new_label="New profile" remove_label="profile row" empty_text="No public profiles added yet." add_label="Add profile" only %}
 
         <div class="filter-actions">
             <input type="submit" value="{{ submit_label }}">
             <a class="button-link is-secondary" href="{{ cancel_url }}">Cancel</a>
         </div>
     </form>
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll("[data-live-relationship-picker]").forEach((picker) => {
+                const searchInput = picker.querySelector("[data-relationship-search]");
+                const hiddenInputs = picker.querySelector("[data-relationship-hidden-inputs]");
+                const selectedContainer = picker.querySelector("[data-relationship-selected]");
+                const resultsContainer = picker.querySelector("[data-relationship-results]");
+                const searchUrl = picker.dataset.searchUrl;
+                const fieldName = picker.dataset.fieldName;
+                const emptyText = picker.dataset.emptyText || "Start typing to search.";
+                const noResultsText = picker.dataset.noResultsText || "No results found.";
+                const selectedEmptyText = picker.dataset.selectedEmptyText || "No items selected.";
+                const selectedItems = new Map();
+                let debounceTimer = null;
+                let controller = null;
+                let activeResults = [];
+
+                if (!searchInput || !hiddenInputs || !selectedContainer || !resultsContainer || !searchUrl || !fieldName) {
+                    return;
+                }
+
+                selectedContainer.querySelectorAll("[data-selected-id]").forEach((item) => {
+                    selectedItems.set(String(item.dataset.selectedId), {
+                        id: String(item.dataset.selectedId),
+                        label: item.dataset.selectedLabel || item.textContent.trim(),
+                        meta: item.dataset.selectedMeta || "",
+                    });
+                });
+
+                const syncHiddenInputs = () => {
+                    hiddenInputs.innerHTML = "";
+                    selectedItems.forEach((item) => {
+                        const input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = fieldName;
+                        input.value = item.id;
+                        hiddenInputs.appendChild(input);
+                    });
+                };
+
+                const renderSelected = () => {
+                    selectedContainer.innerHTML = "";
+                    if (!selectedItems.size) {
+                        const empty = document.createElement("p");
+                        empty.className = "field-help";
+                        empty.dataset.relationshipSelectedEmpty = "true";
+                        empty.textContent = selectedEmptyText;
+                        selectedContainer.appendChild(empty);
+                        return;
+                    }
+
+                    const list = document.createElement("div");
+                    list.className = "relationship-selected-list";
+                    selectedItems.forEach((item) => {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = "relationship-chip";
+                        button.dataset.selectedId = item.id;
+                        button.dataset.selectedLabel = item.label;
+                        button.dataset.selectedMeta = item.meta || "";
+
+                        const label = document.createElement("span");
+                        label.textContent = item.label;
+                        button.appendChild(label);
+
+                        const action = document.createElement("strong");
+                        action.textContent = "Remove";
+                        button.appendChild(action);
+
+                        button.addEventListener("click", () => {
+                            selectedItems.delete(item.id);
+                            syncHiddenInputs();
+                            renderSelected();
+                            renderResults(activeResults);
+                        });
+
+                        list.appendChild(button);
+                    });
+                    selectedContainer.appendChild(list);
+                };
+
+                const renderResults = (results) => {
+                    activeResults = results;
+                    resultsContainer.innerHTML = "";
+
+                    if (searchInput.value.trim().length < 2) {
+                        const empty = document.createElement("p");
+                        empty.className = "field-help";
+                        empty.dataset.relationshipResultsEmpty = "true";
+                        empty.textContent = emptyText;
+                        resultsContainer.appendChild(empty);
+                        return;
+                    }
+
+                    if (!results.length) {
+                        const empty = document.createElement("p");
+                        empty.className = "field-help";
+                        empty.dataset.relationshipResultsEmpty = "true";
+                        empty.textContent = noResultsText;
+                        resultsContainer.appendChild(empty);
+                        return;
+                    }
+
+                    const list = document.createElement("div");
+                    list.className = "relationship-results-list";
+
+                    results.forEach((item) => {
+                        const row = document.createElement("button");
+                        row.type = "button";
+                        row.className = "relationship-result";
+                        if (selectedItems.has(String(item.id))) {
+                            row.classList.add("is-selected");
+                        }
+
+                        const label = document.createElement("span");
+                        label.className = "relationship-result-label";
+                        label.textContent = item.label;
+                        row.appendChild(label);
+
+                        if (item.meta) {
+                            const meta = document.createElement("span");
+                            meta.className = "relationship-result-meta";
+                            meta.textContent = item.meta;
+                            row.appendChild(meta);
+                        }
+
+                        row.addEventListener("click", () => {
+                            const id = String(item.id);
+                            if (selectedItems.has(id)) {
+                                selectedItems.delete(id);
+                            } else {
+                                selectedItems.set(id, {
+                                    id,
+                                    label: item.label,
+                                    meta: item.meta || "",
+                                });
+                            }
+                            syncHiddenInputs();
+                            renderSelected();
+                            renderResults(activeResults);
+                        });
+
+                        list.appendChild(row);
+                    });
+
+                    resultsContainer.appendChild(list);
+                };
+
+                const fetchResults = () => {
+                    const query = searchInput.value.trim();
+                    if (controller) {
+                        controller.abort();
+                    }
+                    if (query.length < 2) {
+                        renderResults([]);
+                        return;
+                    }
+
+                    controller = new AbortController();
+                    fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {
+                        headers: {"X-Requested-With": "XMLHttpRequest"},
+                        signal: controller.signal,
+                    })
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error("Request failed");
+                            }
+                            return response.json();
+                        })
+                        .then((payload) => {
+                            renderResults(Array.isArray(payload.results) ? payload.results : []);
+                        })
+                        .catch((error) => {
+                            if (error.name === "AbortError") {
+                                return;
+                            }
+                            resultsContainer.innerHTML = '<p class="notice is-error">Unable to load contacts right now.</p>';
+                        });
+                };
+
+                searchInput.addEventListener("input", () => {
+                    window.clearTimeout(debounceTimer);
+                    debounceTimer = window.setTimeout(fetchResults, 180);
+                });
+                searchInput.addEventListener("search", fetchResults);
+
+                syncHiddenInputs();
+                renderSelected();
+                renderResults([]);
+            });
+
+            document.querySelectorAll("[data-single-autocomplete]").forEach((picker) => {
+                const searchInput = picker.querySelector("input");
+                const resultsContainer = picker.querySelector("[data-autocomplete-results]");
+                const searchUrl = picker.dataset.searchUrl;
+                const emptyText = picker.dataset.emptyText || "Start typing to search.";
+                const noResultsText = picker.dataset.noResultsText || "No results found.";
+                let debounceTimer = null;
+                let controller = null;
+
+                if (!searchInput || !resultsContainer || !searchUrl) {
+                    return;
+                }
+
+                const renderResults = (results) => {
+                    resultsContainer.innerHTML = "";
+
+                    if (searchInput.value.trim().length < 2) {
+                        const empty = document.createElement("p");
+                        empty.className = "field-help";
+                        empty.dataset.autocompleteResultsEmpty = "true";
+                        empty.textContent = emptyText;
+                        resultsContainer.appendChild(empty);
+                        return;
+                    }
+
+                    if (!results.length) {
+                        const empty = document.createElement("p");
+                        empty.className = "field-help";
+                        empty.dataset.autocompleteResultsEmpty = "true";
+                        empty.textContent = noResultsText;
+                        resultsContainer.appendChild(empty);
+                        return;
+                    }
+
+                    const list = document.createElement("div");
+                    list.className = "relationship-results-list";
+
+                    results.forEach((item) => {
+                        const row = document.createElement("button");
+                        row.type = "button";
+                        row.className = "relationship-result";
+
+                        const label = document.createElement("span");
+                        label.className = "relationship-result-label";
+                        label.textContent = item.label;
+                        row.appendChild(label);
+
+                        row.addEventListener("click", () => {
+                            searchInput.value = item.value || item.label || "";
+                            resultsContainer.innerHTML = "";
+                            searchInput.focus();
+                        });
+
+                        list.appendChild(row);
+                    });
+
+                    resultsContainer.appendChild(list);
+                };
+
+                const fetchResults = () => {
+                    const query = searchInput.value.trim();
+                    if (controller) {
+                        controller.abort();
+                    }
+                    if (query.length < 2) {
+                        renderResults([]);
+                        return;
+                    }
+
+                    controller = new AbortController();
+                    fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {
+                        headers: {"X-Requested-With": "XMLHttpRequest"},
+                        signal: controller.signal,
+                    })
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error("Request failed");
+                            }
+                            return response.json();
+                        })
+                        .then((payload) => {
+                            renderResults(Array.isArray(payload.results) ? payload.results : []);
+                        })
+                        .catch((error) => {
+                            if (error.name === "AbortError") {
+                                return;
+                            }
+                            resultsContainer.innerHTML = '<p class="notice is-error">Unable to load industries right now.</p>';
+                        });
+                };
+
+                searchInput.addEventListener("input", () => {
+                    window.clearTimeout(debounceTimer);
+                    debounceTimer = window.setTimeout(fetchResults, 180);
+                });
+                searchInput.addEventListener("search", fetchResults);
+                renderResults([]);
+            });
+
+            document.querySelectorAll("[data-dynamic-formset]").forEach((formsetRoot) => {
+                const rowsContainer = formsetRoot.querySelector("[data-formset-rows]");
+                const emptyState = formsetRoot.querySelector("[data-formset-empty-state]");
+                const template = formsetRoot.querySelector("[data-formset-template]");
+                const panel = formsetRoot.closest(".panel");
+                const addButton = panel ? panel.querySelector("[data-formset-add]") : null;
+                const totalFormsInput = formsetRoot.querySelector('input[name$="-TOTAL_FORMS"]');
+
+                if (!rowsContainer || !emptyState || !template || !addButton || !totalFormsInput) {
+                    return;
+                }
+
+                const syncEmptyState = () => {
+                    emptyState.classList.toggle("is-hidden", rowsContainer.children.length > 0);
+                };
+
+                const updateRowHeading = (row, label) => {
+                    const heading = row.querySelector(".record-header h3");
+                    if (heading) {
+                        heading.textContent = label;
+                    }
+                };
+
+                const wireRow = (row) => {
+                    const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                    const heading = row.querySelector(".record-header h3");
+                    const defaultHeading = heading ? heading.textContent : "Row";
+                    if (deleteInput) {
+                        deleteInput.addEventListener("change", () => {
+                            row.classList.toggle("is-marked-for-delete", deleteInput.checked);
+                            updateRowHeading(row, deleteInput.checked ? `Remove ${defaultHeading.toLowerCase()}` : defaultHeading);
+                        });
+                        row.classList.toggle("is-marked-for-delete", deleteInput.checked);
+                        updateRowHeading(row, deleteInput.checked ? `Remove ${defaultHeading.toLowerCase()}` : defaultHeading);
+                    }
+                };
+
+                const addRow = () => {
+                    const nextIndex = Number(totalFormsInput.value);
+                    const html = template.innerHTML.replaceAll("__prefix__", String(nextIndex));
+                    const fragment = document.createRange().createContextualFragment(html);
+                    const row = fragment.querySelector("[data-formset-row]");
+                    if (!row) {
+                        return;
+                    }
+
+                    row.querySelectorAll("input, select, textarea").forEach((field) => {
+                        if (field.type === "checkbox" || field.type === "radio") {
+                            field.checked = false;
+                        } else if (field.type !== "hidden") {
+                            field.value = "";
+                        }
+                    });
+                    wireRow(row);
+                    rowsContainer.appendChild(row);
+                    totalFormsInput.value = String(nextIndex + 1);
+                    syncEmptyState();
+                };
+
+                rowsContainer.querySelectorAll("[data-formset-row]").forEach(wireRow);
+                addButton.addEventListener("click", addRow);
+                syncEmptyState();
+            });
+        });
+    </script>
 {% endblock %}

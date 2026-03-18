@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.db.models import (
     BooleanField,
     Case,
@@ -47,6 +48,8 @@ from ._shared import (
     _parse_int,
 )
 
+RELATION_SEARCH_LIMIT = 10
+
 
 def _company_detail_queryset():
     return Company.objects.prefetch_related(
@@ -83,6 +86,7 @@ def _company_form_context(company, bundle, is_edit_mode):
     return {
         "company": company,
         "form": bundle["form"],
+        "selected_contacts": list(bundle["form"].fields["contacts"].queryset),
         "phone_formset": bundle["phone_formset"],
         "email_formset": bundle["email_formset"],
         "social_link_formset": bundle["social_link_formset"],
@@ -100,6 +104,65 @@ def _company_form_context(company, bundle, is_edit_mode):
             else reverse("company_list")
         ),
     }
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def company_contact_search(request):
+    query = _clean_text(request.GET.get("q"))
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    contacts = (
+        Contact.objects.filter(
+            Q(full_name__icontains=query)
+            | Q(email__icontains=query)
+            | Q(title__icontains=query)
+            | Q(phone__icontains=query)
+        )
+        .order_by("full_name")[:RELATION_SEARCH_LIMIT]
+    )
+    return JsonResponse(
+        {
+            "results": [
+                {
+                    "id": contact.pk,
+                    "label": contact.full_name,
+                    "meta": " | ".join(
+                        value
+                        for value in (contact.title, contact.email, contact.phone)
+                        if value
+                    ),
+                }
+                for contact in contacts
+            ]
+        }
+    )
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def company_industry_search(request):
+    query = _clean_text(request.GET.get("q"))
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    industries = list(
+        Company.objects.exclude(industry="")
+        .filter(industry__icontains=query)
+        .order_by("industry")
+        .values_list("industry", flat=True)
+        .distinct()[:RELATION_SEARCH_LIMIT]
+    )
+    return JsonResponse(
+        {
+            "results": [
+                {
+                    "value": industry,
+                    "label": industry,
+                }
+                for industry in industries
+            ]
+        }
+    )
 
 
 def _company_list_state(request):

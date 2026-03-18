@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -33,6 +34,8 @@ from ._shared import (
     _paginate,
     _parse_date_value,
 )
+
+RELATION_SEARCH_LIMIT = 10
 
 
 def _contact_detail_queryset():
@@ -70,6 +73,7 @@ def _contact_form_context(contact, bundle, is_edit_mode):
     return {
         "contact": contact,
         "form": bundle["form"],
+        "selected_companies": list(bundle["form"].fields["companies"].queryset),
         "phone_formset": bundle["phone_formset"],
         "email_formset": bundle["email_formset"],
         "social_link_formset": bundle["social_link_formset"],
@@ -87,6 +91,45 @@ def _contact_form_context(contact, bundle, is_edit_mode):
             else reverse("contact_list")
         ),
     }
+
+
+@crm_role_required(ROLE_TEAM_LEAD)
+def contact_company_search(request):
+    query = _clean_text(request.GET.get("q"))
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    companies = (
+        Company.objects.filter(
+            Q(name__icontains=query)
+            | Q(industry__icontains=query)
+            | Q(city__icontains=query)
+            | Q(state__icontains=query)
+            | Q(country__icontains=query)
+        )
+        .order_by("name")[:RELATION_SEARCH_LIMIT]
+    )
+    return JsonResponse(
+        {
+            "results": [
+                {
+                    "id": company.pk,
+                    "label": company.name,
+                    "meta": " | ".join(
+                        value
+                        for value in (
+                            company.industry,
+                            ", ".join(
+                                value for value in (company.city, company.state, company.country) if value
+                            ),
+                        )
+                        if value
+                    ),
+                }
+                for company in companies
+            ]
+        }
+    )
 
 
 def _contact_list_state(request):

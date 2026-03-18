@@ -1,4 +1,5 @@
 {% extends "crm/base.html" %}
+{% load crm_labels %}
 
 {% block title %}Companies | {{ site_brand }}{% endblock %}
 {% block eyebrow %}Company directory{% endblock %}
@@ -29,7 +30,7 @@
 
 {% block content %}
     {% if has_company_records or filters_active %}
-        <section class="form-card filter-card">
+        <section class="form-card filter-card company-filter-card">
             <div class="table-head">
                 <div>
                     <p class="section-kicker">Advanced filters</p>
@@ -207,7 +208,7 @@
                                     {% if company.phones.all %}
                                         <ul class="table-inline-list">
                                             {% for phone in company.phones.all %}
-                                                <li>{{ phone.label|default:"Direct" }}: {{ phone.phone }}</li>
+                                                <li>{{ phone.label|channel_display|default:"Direct" }}: {{ phone.phone }}</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
@@ -218,7 +219,7 @@
                                     {% if company.emails.all %}
                                         <ul class="table-inline-list">
                                             {% for email in company.emails.all %}
-                                                <li>{{ email.label|default:"Inbox" }}: {{ email.email }}</li>
+                                                <li>{{ email.label|channel_display|default:"Inbox" }}: {{ email.email }}</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
@@ -229,7 +230,7 @@
                                     {% if company.social_links.all %}
                                         <ul class="table-inline-list">
                                             {% for link in company.social_links.all %}
-                                                <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|default:"Website" }}</a></li>
+                                                <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|channel_display|default:"Website" }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

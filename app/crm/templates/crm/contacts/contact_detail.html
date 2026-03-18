@@ -1,4 +1,5 @@
 {% extends "crm/base.html" %}
+{% load crm_labels %}
 
 {% block title %}{{ contact.full_name }} | Contacts | {{ site_brand }}{% endblock %}
 {% block eyebrow %}Contact profile{% endblock %}
@@ -97,7 +98,7 @@
             {% if contact.emails.all %}
                 <ul class="table-inline-list">
                     {% for email in contact.emails.all %}
-                        <li><strong>{{ email.label|default:"Inbox" }}:</strong> {{ email.email }}</li>
+                        <li><strong>{{ email.label|channel_display|default:"Inbox" }}:</strong> {{ email.email }}</li>
                     {% endfor %}
                 </ul>
             {% else %}
@@ -115,7 +116,7 @@
             {% if contact.phones.all %}
                 <ul class="table-inline-list">
                     {% for phone in contact.phones.all %}
-                        <li><strong>{{ phone.label|default:"Line" }}:</strong> {{ phone.phone }}</li>
+                        <li><strong>{{ phone.label|channel_display|default:"Line" }}:</strong> {{ phone.phone }}</li>
                     {% endfor %}
                 </ul>
             {% else %}
@@ -135,7 +136,7 @@
             <div class="detail-strip">
                 {% for link in contact.social_links.all %}
                     <article class="detail-card">
-                        <p class="section-kicker">{{ link.platform|default:"Profile" }}</p>
+                        <p class="section-kicker">{{ link.platform|channel_display|default:"Profile" }}</p>
                         <a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.url }}</a>
                     </article>
                 {% endfor %}

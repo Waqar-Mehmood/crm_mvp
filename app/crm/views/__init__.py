@@ -6,8 +6,21 @@ within the package.
 """
 
 from .dashboard_views import dashboard_home
-from .company_views import company_create, company_detail, company_edit, company_list
-from .contact_views import contact_create, contact_detail, contact_edit, contact_list
+from .company_views import (
+    company_contact_search,
+    company_create,
+    company_detail,
+    company_edit,
+    company_industry_search,
+    company_list,
+)
+from .contact_views import (
+    contact_company_search,
+    contact_create,
+    contact_detail,
+    contact_edit,
+    contact_list,
+)
 from .import_views import (
     import_file_detail,
     import_file_list,
@@ -18,10 +31,13 @@ from .import_views import (
 
 __all__ = [
     "dashboard_home",
+    "company_contact_search",
     "company_create",
     "company_detail",
     "company_edit",
+    "company_industry_search",
     "company_list",
+    "contact_company_search",
     "contact_create",
     "contact_detail",
     "contact_edit",

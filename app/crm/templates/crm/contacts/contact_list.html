@@ -1,4 +1,5 @@
 {% extends "crm/base.html" %}
+{% load crm_labels %}
 
 {% block title %}Contacts | {{ site_brand }}{% endblock %}
 {% block eyebrow %}People database{% endblock %}
@@ -29,7 +30,7 @@
 
 {% block content %}
     {% if has_contact_records or filters_active %}
-        <section class="form-card filter-card">
+        <section class="form-card filter-card contact-filter-card">
             <div class="table-head">
                 <div>
                     <p class="section-kicker">Advanced filters</p>
@@ -177,7 +178,7 @@
                                                             </span>
                                                         {% else %}
                                                             <span class="contact-channel-chip">
-                                                                <span>{{ email.label|default:"Inbox"|title }}</span>
+                                                                <span>{{ email.label|channel_display|default:"Inbox" }}</span>
                                                             </span>
                                                         {% endif %}
                                                         <span class="contact-channel-value">{{ email.email }}</span>
@@ -213,7 +214,7 @@
                                                             </span>
                                                         {% else %}
                                                             <span class="contact-channel-chip">
-                                                                <span>{{ phone.label|default:"Line"|title }}</span>
+                                                                <span>{{ phone.label|channel_display|default:"Line" }}</span>
                                                             </span>
                                                         {% endif %}
                                                         <span class="contact-channel-value">{{ phone.phone }}</span>
@@ -242,7 +243,7 @@
                                     {% if contact.social_links.all %}
                                         <ul class="table-inline-list">
                                             {% for link in contact.social_links.all %}
-                                                <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|default:"Open profile" }}</a></li>
+                                                <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|channel_display|default:"Open profile" }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

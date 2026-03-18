@@ -1,10 +1,13 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 from .views import (
+    company_contact_search,
     company_create,
     company_detail,
     company_edit,
+    company_industry_search,
     company_list,
+    contact_company_search,
     contact_create,
     contact_detail,
     contact_edit,
@@ -28,10 +31,13 @@ urlpatterns = [
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("", dashboard_home, name="home"),
+    path("companies/search/contacts/", company_contact_search, name="company_contact_search"),
+    path("companies/search/industries/", company_industry_search, name="company_industry_search"),
     path("companies/new/", company_create, name="company_create"),
     path("companies/<int:company_id>/edit/", company_edit, name="company_edit"),
     path("companies/<int:company_id>/", company_detail, name="company_detail"),
     path("companies/", company_list, name="company_list"),
+    path("contacts/search/companies/", contact_company_search, name="contact_company_search"),
     path("contacts/new/", contact_create, name="contact_create"),
     path("contacts/<int:contact_id>/edit/", contact_edit, name="contact_edit"),
     path("contacts/<int:contact_id>/", contact_detail, name="contact_detail"),

@@ -1,3 +1,10 @@
+from crm.channel_choices import (
+    BLANK_CHOICE,
+    COMPANY_EMAIL_LABEL_CHOICES,
+    COMPANY_PHONE_LABEL_CHOICES,
+    COMPANY_PROFILE_PLATFORM_CHOICES,
+)
+
 from . import (
     AdvancedFilterTestMixin,
     CRMRoleTestMixin,
@@ -220,13 +227,13 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
             "notes": "Priority launch account",
             "contacts": [str(self.primary_contact.pk), str(self.secondary_contact.pk)],
             **self._management_form("phones", 1, 0),
-            "phones-0-label": "Office",
+            "phones-0-label": "office",
             "phones-0-phone": "555-1000",
             **self._management_form("emails", 1, 0),
-            "emails-0-label": "Support",
+            "emails-0-label": "support",
             "emails-0-email": "ops@blueorbit.com",
             **self._management_form("social_links", 1, 0),
-            "social_links-0-platform": "Website",
+            "social_links-0-platform": "website",
             "social_links-0-url": "https://blueorbit.example.com",
         }
         payload.update(overrides)
@@ -247,29 +254,29 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
             "contacts": [str(self.secondary_contact.pk)],
             **self._management_form("phones", 2, 1),
             "phones-0-id": str(self.company_phone.pk),
-            "phones-0-label": "HQ",
+            "phones-0-label": "office",
             "phones-0-phone": "222-222",
             "phones-0-DELETE": "",
             "phones-1-id": "",
-            "phones-1-label": "Support",
+            "phones-1-label": "support",
             "phones-1-phone": "333-333",
             "phones-1-DELETE": "",
             **self._management_form("emails", 2, 1),
             "emails-0-id": str(self.company_email.pk),
-            "emails-0-label": "Sales",
+            "emails-0-label": "sales",
             "emails-0-email": "revenue@acme.com",
             "emails-0-DELETE": "",
             "emails-1-id": "",
-            "emails-1-label": "Support",
+            "emails-1-label": "support",
             "emails-1-email": "support@acme.com",
             "emails-1-DELETE": "",
             **self._management_form("social_links", 2, 1),
             "social_links-0-id": str(self.company_profile.pk),
-            "social_links-0-platform": "LinkedIn",
+            "social_links-0-platform": "linkedin",
             "social_links-0-url": "https://example.com/acme-prime",
             "social_links-0-DELETE": "",
             "social_links-1-id": "",
-            "social_links-1-platform": "Website",
+            "social_links-1-platform": "website",
             "social_links-1-url": "https://acme-prime.example.com",
             "social_links-1-DELETE": "",
         }
@@ -289,6 +296,66 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "hello@acme.com")
         self.assertContains(response, "https://example.com/acme")
 
+    def test_company_create_form_uses_selects_with_fixed_channel_choices(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.get(reverse("company_create"))
+
+        self.assertEqual(len(response.context["phone_formset"].forms), 0)
+        self.assertEqual(len(response.context["email_formset"].forms), 0)
+        self.assertEqual(len(response.context["social_link_formset"].forms), 0)
+
+        self.assertContains(response, 'data-single-autocomplete', html=False)
+        self.assertContains(response, reverse("company_industry_search"))
+        self.assertContains(response, 'placeholder="55 or 50-100"', html=False)
+
+        form = response.context["form"]
+        self.assertEqual(form.fields["company_size"].widget.attrs["inputmode"], "numeric")
+
+        phone_field = response.context["phone_formset"].empty_form.fields["label"]
+        email_field = response.context["email_formset"].empty_form.fields["label"]
+        profile_field = response.context["social_link_formset"].empty_form.fields["platform"]
+        phone_number_field = response.context["phone_formset"].empty_form.fields["phone"]
+
+        self.assertEqual(phone_field.widget.__class__.__name__, "Select")
+        self.assertEqual(email_field.widget.__class__.__name__, "Select")
+        self.assertEqual(profile_field.widget.__class__.__name__, "Select")
+        self.assertEqual(phone_number_field.widget.input_type, "tel")
+        self.assertEqual(list(phone_field.choices), [BLANK_CHOICE, *COMPANY_PHONE_LABEL_CHOICES])
+        self.assertEqual(list(email_field.choices), [BLANK_CHOICE, *COMPANY_EMAIL_LABEL_CHOICES])
+        self.assertEqual(list(profile_field.choices), [BLANK_CHOICE, *COMPANY_PROFILE_PLATFORM_CHOICES])
+
+    def test_company_industry_search_returns_distinct_matching_values(self):
+        self.client.force_login(self.team_lead_user)
+        Company.objects.create(name="Northwind", industry="Software")
+        Company.objects.create(name="Southwind", industry="Software")
+        Company.objects.create(name="Orbit", industry="Aerospace")
+        Company.objects.create(name="Blank Industry", industry="")
+
+        response = self.client.get(reverse("company_industry_search"), {"q": "soft"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["results"], [{"value": "Software", "label": "Software"}])
+
+    def test_company_edit_form_preserves_legacy_channel_values(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.get(reverse("company_edit", args=[self.company.pk]))
+
+        existing_phone_choices = list(response.context["phone_formset"].forms[0].fields["label"].choices)
+        new_phone_choices = list(response.context["phone_formset"].empty_form.fields["label"].choices)
+        existing_email_choices = list(response.context["email_formset"].forms[0].fields["label"].choices)
+        new_email_choices = list(response.context["email_formset"].empty_form.fields["label"].choices)
+        existing_profile_choices = list(response.context["social_link_formset"].forms[0].fields["platform"].choices)
+        new_profile_choices = list(response.context["social_link_formset"].empty_form.fields["platform"].choices)
+
+        self.assertIn(("Office", "Office"), existing_phone_choices)
+        self.assertNotIn(("Office", "Office"), new_phone_choices)
+        self.assertIn(("Sales", "Sales"), existing_email_choices)
+        self.assertNotIn(("Sales", "Sales"), new_email_choices)
+        self.assertIn(("LinkedIn", "LinkedIn"), existing_profile_choices)
+        self.assertNotIn(("LinkedIn", "LinkedIn"), new_profile_choices)
+
     def test_company_create_succeeds_for_team_lead_and_redirects_with_message(self):
         self.client.force_login(self.team_lead_user)
 
@@ -303,8 +370,128 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "Company created.")
         self.assertEqual(created_company.contacts.count(), 2)
         self.assertEqual(created_company.phones.get().phone, "555-1000")
+        self.assertEqual(created_company.phones.get().label, "office")
         self.assertEqual(created_company.emails.get().email, "ops@blueorbit.com")
+        self.assertEqual(created_company.emails.get().label, "support")
         self.assertEqual(created_company.social_links.get().url, "https://blueorbit.example.com")
+        self.assertEqual(created_company.social_links.get().platform, "website")
+
+    def test_company_create_accepts_new_industry_text_without_match(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                industry="Space Mining",
+                **self._management_form("phones", 0, 0),
+                **self._management_form("emails", 0, 0),
+                **self._management_form("social_links", 0, 0),
+            ),
+            follow=True,
+        )
+
+        created_company = Company.objects.get(name="Blue Orbit Labs")
+        self.assertRedirects(response, reverse("company_detail", args=[created_company.pk]))
+        self.assertEqual(created_company.industry, "Space Mining")
+
+    def test_company_create_normalizes_company_size_ranges(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                company_size="50 - 100",
+                **self._management_form("phones", 0, 0),
+                **self._management_form("emails", 0, 0),
+                **self._management_form("social_links", 0, 0),
+            ),
+            follow=True,
+        )
+
+        created_company = Company.objects.get(name="Blue Orbit Labs")
+        self.assertRedirects(response, reverse("company_detail", args=[created_company.pk]))
+        self.assertEqual(created_company.company_size, "50-100")
+
+    def test_company_create_rejects_invalid_company_size_format(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                company_size="10 to 20",
+                **self._management_form("phones", 0, 0),
+                **self._management_form("emails", 0, 0),
+                **self._management_form("social_links", 0, 0),
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Company.objects.filter(name="Blue Orbit Labs").count(), 0)
+        self.assertContains(response, "Enter a whole number or range like 55 or 50-100.")
+        self.assertContains(response, 'value="10 to 20"', html=False)
+
+    def test_company_create_can_save_without_related_email_rows(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                **self._management_form("emails", 0, 0),
+                **self._management_form("phones", 0, 0),
+                **self._management_form("social_links", 0, 0),
+            ),
+            follow=True,
+        )
+
+        created_company = Company.objects.get(name="Blue Orbit Labs")
+        self.assertRedirects(response, reverse("company_detail", args=[created_company.pk]))
+        self.assertEqual(created_company.emails.count(), 0)
+        self.assertEqual(created_company.phones.count(), 0)
+        self.assertEqual(created_company.social_links.count(), 0)
+
+    def test_company_create_ignores_completely_blank_related_rows(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                **{
+                    "phones-0-label": "",
+                    "phones-0-phone": "",
+                    "emails-0-label": "",
+                    "emails-0-email": "",
+                    "social_links-0-platform": "",
+                    "social_links-0-url": "",
+                }
+            ),
+            follow=True,
+        )
+
+        created_company = Company.objects.get(name="Blue Orbit Labs")
+        self.assertRedirects(response, reverse("company_detail", args=[created_company.pk]))
+        self.assertEqual(created_company.phones.count(), 0)
+        self.assertEqual(created_company.emails.count(), 0)
+        self.assertEqual(created_company.social_links.count(), 0)
+
+    def test_company_create_rejects_partially_filled_email_row(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("company_create"),
+            self._company_create_payload(
+                **self._management_form("phones", 0, 0),
+                **self._management_form("social_links", 0, 0),
+                **{
+                    "emails-0-label": "support",
+                    "emails-0-email": "",
+                }
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Company.objects.filter(name="Blue Orbit Labs").count(), 0)
+        self.assertContains(response, "This field is required.")
+        self.assertContains(response, 'name="emails-0-label"', html=False)
 
     def test_company_edit_updates_core_fields_related_data_and_links(self):
         self.client.force_login(self.team_lead_user)
@@ -322,13 +509,19 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(self.company.address, "99 Mission Street")
         self.assertEqual(list(self.company.contacts.values_list("full_name", flat=True)), ["Sam Seller"])
         self.assertEqual(set(self.company.phones.values_list("phone", flat=True)), {"222-222", "333-333"})
+        self.assertEqual(set(self.company.phones.values_list("label", flat=True)), {"office", "support"})
         self.assertEqual(
             set(self.company.emails.values_list("email", flat=True)),
             {"revenue@acme.com", "support@acme.com"},
         )
+        self.assertEqual(set(self.company.emails.values_list("label", flat=True)), {"sales", "support"})
         self.assertEqual(
             set(self.company.social_links.values_list("url", flat=True)),
             {"https://example.com/acme-prime", "https://acme-prime.example.com"},
+        )
+        self.assertEqual(
+            set(self.company.social_links.values_list("platform", flat=True)),
+            {"linkedin", "website"},
         )
 
         linked_contact_response = self.client.get(reverse("contact_detail", args=[self.secondary_contact.pk]))

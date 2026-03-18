@@ -1,3 +1,10 @@
+from crm.channel_choices import (
+    BLANK_CHOICE,
+    CONTACT_EMAIL_LABEL_CHOICES,
+    CONTACT_PHONE_LABEL_CHOICES,
+    CONTACT_PROFILE_PLATFORM_CHOICES,
+)
+
 from . import (
     AdvancedFilterTestMixin,
     CRMRoleTestMixin,
@@ -184,13 +191,13 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
             "notes": "New stakeholder",
             "companies": [str(self.primary_company.pk), str(self.secondary_company.pk)],
             **self._management_form("phones", 1, 0),
-            "phones-0-label": "Mobile",
+            "phones-0-label": "mobile",
             "phones-0-phone": "555-3000",
             **self._management_form("emails", 1, 0),
-            "emails-0-label": "Work",
+            "emails-0-label": "work",
             "emails-0-email": "chris.vector@example.com",
             **self._management_form("social_links", 1, 0),
-            "social_links-0-platform": "LinkedIn",
+            "social_links-0-platform": "linkedin",
             "social_links-0-url": "https://example.com/chris",
         }
         payload.update(overrides)
@@ -206,29 +213,29 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
             "companies": [str(self.secondary_company.pk)],
             **self._management_form("phones", 2, 1),
             "phones-0-id": str(self.contact_phone.pk),
-            "phones-0-label": "Work",
+            "phones-0-label": "work",
             "phones-0-phone": "222-222",
             "phones-0-DELETE": "",
             "phones-1-id": "",
-            "phones-1-label": "Mobile",
+            "phones-1-label": "mobile",
             "phones-1-phone": "333-333",
             "phones-1-DELETE": "",
             **self._management_form("emails", 2, 1),
             "emails-0-id": str(self.contact_email.pk),
-            "emails-0-label": "Work",
+            "emails-0-label": "work",
             "emails-0-email": "ops@example.com",
             "emails-0-DELETE": "",
             "emails-1-id": "",
-            "emails-1-label": "Personal",
+            "emails-1-label": "personal",
             "emails-1-email": "jane.personal@example.com",
             "emails-1-DELETE": "",
             **self._management_form("social_links", 2, 1),
             "social_links-0-id": str(self.contact_profile.pk),
-            "social_links-0-platform": "LinkedIn",
+            "social_links-0-platform": "linkedin",
             "social_links-0-url": "https://example.com/jane-smith",
             "social_links-0-DELETE": "",
             "social_links-1-id": "",
-            "social_links-1-platform": "Website",
+            "social_links-1-platform": "website",
             "social_links-1-url": "https://jane.example.com",
             "social_links-1-DELETE": "",
         }
@@ -248,6 +255,49 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "work@example.com")
         self.assertContains(response, "https://example.com/jane")
 
+    def test_contact_create_form_uses_selects_with_fixed_channel_choices(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.get(reverse("contact_create"))
+
+        self.assertEqual(len(response.context["phone_formset"].forms), 0)
+        self.assertEqual(len(response.context["email_formset"].forms), 0)
+        self.assertEqual(len(response.context["social_link_formset"].forms), 0)
+
+        form = response.context["form"]
+        phone_field = response.context["phone_formset"].empty_form.fields["label"]
+        email_field = response.context["email_formset"].empty_form.fields["label"]
+        profile_field = response.context["social_link_formset"].empty_form.fields["platform"]
+        phone_number_field = response.context["phone_formset"].empty_form.fields["phone"]
+
+        self.assertEqual(form.fields["phone"].widget.input_type, "tel")
+        self.assertEqual(phone_field.widget.__class__.__name__, "Select")
+        self.assertEqual(email_field.widget.__class__.__name__, "Select")
+        self.assertEqual(profile_field.widget.__class__.__name__, "Select")
+        self.assertEqual(phone_number_field.widget.input_type, "tel")
+        self.assertEqual(list(phone_field.choices), [BLANK_CHOICE, *CONTACT_PHONE_LABEL_CHOICES])
+        self.assertEqual(list(email_field.choices), [BLANK_CHOICE, *CONTACT_EMAIL_LABEL_CHOICES])
+        self.assertEqual(list(profile_field.choices), [BLANK_CHOICE, *CONTACT_PROFILE_PLATFORM_CHOICES])
+
+    def test_contact_edit_form_preserves_legacy_channel_values(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.get(reverse("contact_edit", args=[self.contact.pk]))
+
+        existing_phone_choices = list(response.context["phone_formset"].forms[0].fields["label"].choices)
+        new_phone_choices = list(response.context["phone_formset"].empty_form.fields["label"].choices)
+        existing_email_choices = list(response.context["email_formset"].forms[0].fields["label"].choices)
+        new_email_choices = list(response.context["email_formset"].empty_form.fields["label"].choices)
+        existing_profile_choices = list(response.context["social_link_formset"].forms[0].fields["platform"].choices)
+        new_profile_choices = list(response.context["social_link_formset"].empty_form.fields["platform"].choices)
+
+        self.assertIn(("Work", "Work"), existing_phone_choices)
+        self.assertNotIn(("Work", "Work"), new_phone_choices)
+        self.assertIn(("Work", "Work"), existing_email_choices)
+        self.assertNotIn(("Work", "Work"), new_email_choices)
+        self.assertIn(("LinkedIn", "LinkedIn"), existing_profile_choices)
+        self.assertNotIn(("LinkedIn", "LinkedIn"), new_profile_choices)
+
     def test_contact_create_succeeds_for_team_lead_and_redirects_with_message(self):
         self.client.force_login(self.team_lead_user)
 
@@ -262,8 +312,74 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "Contact created.")
         self.assertEqual(created_contact.companies.count(), 2)
         self.assertEqual(created_contact.phones.get().phone, "555-3000")
+        self.assertEqual(created_contact.phones.get().label, "mobile")
         self.assertEqual(created_contact.emails.get().email, "chris.vector@example.com")
+        self.assertEqual(created_contact.emails.get().label, "work")
         self.assertEqual(created_contact.social_links.get().url, "https://example.com/chris")
+        self.assertEqual(created_contact.social_links.get().platform, "linkedin")
+
+    def test_contact_create_can_save_without_related_channel_rows(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_create"),
+            self._contact_create_payload(
+                **self._management_form("phones", 0, 0),
+                **self._management_form("emails", 0, 0),
+                **self._management_form("social_links", 0, 0),
+            ),
+            follow=True,
+        )
+
+        created_contact = Contact.objects.get(full_name="Chris Vector")
+        self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
+        self.assertEqual(created_contact.phones.count(), 0)
+        self.assertEqual(created_contact.emails.count(), 0)
+        self.assertEqual(created_contact.social_links.count(), 0)
+
+    def test_contact_create_ignores_completely_blank_related_rows(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_create"),
+            self._contact_create_payload(
+                **{
+                    "phones-0-label": "",
+                    "phones-0-phone": "",
+                    "emails-0-label": "",
+                    "emails-0-email": "",
+                    "social_links-0-platform": "",
+                    "social_links-0-url": "",
+                }
+            ),
+            follow=True,
+        )
+
+        created_contact = Contact.objects.get(full_name="Chris Vector")
+        self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
+        self.assertEqual(created_contact.phones.count(), 0)
+        self.assertEqual(created_contact.emails.count(), 0)
+        self.assertEqual(created_contact.social_links.count(), 0)
+
+    def test_contact_create_rejects_partially_filled_email_row(self):
+        self.client.force_login(self.team_lead_user)
+
+        response = self.client.post(
+            reverse("contact_create"),
+            self._contact_create_payload(
+                **self._management_form("phones", 0, 0),
+                **self._management_form("social_links", 0, 0),
+                **{
+                    "emails-0-label": "work",
+                    "emails-0-email": "",
+                }
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Contact.objects.filter(full_name="Chris Vector").count(), 0)
+        self.assertContains(response, "This field is required.")
+        self.assertContains(response, 'name="emails-0-label"', html=False)
 
     def test_contact_edit_updates_core_fields_related_data_and_links(self):
         self.client.force_login(self.team_lead_user)
@@ -284,13 +400,19 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
             ["Blue Orbit"],
         )
         self.assertEqual(set(self.contact.phones.values_list("phone", flat=True)), {"222-222", "333-333"})
+        self.assertEqual(set(self.contact.phones.values_list("label", flat=True)), {"work", "mobile"})
         self.assertEqual(
             set(self.contact.emails.values_list("email", flat=True)),
             {"ops@example.com", "jane.personal@example.com"},
         )
+        self.assertEqual(set(self.contact.emails.values_list("label", flat=True)), {"work", "personal"})
         self.assertEqual(
             set(self.contact.social_links.values_list("url", flat=True)),
             {"https://example.com/jane-smith", "https://jane.example.com"},
+        )
+        self.assertEqual(
+            set(self.contact.social_links.values_list("platform", flat=True)),
+            {"linkedin", "website"},
         )
 
         linked_company_response = self.client.get(reverse("company_detail", args=[self.secondary_company.pk]))
