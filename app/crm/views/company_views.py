@@ -437,10 +437,10 @@ def company_detail(request, company_id):
         "crm/companies/company_detail.html",
         {
             "company": company,
-            "contact_count": company.contacts.count(),
-            "phone_count": company.phones.count(),
-            "email_count": company.emails.count(),
-            "profile_count": company.social_links.count(),
+            "contact_count": len(company.contacts.all()),
+            "phone_count": len(company.phones.all()),
+            "email_count": len(company.emails.all()),
+            "profile_count": len(company.social_links.all()),
         },
     )
 

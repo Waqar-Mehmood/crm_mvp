@@ -381,10 +381,10 @@ def contact_detail(request, contact_id):
         "crm/contacts/contact_detail.html",
         {
             "contact": contact,
-            "company_count": contact.companies.count(),
-            "phone_count": contact.phones.count(),
-            "email_count": contact.emails.count(),
-            "profile_count": contact.social_links.count(),
+            "company_count": len(contact.companies.all()),
+            "phone_count": len(contact.phones.all()),
+            "email_count": len(contact.emails.all()),
+            "profile_count": len(contact.social_links.all()),
         },
     )
 

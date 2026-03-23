@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .tw-shell-card {
+    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] shadow-crm backdrop-blur;
+  }
+
+  .tw-panel {
+    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] p-6 text-paper-100 shadow-crm backdrop-blur;
+  }
+
+  .tw-button-primary {
+    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-gradient-to-br from-paper-100 to-[#f1dcc3] px-[18px] font-bold text-ink-900 no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
+  }
+
+  .tw-button-secondary {
+    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-[18px] font-bold text-paper-100 no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
+  }
+
+  .tw-kicker {
+    @apply m-0 text-[0.74rem] font-bold uppercase tracking-[0.16em] text-paper-100/70;
+  }
+
+  .tw-input {
+    @apply min-h-[46px] w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
+
+  .tw-notice {
+    @apply rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text;
+  }
+}
+
+@layer utilities {
+  .crm-surface {
+    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] backdrop-blur;
+  }
+}
