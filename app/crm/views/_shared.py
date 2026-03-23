@@ -16,6 +16,7 @@ from crm.services.export_service import (
 )
 
 PAGE_SIZE = 10
+PAGE_SIZE_OPTIONS = (10, 50, 100)
 BOOLEAN_FILTER_LABELS = {
     "yes": "Yes",
     "no": "No",
@@ -75,6 +76,23 @@ def _parse_int(value):
         return None
 
 
+def _clean_per_page(value):
+    parsed_value = _parse_int(value)
+    return parsed_value if parsed_value in PAGE_SIZE_OPTIONS else PAGE_SIZE
+
+
+def _clean_column_list(value, allowed_keys, default_keys):
+    allowed = set(allowed_keys)
+    selected = []
+    seen = set()
+    for token in _clean_text(value).split(","):
+        column_key = token.strip()
+        if column_key and column_key in allowed and column_key not in seen:
+            selected.append(column_key)
+            seen.add(column_key)
+    return selected or list(default_keys)
+
+
 def _parse_date_value(value):
     return parse_date(_clean_text(value))
 
@@ -99,6 +117,27 @@ def _apply_toggle_filter(queryset, field_name, toggle_value):
     if toggle_value == "no":
         return queryset.filter(**{field_name: False})
     return queryset
+
+
+def _query_items(request, remove_keys=None, extra=None):
+    query = request.GET.copy()
+    for key in remove_keys or ():
+        query.pop(key, None)
+    for key, value in (extra or {}).items():
+        query.pop(key, None)
+        if value in (None, ""):
+            continue
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                query.appendlist(key, item)
+        else:
+            query[key] = value
+
+    items = []
+    for key, values in query.lists():
+        for value in values:
+            items.append((key, value))
+    return items
 
 
 def _export_response(export_format, base_name, sheet_name, columns, rows):

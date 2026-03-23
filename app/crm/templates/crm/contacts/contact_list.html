@@ -30,227 +30,267 @@
 
 {% block content %}
     {% if has_contact_records or filters_active %}
-        <section class="form-card filter-card contact-filter-card">
-            <div class="table-head">
+        <details class="form-card filter-card contact-filter-card filter-disclosure" data-animated-disclosure{% if filters_active %} open{% endif %}>
+            <summary class="filter-disclosure-summary">
                 <div>
                     <p class="section-kicker">Advanced filters</p>
                     <h2>Refine contact records</h2>
                 </div>
-                <a class="button-link is-secondary" href="{% url 'contact_list' %}">Clear filters</a>
-            </div>
-            <form method="get" class="form-layout">
-                <div class="filter-grid">
-                    <div class="field field-span-2">
-                        <label for="contact-q">Search</label>
-                        <input id="contact-q" type="text" name="q" value="{{ filters.q }}" placeholder="Search names, titles, company, email, phone">
-                    </div>
-                    <div class="field">
-                        <label for="contact-title">Title</label>
-                        <input id="contact-title" type="text" name="title" value="{{ filters.title }}" placeholder="Contains title">
-                    </div>
-                    <div class="field">
-                        <label for="contact-company">Company</label>
-                        <input id="contact-company" type="text" name="company" value="{{ filters.company }}" placeholder="Contains company name">
-                    </div>
-                    <div class="field">
-                        <label for="contact-has-email">Has email</label>
-                        <select id="contact-has-email" name="has_email">
-                            <option value="">Any</option>
-                            <option value="yes" {% if filters.has_email == "yes" %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if filters.has_email == "no" %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="contact-has-phone">Has phone</label>
-                        <select id="contact-has-phone" name="has_phone">
-                            <option value="">Any</option>
-                            <option value="yes" {% if filters.has_phone == "yes" %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if filters.has_phone == "no" %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="contact-has-company">Has company</label>
-                        <select id="contact-has-company" name="has_company">
-                            <option value="">Any</option>
-                            <option value="yes" {% if filters.has_company == "yes" %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if filters.has_company == "no" %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="contact-has-profile">Has profile</label>
-                        <select id="contact-has-profile" name="has_profile">
-                            <option value="">Any</option>
-                            <option value="yes" {% if filters.has_profile == "yes" %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if filters.has_profile == "no" %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="contact-created-from">Created from</label>
-                        <input id="contact-created-from" type="date" name="created_from" value="{{ filters.created_from }}">
-                    </div>
-                    <div class="field">
-                        <label for="contact-created-to">Created to</label>
-                        <input id="contact-created-to" type="date" name="created_to" value="{{ filters.created_to }}">
-                    </div>
-                </div>
-                <div class="filter-actions">
-                    <input type="submit" value="Apply filters">
-                    <a class="button-link is-secondary" href="{% url 'contact_list' %}">Reset</a>
-                </div>
-            </form>
-            <div class="filter-summary">
-                <div class="filter-summary-head">
-                    <div>
-                        <p class="section-kicker">Current result set</p>
-                        <h2>{{ page_obj.paginator.count }} matching contacts</h2>
-                    </div>
-                    <details class="export-menu">
-                        <summary class="button-link is-secondary export-menu-toggle">Export</summary>
-                        <div class="export-menu-panel">
-                            <a class="export-menu-link" href="?{{ export_csv_query }}">Export as CSV</a>
-                            <a class="export-menu-link" href="?{{ export_xlsx_query }}">Export as Excel</a>
+                <span class="button-link is-secondary filter-disclosure-toggle">
+                    <span class="filter-disclosure-label filter-disclosure-label-closed">Show filters</span>
+                    <span class="filter-disclosure-label filter-disclosure-label-open">Hide filters</span>
+                </span>
+            </summary>
+            <div class="filter-disclosure-body" data-disclosure-body>
+                <form method="get" class="form-layout list-filter-form">
+                    {% for item in filter_form_hidden_items %}
+                        <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
+                    {% endfor %}
+                    <div class="filter-grid">
+                        <div class="field field-span-2">
+                            <label for="contact-q">Search</label>
+                            <input id="contact-q" class="list-filter-control" type="text" name="q" value="{{ filters.q }}" placeholder="Search names, titles, company, email, phone">
                         </div>
-                    </details>
-                </div>
-                {% if active_filters %}
-                    <div class="filter-chip-row">
-                        {% for filter in active_filters %}
-                            <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
-                        {% endfor %}
+                        <div class="field">
+                            <label for="contact-title">Title</label>
+                            <input id="contact-title" class="list-filter-control" type="text" name="title" value="{{ filters.title }}" placeholder="Contains title">
+                        </div>
+                        <div class="field">
+                            <label for="contact-company">Company</label>
+                            <input id="contact-company" class="list-filter-control" type="text" name="company" value="{{ filters.company }}" placeholder="Contains company name">
+                        </div>
+                        <div class="field">
+                            <label for="contact-has-email">Has email</label>
+                            <select id="contact-has-email" class="list-filter-control" name="has_email">
+                                <option value="">Any</option>
+                                <option value="yes" {% if filters.has_email == "yes" %}selected{% endif %}>Yes</option>
+                                <option value="no" {% if filters.has_email == "no" %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="contact-has-phone">Has phone</label>
+                            <select id="contact-has-phone" class="list-filter-control" name="has_phone">
+                                <option value="">Any</option>
+                                <option value="yes" {% if filters.has_phone == "yes" %}selected{% endif %}>Yes</option>
+                                <option value="no" {% if filters.has_phone == "no" %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="contact-has-company">Has company</label>
+                            <select id="contact-has-company" class="list-filter-control" name="has_company">
+                                <option value="">Any</option>
+                                <option value="yes" {% if filters.has_company == "yes" %}selected{% endif %}>Yes</option>
+                                <option value="no" {% if filters.has_company == "no" %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="contact-has-profile">Has profile</label>
+                            <select id="contact-has-profile" class="list-filter-control" name="has_profile">
+                                <option value="">Any</option>
+                                <option value="yes" {% if filters.has_profile == "yes" %}selected{% endif %}>Yes</option>
+                                <option value="no" {% if filters.has_profile == "no" %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="contact-created-from">Created from</label>
+                            <input id="contact-created-from" class="list-filter-control" type="date" name="created_from" value="{{ filters.created_from }}">
+                        </div>
+                        <div class="field">
+                            <label for="contact-created-to">Created to</label>
+                            <input id="contact-created-to" class="list-filter-control" type="date" name="created_to" value="{{ filters.created_to }}">
+                        </div>
                     </div>
-                {% else %}
-                    <p class="table-secondary">Showing all {{ total_contacts }} contacts in the CRM roster.</p>
-                {% endif %}
+                    <div class="filter-actions list-filter-actions">
+                        <input class="list-filter-submit" type="submit" value="Apply filters">
+                        <a class="button-link is-secondary list-filter-reset" href="{{ filter_reset_url }}">Reset</a>
+                    </div>
+                </form>
+                <div class="filter-summary">
+                    <div class="filter-summary-head">
+                        <div>
+                            <p class="section-kicker">Current result set</p>
+                            <h2>{{ page_obj.paginator.count }} matching contacts</h2>
+                        </div>
+                    </div>
+                    {% if active_filters %}
+                        <div class="filter-chip-row">
+                            {% for filter in active_filters %}
+                                <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="table-secondary">Showing all {{ total_contacts }} contacts in the CRM roster.</p>
+                    {% endif %}
+                </div>
             </div>
-        </section>
+        </details>
     {% endif %}
 
     {% if contacts %}
         <section class="table-card">
-            <div class="table-head">
+            <div class="table-head table-head-with-tools">
                 <div>
                     <p class="section-kicker">Roster table</p>
                     <h2>Contact records</h2>
+                </div>
+                <div class="table-toolbar-actions">
+                    <details class="table-menu rows-menu">
+                        <summary class="button-link is-secondary rows-menu-toggle toolbar-menu-toggle">Rows: {{ per_page }}</summary>
+                        <div class="table-menu-panel toolbar-menu-panel rows-menu-panel">
+                            <div class="rows-menu-list">
+                                {% for option in per_page_menu_options %}
+                                    <a class="rows-menu-link{% if option.is_active %} is-active{% endif %}" href="{{ option.url }}">{{ option.label }}</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </details>
+                    <details class="table-menu">
+                        <summary class="button-link is-secondary table-menu-toggle toolbar-menu-toggle">Columns</summary>
+                        <form method="get" class="table-menu-panel toolbar-menu-panel" data-column-picker-form>
+                            {% for item in column_picker_hidden_items %}
+                                <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
+                            {% endfor %}
+                            <input type="hidden" name="columns" value="{{ selected_columns_query }}" data-columns-output>
+                            <div class="table-menu-list">
+                                {% for option in column_options %}
+                                    <label class="table-menu-option">
+                                        <input type="checkbox" value="{{ option.key }}" data-column-option {% if option.key in visible_columns %}checked{% endif %}>
+                                        <span>{{ option.label }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            <div class="table-menu-actions">
+                                <button type="submit" class="button-link">Apply columns</button>
+                            </div>
+                        </form>
+                    </details>
+                    <details class="export-menu">
+                        <summary class="button-link is-secondary export-menu-toggle toolbar-menu-toggle toolbar-menu-toggle-accent">Export</summary>
+                        <div class="export-menu-panel toolbar-menu-panel">
+                            <a class="export-menu-link" href="?{{ export_csv_query }}">Export as CSV</a>
+                            <a class="export-menu-link" href="?{{ export_xlsx_query }}">Export as Excel</a>
+                        </div>
+                    </details>
                 </div>
             </div>
             <div class="table-shell">
                 <table class="data-table data-table-wide">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Contact</th>
-                            <th>Title</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Companies</th>
-                            <th>Profiles</th>
-                            <th>Created</th>
+                            {% if "row" in visible_columns %}<th>#</th>{% endif %}
+                            {% if "contact" in visible_columns %}<th>Contact</th>{% endif %}
+                            {% if "title" in visible_columns %}<th>Title</th>{% endif %}
+                            {% if "email" in visible_columns %}<th>Email</th>{% endif %}
+                            {% if "phone" in visible_columns %}<th>Phone</th>{% endif %}
+                            {% if "companies" in visible_columns %}<th>Companies</th>{% endif %}
+                            {% if "profiles" in visible_columns %}<th>Profiles</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
                         {% for contact in contacts %}
                             <tr>
-                                <td>{{ contact.id }}</td>
-                                <td>
-                                    <div class="table-primary"><a class="text-link" href="{% url 'contact_detail' contact.id %}">{{ contact.full_name }}</a></div>
-                                    <div class="table-secondary">{{ contact.notes|default:"No notes stored" }}</div>
-                                </td>
-                                <td>{{ contact.title|default:"No title captured" }}</td>
-                                <td>
-                                    {% if contact.emails.all or contact.email %}
-                                        <ul class="table-inline-list">
-                                            {% for email in contact.emails.all %}
-                                                {% with email_type=email.label|default:""|lower %}
-                                                    <li class="contact-channel-row">
-                                                        {% if email_type == "work" %}
-                                                            <span class="contact-channel-chip is-work">
-                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                                    <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
-                                                                </svg>
-                                                                <span>Work</span>
-                                                            </span>
-                                                        {% elif email_type == "personal" %}
-                                                            <span class="contact-channel-chip is-personal">
-                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                                    <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
-                                                                </svg>
-                                                                <span>Personal</span>
-                                                            </span>
-                                                        {% else %}
-                                                            <span class="contact-channel-chip">
-                                                                <span>{{ email.label|channel_display|default:"Inbox" }}</span>
-                                                            </span>
-                                                        {% endif %}
-                                                        <span class="contact-channel-value">{{ email.email }}</span>
-                                                    </li>
-                                                {% endwith %}
-                                            {% empty %}
-                                                <li>{{ contact.email }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        <span class="table-secondary">No email</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if contact.phones.all or contact.phone %}
-                                        <ul class="table-inline-list">
-                                            {% for phone in contact.phones.all %}
-                                                {% with phone_type=phone.label|default:""|lower %}
-                                                    <li class="contact-channel-row">
-                                                        {% if phone_type == "work" %}
-                                                            <span class="contact-channel-chip is-work">
-                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                                    <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
-                                                                </svg>
-                                                                <span>Work</span>
-                                                            </span>
-                                                        {% elif phone_type == "personal" %}
-                                                            <span class="contact-channel-chip is-personal">
-                                                                <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                                    <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
-                                                                </svg>
-                                                                <span>Personal</span>
-                                                            </span>
-                                                        {% else %}
-                                                            <span class="contact-channel-chip">
-                                                                <span>{{ phone.label|channel_display|default:"Line" }}</span>
-                                                            </span>
-                                                        {% endif %}
-                                                        <span class="contact-channel-value">{{ phone.phone }}</span>
-                                                    </li>
-                                                {% endwith %}
-                                            {% empty %}
-                                                <li>{{ contact.phone }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        <span class="table-secondary">No phone</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if contact.companies.all %}
-                                        <ul class="table-inline-list">
-                                            {% for company in contact.companies.all %}
-                                                <li><a class="text-link" href="{% url 'company_detail' company.id %}">{{ company.name }}</a></li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        <span class="table-secondary">No company links</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if contact.social_links.all %}
-                                        <ul class="table-inline-list">
-                                            {% for link in contact.social_links.all %}
-                                                <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|channel_display|default:"Open profile" }}</a></li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        <span class="table-secondary">No profiles</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ contact.created_at|date:"Y-m-d H:i" }}</td>
+                                {% if "row" in visible_columns %}<td>{{ row_number_offset|add:forloop.counter }}</td>{% endif %}
+                                {% if "contact" in visible_columns %}
+                                    <td>
+                                        <div class="table-primary"><a class="text-link" href="{% url 'contact_detail' contact.id %}">{{ contact.full_name }}</a></div>
+                                        {% if contact.notes %}<div class="table-secondary">{{ contact.notes }}</div>{% endif %}
+                                    </td>
+                                {% endif %}
+                                {% if "title" in visible_columns %}<td>{{ contact.title }}</td>{% endif %}
+                                {% if "email" in visible_columns %}
+                                    <td>
+                                        {% if contact.emails.all or contact.email %}
+                                            <ul class="table-inline-list">
+                                                {% for email in contact.emails.all %}
+                                                    {% with email_type=email.label|default:""|lower %}
+                                                        <li class="contact-channel-row">
+                                                            {% if email_type == "work" %}
+                                                                <span class="contact-channel-chip is-work">
+                                                                    <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                        <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
+                                                                    </svg>
+                                                                    <span>Work</span>
+                                                                </span>
+                                                            {% elif email_type == "personal" %}
+                                                                <span class="contact-channel-chip is-personal">
+                                                                    <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                        <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
+                                                                    </svg>
+                                                                    <span>Personal</span>
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="contact-channel-chip">
+                                                                    <span>{{ email.label|channel_display|default:"Inbox" }}</span>
+                                                                </span>
+                                                            {% endif %}
+                                                            <span class="contact-channel-value">{{ email.email }}</span>
+                                                        </li>
+                                                    {% endwith %}
+                                                {% empty %}
+                                                    <li>{{ contact.email }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                                {% if "phone" in visible_columns %}
+                                    <td>
+                                        {% if contact.phones.all or contact.phone %}
+                                            <ul class="table-inline-list">
+                                                {% for phone in contact.phones.all %}
+                                                    {% with phone_type=phone.label|default:""|lower %}
+                                                        <li class="contact-channel-row">
+                                                            {% if phone_type == "work" %}
+                                                                <span class="contact-channel-chip is-work">
+                                                                    <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                        <path d="M9 6V4.75A1.75 1.75 0 0 1 10.75 3h2.5A1.75 1.75 0 0 1 15 4.75V6h2.75A2.25 2.25 0 0 1 20 8.25v8.5A2.25 2.25 0 0 1 17.75 19h-11.5A2.25 2.25 0 0 1 4 16.75v-8.5A2.25 2.25 0 0 1 6.25 6H9Zm1.5 0h3V4.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25V6Z" fill="currentColor"></path>
+                                                                    </svg>
+                                                                    <span>Work</span>
+                                                                </span>
+                                                            {% elif phone_type == "personal" %}
+                                                                <span class="contact-channel-chip is-personal">
+                                                                    <svg class="contact-channel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                                        <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12Zm0 1.5c-3.18 0-5.75 1.93-5.75 4.31 0 .39.31.69.69.69h10.12a.69.69 0 0 0 .69-.69c0-2.38-2.57-4.31-5.75-4.31Z" fill="currentColor"></path>
+                                                                    </svg>
+                                                                    <span>Personal</span>
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="contact-channel-chip">
+                                                                    <span>{{ phone.label|channel_display|default:"Line" }}</span>
+                                                                </span>
+                                                            {% endif %}
+                                                            <span class="contact-channel-value">{{ phone.phone }}</span>
+                                                        </li>
+                                                    {% endwith %}
+                                                {% empty %}
+                                                    <li>{{ contact.phone }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                                {% if "companies" in visible_columns %}
+                                    <td>
+                                        {% if contact.companies.all %}
+                                            <ul class="table-inline-list">
+                                                {% for company in contact.companies.all %}
+                                                    <li><a class="text-link" href="{% url 'company_detail' company.id %}">{{ company.name }}</a></li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                                {% if "profiles" in visible_columns %}
+                                    <td>
+                                        {% if contact.social_links.all %}
+                                            <ul class="table-inline-list">
+                                                {% for link in contact.social_links.all %}
+                                                    <li><a class="text-link" href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.platform|channel_display|default:"Open profile" }}</a></li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -271,7 +311,7 @@
                 </div>
             {% endif %}
             <div class="action-stack">
-                <a class="button-link" href="{% url 'contact_list' %}">Clear filters</a>
+                <a class="button-link" href="{{ filter_reset_url }}">Clear filters</a>
                 <a class="button-link is-secondary" href="{% url 'company_list' %}">Open companies</a>
             </div>
         </section>

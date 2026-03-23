@@ -25,7 +25,9 @@ from ._shared import (
     BOOLEAN_FILTER_LABELS,
     _add_active_filter,
     _apply_toggle_filter,
+    _clean_column_list,
     _clean_export_format,
+    _clean_per_page,
     _clean_text,
     _clean_toggle,
     _export_query,
@@ -33,9 +35,35 @@ from ._shared import (
     _page_query,
     _paginate,
     _parse_date_value,
+    _query_items,
+    _query_string,
+    PAGE_SIZE_OPTIONS,
 )
 
 RELATION_SEARCH_LIMIT = 10
+CONTACT_COLUMN_OPTIONS = (
+    ("row", "Row number"),
+    ("contact", "Contact"),
+    ("title", "Title"),
+    ("email", "Email"),
+    ("phone", "Phone"),
+    ("companies", "Companies"),
+    ("profiles", "Profiles"),
+)
+DEFAULT_CONTACT_COLUMNS = [key for key, _label in CONTACT_COLUMN_OPTIONS]
+CONTACT_FILTER_KEYS = frozenset(
+    {
+        "q",
+        "title",
+        "company",
+        "has_email",
+        "has_phone",
+        "has_company",
+        "has_profile",
+        "created_from",
+        "created_to",
+    }
+)
 
 
 def _contact_detail_queryset():
@@ -133,6 +161,12 @@ def contact_company_search(request):
 
 
 def _contact_list_state(request):
+    per_page = _clean_per_page(request.GET.get("per_page"))
+    visible_columns = _clean_column_list(
+        request.GET.get("columns"),
+        [key for key, _label in CONTACT_COLUMN_OPTIONS],
+        DEFAULT_CONTACT_COLUMNS,
+    )
     contact_filters = {
         "q": _clean_text(request.GET.get("q")),
         "title": _clean_text(request.GET.get("title")),
@@ -260,6 +294,13 @@ def _contact_list_state(request):
         "active_filters": active_filters,
         "total_contacts": total_contacts,
         "has_contact_records": has_contact_records,
+        "visible_columns": visible_columns,
+        "selected_columns_query": ",".join(visible_columns),
+        "column_options": [
+            {"key": key, "label": label} for key, label in CONTACT_COLUMN_OPTIONS
+        ],
+        "per_page": per_page,
+        "per_page_options": PAGE_SIZE_OPTIONS,
     }
 
 
@@ -277,7 +318,32 @@ def contact_list(request):
             rows,
         )
 
-    page_obj = _paginate(request, state["queryset"])
+    filter_reset_query = _query_string(
+        request,
+        remove_keys=CONTACT_FILTER_KEYS | {"page", "export"},
+    )
+    per_page_menu_options = []
+    contact_list_url = reverse("contact_list")
+    for option in PAGE_SIZE_OPTIONS:
+        query_string = _query_string(
+            request,
+            remove_keys={"page", "export"},
+            extra={"per_page": option},
+        )
+        per_page_menu_options.append(
+            {
+                "value": option,
+                "label": str(option),
+                "is_active": option == state["per_page"],
+                "url": f"{contact_list_url}?{query_string}" if query_string else contact_list_url,
+            }
+        )
+
+    filter_reset_url = reverse("contact_list")
+    if filter_reset_query:
+        filter_reset_url = f"{filter_reset_url}?{filter_reset_query}"
+
+    page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
     return render(
         request,
         "crm/contacts/contact_list.html",
@@ -288,6 +354,21 @@ def contact_list(request):
             "page_query": _page_query(request),
             "export_csv_query": _export_query(request, "csv"),
             "export_xlsx_query": _export_query(request, "xlsx"),
+            "row_number_offset": page_obj.start_index() - 1 if page_obj.paginator.count else 0,
+            "per_page_menu_options": per_page_menu_options,
+            "filter_form_hidden_items": _query_items(
+                request,
+                remove_keys=CONTACT_FILTER_KEYS | {"page", "export"},
+            ),
+            "column_picker_hidden_items": _query_items(
+                request,
+                remove_keys={"columns", "page", "export"},
+            ),
+            "per_page_hidden_items": _query_items(
+                request,
+                remove_keys={"per_page", "page", "export"},
+            ),
+            "filter_reset_url": filter_reset_url,
         },
     )
 

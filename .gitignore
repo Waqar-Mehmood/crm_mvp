@@ -12,3 +12,4 @@ postgres_data/
 app/data/uploads/
 app/staticfiles/
 app/media/
+docs.md

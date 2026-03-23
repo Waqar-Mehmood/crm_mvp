@@ -36,7 +36,9 @@ from ._shared import (
     BOOLEAN_FILTER_LABELS,
     _add_active_filter,
     _apply_toggle_filter,
+    _clean_column_list,
     _clean_export_format,
+    _clean_per_page,
     _clean_text,
     _clean_toggle,
     _distinct_nonempty_values,
@@ -46,9 +48,43 @@ from ._shared import (
     _paginate,
     _parse_date_value,
     _parse_int,
+    _query_items,
+    _query_string,
+    PAGE_SIZE_OPTIONS,
 )
 
 RELATION_SEARCH_LIMIT = 10
+COMPANY_COLUMN_OPTIONS = (
+    ("row", "Row number"),
+    ("company", "Company"),
+    ("industry", "Industry"),
+    ("address", "Address"),
+    ("size", "Size"),
+    ("revenue", "Revenue"),
+    ("location", "Location"),
+    ("phones", "Phones"),
+    ("emails", "Emails"),
+    ("profiles", "Profiles"),
+)
+DEFAULT_COMPANY_COLUMNS = [key for key, _label in COMPANY_COLUMN_OPTIONS]
+COMPANY_FILTER_KEYS = frozenset(
+    {
+        "q",
+        "industry",
+        "state",
+        "country",
+        "city",
+        "size_min",
+        "size_max",
+        "revenue",
+        "has_revenue",
+        "has_phone",
+        "has_email",
+        "has_profile",
+        "created_from",
+        "created_to",
+    }
+)
 
 
 def _company_detail_queryset():
@@ -166,6 +202,12 @@ def company_industry_search(request):
 
 
 def _company_list_state(request):
+    per_page = _clean_per_page(request.GET.get("per_page"))
+    visible_columns = _clean_column_list(
+        request.GET.get("columns"),
+        [key for key, _label in COMPANY_COLUMN_OPTIONS],
+        DEFAULT_COMPANY_COLUMNS,
+    )
     company_filters = {
         "q": _clean_text(request.GET.get("q")),
         "industry": _clean_text(request.GET.get("industry")),
@@ -308,6 +350,13 @@ def _company_list_state(request):
         "state_options": _distinct_nonempty_values(Company.objects, "state"),
         "country_options": _distinct_nonempty_values(Company.objects, "country"),
         "revenue_options": _distinct_nonempty_values(Company.objects, "revenue"),
+        "visible_columns": visible_columns,
+        "selected_columns_query": ",".join(visible_columns),
+        "column_options": [
+            {"key": key, "label": label} for key, label in COMPANY_COLUMN_OPTIONS
+        ],
+        "per_page": per_page,
+        "per_page_options": PAGE_SIZE_OPTIONS,
     }
 
 
@@ -325,7 +374,32 @@ def company_list(request):
             rows,
         )
 
-    page_obj = _paginate(request, state["queryset"])
+    filter_reset_query = _query_string(
+        request,
+        remove_keys=COMPANY_FILTER_KEYS | {"page", "export"},
+    )
+    per_page_menu_options = []
+    company_list_url = reverse("company_list")
+    for option in PAGE_SIZE_OPTIONS:
+        query_string = _query_string(
+            request,
+            remove_keys={"page", "export"},
+            extra={"per_page": option},
+        )
+        per_page_menu_options.append(
+            {
+                "value": option,
+                "label": str(option),
+                "is_active": option == state["per_page"],
+                "url": f"{company_list_url}?{query_string}" if query_string else company_list_url,
+            }
+        )
+
+    filter_reset_url = reverse("company_list")
+    if filter_reset_query:
+        filter_reset_url = f"{filter_reset_url}?{filter_reset_query}"
+
+    page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
     return render(
         request,
         "crm/companies/company_list.html",
@@ -336,6 +410,21 @@ def company_list(request):
             "page_query": _page_query(request),
             "export_csv_query": _export_query(request, "csv"),
             "export_xlsx_query": _export_query(request, "xlsx"),
+            "row_number_offset": page_obj.start_index() - 1 if page_obj.paginator.count else 0,
+            "per_page_menu_options": per_page_menu_options,
+            "filter_form_hidden_items": _query_items(
+                request,
+                remove_keys=COMPANY_FILTER_KEYS | {"page", "export"},
+            ),
+            "column_picker_hidden_items": _query_items(
+                request,
+                remove_keys={"columns", "page", "export"},
+            ),
+            "per_page_hidden_items": _query_items(
+                request,
+                remove_keys={"per_page", "page", "export"},
+            ),
+            "filter_reset_url": filter_reset_url,
         },
     )
 
