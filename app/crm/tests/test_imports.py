@@ -790,6 +790,39 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(detail_response.context["import_result"]["failed_rows_count"], 0)
         self._assert_no_staged_queue()
 
+    def test_import_detail_hero_uses_generic_title_with_file_name_metadata(self):
+        self.client.force_login(self.team_lead_user)
+        import_file = ImportFile.objects.create(
+            file_name="rizwanmehmood2ATgmail.com-Portal-Requested-05-03-26",
+            source_path="/tmp/test-import.csv",
+            status=ImportFile.Status.COMPLETED,
+            total_rows=83,
+            processed_rows=83,
+            result_summary=build_import_result_summary(
+                {
+                    "rows_processed": 83,
+                    "created_companies": 0,
+                    "created_contacts": 0,
+                    "skipped_rows": 0,
+                    "skipped_empty_rows": 0,
+                    "skipped_duplicate_rows": 0,
+                    "failed_rows": [],
+                }
+            ),
+        )
+
+        response = self.client.get(reverse("import_file_detail", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<h1 class=\"page-title\">Import detail</h1>", html=True)
+        self.assertContains(response, "File name")
+        self.assertContains(response, import_file.file_name)
+        self.assertNotContains(
+            response,
+            f"<h1 class=\"page-title\">{import_file.file_name}</h1>",
+            html=False,
+        )
+
     def test_mapping_page_renders_for_csv_source(self):
         self.client.force_login(self.team_lead_user)
 

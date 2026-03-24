@@ -2,8 +2,14 @@
 
 {% block title %}{{ import_file.file_name }} | Import Detail{% endblock %}
 {% block eyebrow %}Stored import detail{% endblock %}
-{% block page_title %}{{ import_file.file_name }}{% endblock %}
+{% block page_title %}Import detail{% endblock %}
 {% block page_description %}Review import status, result summaries, and the stored source rows behind this import file.{% endblock %}
+{% block hero_meta %}
+    <div class="hero-meta">
+        <p class="hero-meta-label">File name</p>
+        <p class="hero-meta-value" title="{{ import_file.file_name }}">{{ import_file.file_name }}</p>
+    </div>
+{% endblock %}
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
@@ -80,26 +86,51 @@
                     <p class="table-secondary">Review the latest import outcome before drilling into the stored row data.</p>
                 </div>
             </div>
-            <div class="metric-grid">
-                <article class="metric-card">
-                    <p class="metric-label">Rows processed</p>
-                    <strong class="metric-value is-mono">{{ import_result.rows_processed }}</strong>
+            <div class="import-result-grid">
+                <article class="import-result-card import-result-card-hero">
+                    <p class="section-kicker">Rows processed</p>
+                    <strong class="import-result-value">{{ import_result.rows_processed }}</strong>
+                    <p class="import-result-copy">
+                        {% if import_result.failed_rows_count %}
+                            Import completed with {{ import_result.failed_rows_count }} failed row{{ import_result.failed_rows_count|pluralize }} to review.
+                        {% elif import_result.rows_skipped %}
+                            Import completed with {{ import_result.rows_skipped }} skipped row{{ import_result.rows_skipped|pluralize }}.
+                        {% else %}
+                            Import completed cleanly with no skipped or failed rows.
+                        {% endif %}
+                    </p>
                 </article>
-                <article class="metric-card">
+                <article class="import-result-card import-result-card-success">
                     <p class="metric-label">Companies created</p>
-                    <strong class="metric-value is-mono">{{ import_result.companies_created }}</strong>
+                    <strong class="import-result-stat">{{ import_result.companies_created }}</strong>
+                    <span class="import-result-note">New company records added from this file.</span>
                 </article>
-                <article class="metric-card">
+                <article class="import-result-card import-result-card-success">
                     <p class="metric-label">Contacts created</p>
-                    <strong class="metric-value is-mono">{{ import_result.contacts_created }}</strong>
+                    <strong class="import-result-stat">{{ import_result.contacts_created }}</strong>
+                    <span class="import-result-note">New contact records created during import.</span>
                 </article>
-                <article class="metric-card">
+                <article class="import-result-card{% if import_result.rows_skipped %} import-result-card-warning{% endif %}">
                     <p class="metric-label">Rows skipped</p>
-                    <strong class="metric-value is-mono">{{ import_result.rows_skipped }}</strong>
+                    <strong class="import-result-stat">{{ import_result.rows_skipped }}</strong>
+                    <span class="import-result-note">
+                        {% if import_result.rows_skipped %}
+                            Rows were intentionally skipped after mapping.
+                        {% else %}
+                            Every mapped row was processed.
+                        {% endif %}
+                    </span>
                 </article>
-                <article class="metric-card">
+                <article class="import-result-card{% if import_result.failed_rows_count %} import-result-card-danger{% endif %}">
                     <p class="metric-label">Failed rows</p>
-                    <strong class="metric-value is-mono">{{ import_result.failed_rows_count }}</strong>
+                    <strong class="import-result-stat">{{ import_result.failed_rows_count }}</strong>
+                    <span class="import-result-note">
+                        {% if import_result.failed_rows_count %}
+                            Review the failed-row table below.
+                        {% else %}
+                            No failed rows were recorded.
+                        {% endif %}
+                    </span>
                 </article>
             </div>
         </section>
