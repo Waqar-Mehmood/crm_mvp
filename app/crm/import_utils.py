@@ -6,13 +6,14 @@ from django.db import transaction
 
 from crm.models import (
     Company,
-    CompanySocialLink,
     Contact,
-    ContactEmail,
-    ContactPhone,
-    ContactSocialLink,
     ImportFile,
     ImportRow,
+)
+from crm.services.import_components import (
+    DataCleaner,
+    FieldMapper,
+    ImportOrchestrator,
 )
 
 
@@ -159,26 +160,10 @@ SUGGEST_MAPPING_ALIASES = {
     "country": ("Country",),
 }
 
-
-def clean(value):
-    if value is None:
-        return ""
-    return " ".join(str(value).replace("\r", " ").replace("\n", " ").split()).strip()
-
-
-def _normalize_mapping_header(value):
-    return "".join(character for character in clean(value).lower() if character.isalnum())
-
-
-def clean_for_model_field(model, field_name, value):
-    normalized = clean(value)
-    if not normalized:
-        return ""
-    field = model._meta.get_field(field_name)
-    max_length = getattr(field, "max_length", None)
-    if max_length:
-        return normalized[:max_length]
-    return normalized
+# Backwards compatibility - components now live in import_components
+suggest_mapping = FieldMapper.suggest_mapping
+clean = DataCleaner.clean
+clean_for_model_field = DataCleaner.clean_for_model_field
 
 
 def infer_platform(url):
@@ -203,27 +188,6 @@ def mapped_value(row, mapping, target):
     if not source:
         return ""
     return clean(row.get(source))
-
-
-def _row_signature(values):
-    ordered_keys = (
-        "company_name",
-        "industry",
-        "company_size",
-        "revenue",
-        "website",
-        "contact_name",
-        "contact_title",
-        "email",
-        "phone",
-        "person_source",
-        "address",
-        "city",
-        "state",
-        "zip_code",
-        "country",
-    )
-    return tuple(clean(values.get(key, "")) for key in ordered_keys)
 
 
 def _csv_lookup_for_sources(import_file, source_fields, mapping_overrides=None):
@@ -279,35 +243,34 @@ def detect_headers(csv_path):
         return [clean(h) for h in (reader.fieldnames or [])]
 
 
-def suggest_mapping(headers):
-    raw_headers = {}
-    normalized_headers = {}
-    for header in headers:
-        cleaned_header = clean(header)
-        if not cleaned_header:
-            continue
-        raw_headers.setdefault(cleaned_header.lower(), cleaned_header)
-        normalized_headers.setdefault(
-            _normalize_mapping_header(cleaned_header),
-            cleaned_header,
-        )
+def _legacy_failed_rows_from_errors(errors):
+    return [
+        {
+            "row_number": error.get("row_num"),
+            "reason": error.get("message", ""),
+        }
+        for error in errors
+    ]
 
-    suggestions = {}
-    for field in TARGET_FIELDS:
-        suggestion = ""
-        for alias in SUGGEST_MAPPING_ALIASES.get(field, ()):
-            raw_alias = clean(alias).lower()
-            if raw_alias in raw_headers:
-                suggestion = raw_headers[raw_alias]
-                break
-        if not suggestion:
-            for alias in SUGGEST_MAPPING_ALIASES.get(field, ()):
-                normalized_alias = _normalize_mapping_header(alias)
-                if normalized_alias in normalized_headers:
-                    suggestion = normalized_headers[normalized_alias]
-                    break
-        suggestions[field] = suggestion
-    return suggestions
+
+def _legacy_stats_from_import_stats(stats):
+    failed_rows = _legacy_failed_rows_from_errors(getattr(stats, "errors", []))
+    return {
+        "rows_processed": getattr(stats, "rows_processed", 0),
+        "created_companies": getattr(stats, "created_companies", 0),
+        "created_contacts": getattr(stats, "created_contacts", 0),
+        "links_created": getattr(stats, "links_created", 0),
+        "email_rows_created": getattr(stats, "email_rows_created", 0),
+        "phone_rows_created": getattr(stats, "phone_rows_created", 0),
+        "social_rows_created": getattr(stats, "social_rows_created", 0),
+        "company_social_rows_created": getattr(stats, "company_social_rows_created", 0),
+        "import_rows_created": getattr(stats, "import_rows_created", 0),
+        "import_rows_updated": getattr(stats, "import_rows_updated", 0),
+        "skipped_rows": getattr(stats, "skipped_rows", 0),
+        "skipped_empty_rows": getattr(stats, "skipped_empty_rows", 0),
+        "skipped_duplicate_rows": getattr(stats, "skipped_duplicate_rows", 0),
+        "failed_rows": failed_rows,
+    }
 
 
 def import_csv_with_mapping(
@@ -329,288 +292,25 @@ def import_csv_with_mapping(
     if source_path and source_path != import_file.source_path:
         import_file.source_path = source_path
         import_file.save(update_fields=["source_path", "updated_at"])
-
-    stats = {
-        "rows_processed": 0,
-        "created_companies": 0,
-        "created_contacts": 0,
-        "links_created": 0,
-        "email_rows_created": 0,
-        "phone_rows_created": 0,
-        "social_rows_created": 0,
-        "company_social_rows_created": 0,
-        "import_rows_created": 0,
-        "import_rows_updated": 0,
-        "skipped_rows": 0,
-        "skipped_empty_rows": 0,
-        "skipped_duplicate_rows": 0,
-        "failed_rows": [],
-    }
-    seen_signatures = set()
     progress_interval = max(int(progress_interval or 1), 1)
 
     with csv_path.open(newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for row_index, row in enumerate(reader, start=2):
-            stats["rows_processed"] += 1
-            company_name = clean_for_model_field(
-                Company,
-                "name",
-                mapped_value(row, mapping, "company_name"),
-            )
-            industry = clean_for_model_field(
-                Company,
-                "industry",
-                mapped_value(row, mapping, "industry"),
-            )
-            company_size = clean_for_model_field(
-                Company,
-                "company_size",
-                mapped_value(row, mapping, "company_size"),
-            )
-            revenue = clean_for_model_field(
-                Company,
-                "revenue",
-                mapped_value(row, mapping, "revenue"),
-            )
-            website = clean_for_model_field(
-                CompanySocialLink,
-                "url",
-                mapped_value(row, mapping, "website"),
-            )
-            contact_name = clean_for_model_field(
-                Contact,
-                "full_name",
-                mapped_value(row, mapping, "contact_name"),
-            )
-            first_name = mapped_value(row, mapping, "contact_first_name")
-            last_name = mapped_value(row, mapping, "contact_last_name")
-            raw_contact_title = mapped_value(row, mapping, "contact_title")
-            contact_title = clean_for_model_field(Contact, "title", raw_contact_title)
-            import_row_contact_title = clean_for_model_field(
-                ImportRow,
-                "contact_title",
-                raw_contact_title,
-            )
-            email = clean_for_model_field(
-                Contact,
-                "email",
-                mapped_value(row, mapping, "email"),
-            )
-            phone = clean_for_model_field(
-                Contact,
-                "phone",
-                mapped_value(row, mapping, "phone"),
-            )
-            person_source = clean_for_model_field(
-                ContactSocialLink,
-                "url",
-                mapped_value(row, mapping, "person_source"),
-            )
-            address = clean_for_model_field(
-                Company,
-                "address",
-                mapped_value(row, mapping, "address"),
-            )
-            city = clean_for_model_field(
-                Company,
-                "city",
-                mapped_value(row, mapping, "city"),
-            )
-            state = clean_for_model_field(
-                Company,
-                "state",
-                mapped_value(row, mapping, "state"),
-            )
-            zip_code = clean_for_model_field(
-                Company,
-                "zip_code",
-                mapped_value(row, mapping, "zip_code"),
-            )
-            country = clean_for_model_field(
-                Company,
-                "country",
-                mapped_value(row, mapping, "country"),
-            )
+        csv_rows = list(csv.DictReader(f))
 
-            if not contact_name and (first_name or last_name):
-                contact_name = clean_for_model_field(
-                    Contact,
-                    "full_name",
-                    f"{first_name} {last_name}",
-                )
+    partial_progress = {"rows_processed": 0}
 
-            row_values = {
-                "company_name": company_name,
-                "industry": industry,
-                "company_size": company_size,
-                "revenue": revenue,
-                "website": website,
-                "contact_name": contact_name,
-                "contact_title": import_row_contact_title,
-                "email": email,
-                "phone": phone,
-                "person_source": person_source,
-                "address": address,
-                "city": city,
-                "state": state,
-                "zip_code": zip_code,
-                "country": country,
-            }
+    def _orchestrator_progress(current_row, total_rows):
+        partial_progress["rows_processed"] = current_row
+        if progress_callback and current_row % progress_interval == 0:
+            progress_callback(import_file, partial_progress, final=False)
 
-            if not any(row_values.values()):
-                stats["skipped_empty_rows"] += 1
-                stats["failed_rows"].append(
-                    {"row_number": row_index, "reason": "Row was empty after mapping."}
-                )
-                continue
-
-            signature = _row_signature(row_values)
-            if signature in seen_signatures:
-                stats["skipped_duplicate_rows"] += 1
-                stats["failed_rows"].append(
-                    {"row_number": row_index, "reason": "Duplicate mapped row in this import."}
-                )
-                continue
-            seen_signatures.add(signature)
-
-            company = None
-            if company_name:
-                company, company_created = Company.objects.get_or_create(
-                    name=company_name,
-                    defaults={
-                        "industry": industry,
-                        "company_size": company_size,
-                        "revenue": revenue,
-                        "address": address,
-                        "city": city,
-                        "state": state,
-                        "zip_code": zip_code,
-                        "country": country,
-                    },
-                )
-                if company_created:
-                    stats["created_companies"] += 1
-                else:
-                    fields = []
-                    if industry and not clean(company.industry):
-                        company.industry = industry
-                        fields.append("industry")
-                    if company_size and not clean(company.company_size):
-                        company.company_size = company_size
-                        fields.append("company_size")
-                    if revenue and not clean(company.revenue):
-                        company.revenue = revenue
-                        fields.append("revenue")
-                    if address and not clean(company.address):
-                        company.address = address
-                        fields.append("address")
-                    if city and not clean(company.city):
-                        company.city = city
-                        fields.append("city")
-                    if state and not clean(company.state):
-                        company.state = state
-                        fields.append("state")
-                    if zip_code and not clean(company.zip_code):
-                        company.zip_code = zip_code
-                        fields.append("zip_code")
-                    if country and not clean(company.country):
-                        company.country = country
-                        fields.append("country")
-                    if fields:
-                        company.save(update_fields=fields)
-
-            contact = None
-            if contact_name:
-                contact, contact_created = Contact.objects.get_or_create(
-                    full_name=contact_name,
-                    defaults={
-                        "title": contact_title,
-                        "email": email,
-                        "phone": phone,
-                    },
-                )
-                if contact_created:
-                    stats["created_contacts"] += 1
-                else:
-                    fields = []
-                    if contact_title and not clean(contact.title):
-                        contact.title = contact_title
-                        fields.append("title")
-                    if email and not clean(contact.email):
-                        contact.email = email
-                        fields.append("email")
-                    if phone and not clean(contact.phone):
-                        contact.phone = phone
-                        fields.append("phone")
-                    if fields:
-                        contact.save(update_fields=fields)
-
-            if company and contact and not company.contacts.filter(pk=contact.pk).exists():
-                company.contacts.add(contact)
-                stats["links_created"] += 1
-
-            if contact and email and not ContactEmail.objects.filter(contact=contact, email=email).exists():
-                ContactEmail.objects.create(contact=contact, email=email, label="work")
-                stats["email_rows_created"] += 1
-
-            if contact and phone and not ContactPhone.objects.filter(contact=contact, phone=phone).exists():
-                ContactPhone.objects.create(contact=contact, phone=phone, label="work")
-                stats["phone_rows_created"] += 1
-
-            if contact and person_source and not ContactSocialLink.objects.filter(contact=contact, url=person_source).exists():
-                ContactSocialLink.objects.create(
-                    contact=contact,
-                    url=person_source,
-                    platform=infer_platform(person_source),
-                )
-                stats["social_rows_created"] += 1
-
-            if company and website and not CompanySocialLink.objects.filter(company=company, url=website).exists():
-                CompanySocialLink.objects.create(
-                    company=company,
-                    url=website,
-                    platform=infer_platform(website),
-                )
-                stats["company_social_rows_created"] += 1
-
-            import_row_defaults = {
-                "company": company,
-                "contact": contact,
-                "company_name": company_name,
-                "website": website,
-                "contact_name": contact_name,
-                "contact_title": import_row_contact_title,
-                "email_address": email,
-                "phone_number": phone,
-                "person_source": person_source,
-                "address": address,
-                "city": city,
-                "state": state,
-                "zip_code": zip_code,
-                "country": country,
-            }
-            _, row_created = ImportRow.objects.update_or_create(
-                import_file=import_file,
-                row_number=row_index,
-                defaults=import_row_defaults,
-            )
-            if row_created:
-                stats["import_rows_created"] += 1
-            else:
-                stats["import_rows_updated"] += 1
-
-            if not company and not contact:
-                stats["skipped_rows"] += 1
-                stats["failed_rows"].append(
-                    {
-                        "row_number": row_index,
-                        "reason": "Row did not create or match a company or contact.",
-                    }
-                )
-
-            if progress_callback and stats["rows_processed"] % progress_interval == 0:
-                progress_callback(import_file, stats, final=False)
+    stats_obj = ImportOrchestrator.execute(
+        csv_rows,
+        mapping,
+        import_file=import_file,
+        progress_callback=_orchestrator_progress if progress_callback else None,
+    )
+    stats = _legacy_stats_from_import_stats(stats_obj)
 
     if progress_callback:
         progress_callback(import_file, stats, final=True)

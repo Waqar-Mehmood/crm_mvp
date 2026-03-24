@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 
 from django.contrib import messages
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import UploadedFile
 from django.db.models import Count
 from django.http import HttpRequest, HttpResponse
@@ -14,18 +15,19 @@ from django.urls import reverse
 
 from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
 from crm.models import ImportFile
+from crm.services.import_components import (
+    FileManager,
+    ImportSessionManager,
+    MappingBuilder,
+    UploadHandler,
+)
 from crm.services.import_jobs import count_csv_rows, queue_import_job
 from crm.services.import_workflow import (
     TARGET_FIELDS,
-    suggest_mapping,
 )
-from crm.services.import_parsers import detect_csv_headers, parse_csv_file
 from crm.services.import_service import (
     detect_import_source_type,
     get_row_headers,
-    parse_rows_from_source,
-    rows_to_uploaded_csv,
-    select_import_parser,
 )
 from crm.upload_storage import save_import_upload
 from ._shared import (
@@ -96,10 +98,7 @@ def _default_import_display_name(original_name: str) -> str:
 
 def _delete_staged_paths(paths: list[str | Path]) -> None:
     for raw_path in {str(path) for path in paths if path}:
-        try:
-            Path(raw_path).unlink(missing_ok=True)
-        except OSError:
-            continue
+        FileManager.cleanup_temp_file(raw_path)
 
 
 def _cleanup_staged_entries(entries: list[dict[str, object]]) -> None:
@@ -149,7 +148,7 @@ def _legacy_staged_entry_from_session(
 
 
 def _get_staged_queue(request: HttpRequest) -> list[dict[str, object]]:
-    queue = request.session.get(STAGED_IMPORTS_SESSION_KEY, [])
+    queue = ImportSessionManager.get_staged_queue(request)
     if queue:
         return queue
 
@@ -166,30 +165,62 @@ def _set_staged_queue(
     request: HttpRequest,
     entries: list[dict[str, object]],
 ) -> None:
+    ImportSessionManager.clear_queue(request)
     if entries:
-        request.session[STAGED_IMPORTS_SESSION_KEY] = entries
+        for entry in entries:
+            ImportSessionManager.add_to_queue(request, entry)
         _sync_legacy_staged_source(request, entries[0])
     else:
-        request.session.pop(STAGED_IMPORTS_SESSION_KEY, None)
         _clear_legacy_staged_source(request)
-    request.session.modified = True
 
 
 def _clear_staged_queue(request: HttpRequest, *, cleanup: bool = False) -> None:
     queue = _get_staged_queue(request)
     if cleanup and queue:
         _cleanup_staged_entries(queue)
-    _set_staged_queue(request, [])
+    ImportSessionManager.clear_queue(request)
+    _clear_legacy_staged_source(request)
+    request.session.modified = True
 
 
 def _clear_active_import_job(request: HttpRequest) -> None:
-    request.session.pop(ACTIVE_IMPORT_JOB_SESSION_KEY, None)
-    request.session.modified = True
+    ImportSessionManager.mark_job_complete(request)
 
 
 def _set_active_import_job(request: HttpRequest, import_file: ImportFile) -> None:
-    request.session[ACTIVE_IMPORT_JOB_SESSION_KEY] = import_file.id
-    request.session.modified = True
+    ImportSessionManager.set_active_job(request, str(import_file.id))
+
+
+def _build_staged_entry_from_rows(
+    rows: list[dict[str, str]],
+    original_name: str,
+    *,
+    source_type: str,
+) -> dict[str, object]:
+    headers = get_row_headers(rows)
+    if not headers:
+        raise ValueError("The uploaded file did not contain any headers or data rows.")
+
+    temp_csv_path = FileManager.create_temp_csv(rows)
+    try:
+        staged_filename = FileManager.validate_filename(original_name)
+        with Path(temp_csv_path).open("rb") as handle:
+            staged_upload = SimpleUploadedFile(
+                staged_filename,
+                handle.read(),
+                content_type="text/csv",
+            )
+        source_path = save_import_upload(staged_upload)
+    finally:
+        FileManager.cleanup_temp_file(temp_csv_path)
+
+    return {
+        "temp_path": str(source_path),
+        "original_name": original_name,
+        "headers": headers,
+        "source_type": source_type,
+        "cleanup_paths": [str(source_path)],
+    }
 
 
 def _build_staged_upload_entry(
@@ -198,49 +229,12 @@ def _build_staged_upload_entry(
     source_type_override: str | None = None,
 ) -> dict[str, object]:
     original_name = Path(getattr(uploaded, "name", "import.csv")).name
-    created_paths: list[Path] = []
-
-    try:
-        source_path = save_import_upload(uploaded)
-        created_paths.append(source_path)
-        resolved_source_type = detect_import_source_type(
-            source=source_path,
-            source_type=source_type_override,
-            filename=original_name,
-        )
-        parser = select_import_parser(
-            source=source_path,
-            source_type=source_type_override,
-            filename=original_name,
-        )
-
-        if parser is parse_csv_file:
-            temp_path = source_path
-            headers = detect_csv_headers(temp_path)
-        else:
-            rows = parse_rows_from_source(source_path, filename=original_name)
-            headers = get_row_headers(rows)
-            if not headers:
-                raise ValueError("The uploaded file did not contain any headers or data rows.")
-
-            staged_csv_name = f"{Path(original_name).stem}.csv"
-            staged_upload = rows_to_uploaded_csv(rows, filename=staged_csv_name)
-            temp_path = save_import_upload(staged_upload)
-            created_paths.append(temp_path)
-
-        if not headers:
-            raise ValueError("The uploaded file did not contain any headers.")
-
-        return {
-            "temp_path": str(temp_path),
-            "original_name": original_name,
-            "headers": headers,
-            "source_type": resolved_source_type,
-            "cleanup_paths": [str(path) for path in created_paths],
-        }
-    except Exception:
-        _delete_staged_paths(created_paths)
-        raise
+    processed = UploadHandler.process_uploaded_file(uploaded)
+    return _build_staged_entry_from_rows(
+        processed["rows"],
+        original_name,
+        source_type=source_type_override or processed["source_type"],
+    )
 
 
 def _stage_entries_for_mapping(
@@ -296,46 +290,40 @@ def _stage_parsed_rows_for_mapping(
     source_type: str,
 ) -> HttpResponse:
     """Normalize parsed rows into the existing staged CSV mapping flow."""
-    uploaded = rows_to_uploaded_csv(rows, filename=filename)
-    return _stage_import_upload(request, uploaded, source_type_override=source_type)
+    entry = _build_staged_entry_from_rows(rows, filename, source_type=source_type)
+    return _stage_entries_for_mapping(request, [entry])
 
 
 def _build_mapping_fields(headers: list[str]) -> list[dict[str, str | bool]]:
     """Build mapping field metadata with reusable suggestion state."""
-    target_labels = {
-        "company_name": "Company Name",
-        "industry": "Industry / Business Type",
-        "company_size": "Company Size",
-        "revenue": "Revenue",
-        "website": "Website / Company URL",
-        "contact_name": "Contact Full Name",
-        "contact_first_name": "Contact First Name",
-        "contact_last_name": "Contact Last Name",
-        "contact_title": "Contact Title",
-        "email": "Email",
-        "phone": "Phone",
-        "person_source": "Person Source / Profile URL",
-        "address": "Address / Location",
-        "city": "City",
-        "state": "State",
-        "zip_code": "Zip Code",
-        "country": "Country",
-    }
-    suggested = suggest_mapping(headers)
-
     mapping_fields = [
         {
-            "key": key,
-            "label": target_labels.get(key, key),
-            "suggested": suggested.get(key, ""),
-            "selected": suggested.get(key, ""),
-            "requirement": FIELD_REQUIREMENTS.get(key, "Optional field."),
-            "status_label": "Suggested" if suggested.get(key, "") else "Review",
-            "status_tone": "suggested" if suggested.get(key, "") else "review",
+            "key": field["target_field"],
+            "label": field["label"],
+            "suggested": field["suggested_column"],
+            "selected": field["suggested_column"],
+            "requirement": FIELD_REQUIREMENTS.get(field["target_field"], "Optional field."),
+            "status_label": "Suggested" if field["suggested_column"] else "Review",
+            "status_tone": "suggested" if field["suggested_column"] else "review",
         }
-        for key in TARGET_FIELDS
+        for field in MappingBuilder.build_mapping_fields(headers)
     ]
-    return sorted(mapping_fields, key=lambda field: (field["selected"] == "",))
+    return mapping_fields
+
+
+def _apply_selected_mapping(
+    mapping_fields: list[dict[str, str | bool]],
+    mapping: dict[str, str],
+) -> list[dict[str, str | bool]]:
+    updated_fields = []
+    for field in mapping_fields:
+        selected = (mapping.get(field["key"], "") or "").strip()
+        updated_field = dict(field)
+        updated_field["selected"] = selected
+        updated_field["status_label"] = "Suggested" if selected else "Review"
+        updated_field["status_tone"] = "suggested" if selected else "review"
+        updated_fields.append(updated_field)
+    return updated_fields
 
 
 def _build_preview_rows(
@@ -459,8 +447,13 @@ def import_google_sheets_preview(request: HttpRequest) -> HttpResponse:
             try:
                 from crm.services.google_sheets import extract_sheet_id
 
-                rows = parse_rows_from_source(sheet_url)
-                total_rows = len(rows)
+                is_valid, error_message = UploadHandler.validate_file(sheet_url)
+                if not is_valid:
+                    raise ValueError(error_message)
+
+                processed = UploadHandler.process_uploaded_file(sheet_url)
+                rows = processed["rows"]
+                total_rows = processed["row_count"]
                 headers, preview_rows = _build_preview_rows(rows)
                 if action == "import":
                     sheet_id = extract_sheet_id(sheet_url)
@@ -492,9 +485,9 @@ def import_google_sheets_preview(request: HttpRequest) -> HttpResponse:
 def import_file_detail(request, file_id):
     import_file = get_object_or_404(ImportFile, pk=file_id)
     staged_queue = _get_staged_queue(request)
-    active_import_job_id = request.session.get(ACTIVE_IMPORT_JOB_SESSION_KEY)
+    active_import_job_id = ImportSessionManager.get_active_job(request)
 
-    if active_import_job_id == import_file.id:
+    if active_import_job_id == str(import_file.id):
         if import_file.status == ImportFile.Status.COMPLETED:
             _clear_active_import_job(request)
             if staged_queue:
@@ -527,7 +520,7 @@ def import_file_detail(request, file_id):
             "page_query": _page_query(request),
             "should_auto_refresh": import_file.status in {ImportFile.Status.QUEUED, ImportFile.Status.RUNNING},
             "staged_queue_remaining": len(staged_queue),
-            "is_active_import_job": active_import_job_id == import_file.id,
+            "is_active_import_job": active_import_job_id == str(import_file.id),
         },
     )
 
@@ -571,7 +564,12 @@ def import_upload(request):
 
             from crm.services.google_sheets import extract_sheet_id
 
-            rows = parse_rows_from_source(sheet_url)
+            is_valid, error_message = UploadHandler.validate_file(sheet_url)
+            if not is_valid:
+                raise ValueError(error_message)
+
+            processed = UploadHandler.process_uploaded_file(sheet_url)
+            rows = processed["rows"]
             sheet_id = extract_sheet_id(sheet_url)
             filename = f"Google Sheet - {sheet_id}.csv"
             return _stage_parsed_rows_for_mapping(
@@ -615,6 +613,23 @@ def import_map_headers(request):
         for key in TARGET_FIELDS:
             selected = (request.POST.get(f"map_{key}") or "").strip()
             mapping[key] = selected
+
+        is_valid, error_message = MappingBuilder.validate_user_mapping(mapping)
+        if not is_valid:
+            return render(
+                request,
+                "crm/imports/import_map_headers.html",
+                {
+                    "original_name": original_name,
+                    "display_name": file_name,
+                    "headers": headers,
+                    "mapping_fields": _apply_selected_mapping(mapping_fields, mapping),
+                    "source_type_label": SOURCE_TYPE_LABELS.get(source_type, "Import source"),
+                    "queue_position": queue_position,
+                    "queue_total": queue_total,
+                    "error": error_message,
+                },
+            )
 
         import_file = queue_import_job(
             file_name=file_name,
