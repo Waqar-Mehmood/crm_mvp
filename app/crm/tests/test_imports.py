@@ -1,7 +1,9 @@
 from . import (
     CRMRoleTestMixin,
     Client,
+    Contact,
     ImportFile,
+    ImportRow,
     Mock,
     Path,
     ROLE_OWNER,
@@ -612,6 +614,47 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
             map_response.context["import_result"]["failed_rows"],
             [{"row_number": 3, "reason": "Row was empty after mapping."}],
         )
+
+    def test_import_mapping_truncates_overlong_contact_title_for_model_limits(self):
+        self.client.force_login(self.team_lead_user)
+        long_title = "Senior Strategic Partnerships " * 12
+
+        upload_response = self.client.post(
+            reverse("import_upload"),
+            {
+                "csv_file": make_csv_file(
+                    "long-title-import.csv",
+                    (
+                        "First Name,Last Name,Title,Email\n"
+                        f"Jane,Doe,{long_title},jane@example.com\n"
+                    ),
+                ),
+            },
+        )
+
+        self.assertRedirects(upload_response, reverse("import_map_headers"))
+
+        map_response = self.client.post(
+            reverse("import_map_headers"),
+            {
+                "file_name": "long-title-import.csv",
+                "map_contact_first_name": "First Name",
+                "map_contact_last_name": "Last Name",
+                "map_contact_title": "Title",
+                "map_email": "Email",
+            },
+            follow=True,
+        )
+
+        contact = Contact.objects.get(full_name="Jane Doe")
+        import_row = ImportRow.objects.get(contact=contact)
+
+        self.assertEqual(map_response.status_code, 200)
+        self.assertContains(map_response, "Import result")
+        self.assertEqual(contact.title, long_title[:100])
+        self.assertEqual(import_row.contact_title, long_title[:255])
+        self.assertEqual(map_response.context["import_result"]["contacts_created"], 1)
+        self.assertEqual(map_response.context["import_result"]["failed_rows_count"], 0)
 
     def test_admin_import_upload_stores_file_under_media_imports(self):
         self.client.force_login(self.owner_user)

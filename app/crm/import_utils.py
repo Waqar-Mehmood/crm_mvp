@@ -75,6 +75,17 @@ def clean(value):
     return " ".join(str(value).replace("\r", " ").replace("\n", " ").split()).strip()
 
 
+def clean_for_model_field(model, field_name, value):
+    normalized = clean(value)
+    if not normalized:
+        return ""
+    field = model._meta.get_field(field_name)
+    max_length = getattr(field, "max_length", None)
+    if max_length:
+        return normalized[:max_length]
+    return normalized
+
+
 def infer_platform(url):
     if not url:
         return ""
@@ -236,26 +247,92 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
         reader = csv.DictReader(f)
         for row_index, row in enumerate(reader, start=2):
             stats["rows_processed"] += 1
-            company_name = mapped_value(row, mapping, "company_name")
-            industry = mapped_value(row, mapping, "industry")
-            company_size = mapped_value(row, mapping, "company_size")
-            revenue = mapped_value(row, mapping, "revenue")
-            website = mapped_value(row, mapping, "website")
-            contact_name = mapped_value(row, mapping, "contact_name")
+            company_name = clean_for_model_field(
+                Company,
+                "name",
+                mapped_value(row, mapping, "company_name"),
+            )
+            industry = clean_for_model_field(
+                Company,
+                "industry",
+                mapped_value(row, mapping, "industry"),
+            )
+            company_size = clean_for_model_field(
+                Company,
+                "company_size",
+                mapped_value(row, mapping, "company_size"),
+            )
+            revenue = clean_for_model_field(
+                Company,
+                "revenue",
+                mapped_value(row, mapping, "revenue"),
+            )
+            website = clean_for_model_field(
+                CompanySocialLink,
+                "url",
+                mapped_value(row, mapping, "website"),
+            )
+            contact_name = clean_for_model_field(
+                Contact,
+                "full_name",
+                mapped_value(row, mapping, "contact_name"),
+            )
             first_name = mapped_value(row, mapping, "contact_first_name")
             last_name = mapped_value(row, mapping, "contact_last_name")
-            contact_title = mapped_value(row, mapping, "contact_title")
-            email = mapped_value(row, mapping, "email")
-            phone = mapped_value(row, mapping, "phone")
-            person_source = mapped_value(row, mapping, "person_source")
-            address = mapped_value(row, mapping, "address")
-            city = mapped_value(row, mapping, "city")
-            state = mapped_value(row, mapping, "state")
-            zip_code = mapped_value(row, mapping, "zip_code")
-            country = mapped_value(row, mapping, "country")
+            raw_contact_title = mapped_value(row, mapping, "contact_title")
+            contact_title = clean_for_model_field(Contact, "title", raw_contact_title)
+            import_row_contact_title = clean_for_model_field(
+                ImportRow,
+                "contact_title",
+                raw_contact_title,
+            )
+            email = clean_for_model_field(
+                Contact,
+                "email",
+                mapped_value(row, mapping, "email"),
+            )
+            phone = clean_for_model_field(
+                Contact,
+                "phone",
+                mapped_value(row, mapping, "phone"),
+            )
+            person_source = clean_for_model_field(
+                ContactSocialLink,
+                "url",
+                mapped_value(row, mapping, "person_source"),
+            )
+            address = clean_for_model_field(
+                Company,
+                "address",
+                mapped_value(row, mapping, "address"),
+            )
+            city = clean_for_model_field(
+                Company,
+                "city",
+                mapped_value(row, mapping, "city"),
+            )
+            state = clean_for_model_field(
+                Company,
+                "state",
+                mapped_value(row, mapping, "state"),
+            )
+            zip_code = clean_for_model_field(
+                Company,
+                "zip_code",
+                mapped_value(row, mapping, "zip_code"),
+            )
+            country = clean_for_model_field(
+                Company,
+                "country",
+                mapped_value(row, mapping, "country"),
+            )
 
             if not contact_name and (first_name or last_name):
-                contact_name = clean(f"{first_name} {last_name}")
+                contact_name = clean_for_model_field(
+                    Contact,
+                    "full_name",
+                    f"{first_name} {last_name}",
+                )
 
             row_values = {
                 "company_name": company_name,
@@ -264,7 +341,7 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
                 "revenue": revenue,
                 "website": website,
                 "contact_name": contact_name,
-                "contact_title": contact_title,
+                "contact_title": import_row_contact_title,
                 "email": email,
                 "phone": phone,
                 "person_source": person_source,
@@ -397,7 +474,7 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
                 "company_name": company_name,
                 "website": website,
                 "contact_name": contact_name,
-                "contact_title": contact_title,
+                "contact_title": import_row_contact_title,
                 "email_address": email,
                 "phone_number": phone,
                 "person_source": person_source,
