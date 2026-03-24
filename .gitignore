@@ -13,4 +13,5 @@ postgres_data/
 app/data/uploads/
 app/staticfiles/
 app/media/
+app/crm/static/crm_spa/
 docs.md

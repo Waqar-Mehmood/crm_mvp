@@ -33,6 +33,20 @@ services:
         aliases:
           - crm-web
 
+  worker:
+    build: .
+    command: python manage.py run_import_worker --poll-interval 2
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app
+      - ./app/media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      default:
+
   adminer:
     image: adminer:latest
     ports:

@@ -16,11 +16,17 @@
         </article>
         <article class="metric-card">
             <p class="metric-label">Display name</p>
-            <strong class="metric-value is-mono">{{ original_name|default:"Pending" }}</strong>
+            <strong class="metric-value is-compact">{{ display_name|default:"Pending" }}</strong>
         </article>
+        {% if queue_total > 1 %}
+            <article class="metric-card">
+                <p class="metric-label">Queue progress</p>
+                <strong class="metric-value is-mono">File {{ queue_position }} of {{ queue_total }}</strong>
+            </article>
+        {% endif %}
     </div>
     <div class="action-stack">
-        <a class="button-link is-secondary" href="{% url 'import_upload' %}">Swap file</a>
+        <a class="button-link is-secondary" href="{% url 'import_upload' %}?reset_queue=1">Swap file</a>
         <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
@@ -54,10 +60,14 @@
 
                 <div class="field">
                     <label for="file_name">File display name</label>
-                    <input type="text" id="file_name" name="file_name" value="{{ original_name }}" required>
+                    <input type="text" id="file_name" name="file_name" value="{{ display_name }}" required>
                 </div>
 
-                <p class="notice">Suggested matches are preselected. Review the highlighted fields first, then adjust any optional mappings before import.</p>
+                {% if queue_total > 1 %}
+                    <p class="notice">You are mapping file {{ queue_position }} of {{ queue_total }}. This file will be queued for background import, and the next staged file will open automatically after it completes.</p>
+                {% endif %}
+
+                <p class="notice">Suggested matches are preselected. Review the highlighted fields first, then queue the import for background processing.</p>
 
                 <div class="table-shell">
                     <table class="data-table">
@@ -94,7 +104,7 @@
 
                 <p class="notice">Tip: map either <strong>Contact Full Name</strong> or map both <strong>Contact First Name</strong> and <strong>Contact Last Name</strong>.</p>
 
-                <button type="submit">Import with mapping</button>
+                <button type="submit">Queue import with mapping</button>
             </form>
         </article>
     </section>

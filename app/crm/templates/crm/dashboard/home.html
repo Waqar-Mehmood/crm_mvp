@@ -54,7 +54,7 @@
                                     <p class="section-kicker">Import batch</p>
                                     <h3>{{ import_file.file_name }}</h3>
                                 </div>
-                                <span class="path-chip">{{ import_file.total_rows }} rows</span>
+                                <span class="path-chip">{{ import_file.stored_rows }} rows</span>
                             </div>
                             <p class="muted">Updated {{ import_file.updated_at|date:"Y-m-d H:i" }}</p>
                             {% if import_file.review_rows %}

@@ -32,9 +32,6 @@
                             <a class="nav-pill{% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_detail' or request.resolver_match.url_name == 'company_create' or request.resolver_match.url_name == 'company_edit' %} is-active{% endif %}" href="{% url 'company_list' %}">Companies</a>
                             <a class="nav-pill{% if request.resolver_match.url_name == 'contact_list' or request.resolver_match.url_name == 'contact_detail' or request.resolver_match.url_name == 'contact_create' or request.resolver_match.url_name == 'contact_edit' %} is-active{% endif %}" href="{% url 'contact_list' %}">Contacts</a>
                             <a class="nav-pill{% if request.resolver_match.url_name == 'import_file_list' or request.resolver_match.url_name == 'import_file_detail' %} is-active{% endif %}" href="{% url 'import_file_list' %}">Imports</a>
-                            {% if crm_can_import %}
-                                <a class="nav-pill{% if request.resolver_match.url_name == 'import_upload' or request.resolver_match.url_name == 'import_map_headers' %} is-active{% endif %}" href="{% url 'import_upload' %}">Upload</a>
-                            {% endif %}
                         </nav>
                     {% endif %}
                     <div class="auth-strip">

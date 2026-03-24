@@ -86,7 +86,7 @@ def _dashboard_copy(flags):
 
 def _annotated_import_files():
     return ImportFile.objects.annotate(
-        total_rows=Count("rows", distinct=True),
+        stored_rows=Count("rows", distinct=True),
         review_rows=Count(
             "rows",
             filter=Q(rows__company__isnull=True, rows__contact__isnull=True),

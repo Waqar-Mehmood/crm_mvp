@@ -7,8 +7,11 @@
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
-            <p class="metric-label">Import sets</p>
+            <p class="metric-label">{% if filters_active %}Matching imports{% else %}Import sets{% endif %}</p>
             <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+            {% if filters_active %}
+                <span class="metric-subtext">of {{ total_imports }} total</span>
+            {% endif %}
         </article>
         <article class="metric-card">
             <p class="metric-label">Visible rows</p>
@@ -17,13 +20,79 @@
     </div>
     <div class="action-stack">
         {% if crm_can_import %}
-            <a class="button-link" href="{% url 'import_upload' %}">Upload a CSV</a>
+            <a class="button-link" href="{% url 'import_upload' %}">Upload</a>
         {% endif %}
         <a class="button-link is-secondary" href="{% url 'company_list' %}">Browse records</a>
     </div>
 {% endblock %}
 
 {% block content %}
+    {% if has_import_records or filters_active %}
+        <details class="form-card filter-card import-filter-card filter-disclosure" data-animated-disclosure{% if filters_active %} open{% endif %}>
+            <summary class="filter-disclosure-summary">
+                <div>
+                    <p class="section-kicker">Advanced filters</p>
+                    <h2>Refine import history</h2>
+                </div>
+                <span class="button-link is-secondary filter-disclosure-toggle">
+                    <span class="filter-disclosure-label filter-disclosure-label-closed">Show filters</span>
+                    <span class="filter-disclosure-label filter-disclosure-label-open">Hide filters</span>
+                </span>
+            </summary>
+            <div class="filter-disclosure-body" data-disclosure-body>
+                <form method="get" class="form-layout list-filter-form">
+                    {% for item in filter_form_hidden_items %}
+                        <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
+                    {% endfor %}
+                    <div class="filter-grid">
+                        <div class="field field-span-2">
+                            <label for="import-q">Search</label>
+                            <input id="import-q" class="list-filter-control" type="text" name="q" value="{{ filters.q }}" placeholder="Search file names">
+                        </div>
+                        <div class="field">
+                            <label for="import-status">Status</label>
+                            <select id="import-status" class="list-filter-control" name="status">
+                                <option value="">All statuses</option>
+                                {% for value, label in status_options %}
+                                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="import-updated-from">Updated from</label>
+                            <input id="import-updated-from" class="list-filter-control" type="date" name="updated_from" value="{{ filters.updated_from }}">
+                        </div>
+                        <div class="field">
+                            <label for="import-updated-to">Updated to</label>
+                            <input id="import-updated-to" class="list-filter-control" type="date" name="updated_to" value="{{ filters.updated_to }}">
+                        </div>
+                    </div>
+                    <div class="filter-actions list-filter-actions">
+                        <input class="list-filter-submit" type="submit" value="Apply filters">
+                        <a class="button-link is-secondary list-filter-reset" href="{{ filter_reset_url }}">Reset</a>
+                    </div>
+                </form>
+                <div class="filter-summary">
+                    <div class="filter-summary-head">
+                        <div>
+                            <p class="section-kicker">Current result set</p>
+                            <h2>{{ page_obj.paginator.count }} matching imports</h2>
+                        </div>
+                    </div>
+                    {% if active_filters %}
+                        <div class="filter-chip-row">
+                            {% for filter in active_filters %}
+                                <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="table-secondary">Showing all {{ total_imports }} imports in the ledger.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+    {% endif %}
+
     {% if import_files %}
         <section class="table-card">
             <div class="table-head">
@@ -38,8 +107,8 @@
                         <tr>
                             <th>ID</th>
                             <th>File</th>
+                            <th>Status</th>
                             <th>Rows</th>
-                            <th>Source path</th>
                             <th>Updated</th>
                             <th>Open</th>
                         </tr>
@@ -49,8 +118,13 @@
                             <tr>
                                 <td>{{ item.id }}</td>
                                 <td><div class="table-primary">{{ item.file_name }}</div></td>
-                                <td>{{ item.total_rows }}</td>
-                                <td><span class="table-secondary">{{ item.source_path|default:"No source path stored" }}</span></td>
+                                <td>
+                                    <div class="table-primary">{{ item.get_status_display }}</div>
+                                    {% if item.status != "completed" %}
+                                        <div class="table-secondary">{{ item.processed_rows }} / {{ item.total_rows }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.stored_rows }}</td>
                                 <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
                                 <td><a class="text-link" href="{% url 'import_file_detail' item.id %}">Open detail</a></td>
                             </tr>
@@ -59,6 +133,22 @@
                 </table>
             </div>
             {% include "crm/includes/pagination.html" %}
+        </section>
+    {% elif filters_active and has_import_records %}
+        <section class="empty-state">
+            <p class="section-kicker">No filtered imports</p>
+            <h2>No imports matched the current filters.</h2>
+            <p>Adjust the active filters or clear them to return to the full import ledger.</p>
+            {% if active_filters %}
+                <div class="filter-chip-row">
+                    {% for filter in active_filters %}
+                        <span class="filter-chip"><strong>{{ filter.label }}:</strong> {{ filter.value }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="action-stack">
+                <a class="button-link" href="{{ filter_reset_url }}">Clear filters</a>
+            </div>
         </section>
     {% else %}
         <section class="empty-state">

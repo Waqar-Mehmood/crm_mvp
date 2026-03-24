@@ -3,7 +3,7 @@
 {% block title %}{{ import_file.file_name }} | Import Detail{% endblock %}
 {% block eyebrow %}Stored import detail{% endblock %}
 {% block page_title %}{{ import_file.file_name }}{% endblock %}
-{% block page_description %}Review the raw rows that fed this import file, from source links through address fields, all in one high-density grid.{% endblock %}
+{% block page_description %}Review import status, result summaries, and the stored source rows behind this import file.{% endblock %}
 {% block hero_side %}
     <div class="metric-grid">
         <article class="metric-card">
@@ -11,8 +11,12 @@
             <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
         </article>
         <article class="metric-card">
-            <p class="metric-label">Visible rows</p>
-            <strong class="metric-value is-mono">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong>
+            <p class="metric-label">Import status</p>
+            <strong class="metric-value is-mono">{{ import_file.get_status_display }}</strong>
+        </article>
+        <article class="metric-card">
+            <p class="metric-label">Progress</p>
+            <strong class="metric-value is-mono">{{ import_file.processed_rows }} / {{ import_file.total_rows }}</strong>
         </article>
     </div>
     <div class="action-stack">
@@ -22,15 +26,50 @@
 {% endblock %}
 
 {% block content %}
-    <section class="panel">
-        <div class="panel-head">
-            <div>
-                <p class="section-kicker">Source path</p>
-                <h2>Import metadata</h2>
+    {% if import_file.status == "queued" or import_file.status == "running" %}
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Import status</p>
+                    <h2>Background import in progress</h2>
+                    <p class="table-secondary">This page refreshes automatically while the worker processes the file.</p>
+                </div>
             </div>
-        </div>
-        <div class="path-chip">{{ import_file.source_path|default:"No source path stored" }}</div>
-    </section>
+            <div class="metric-grid">
+                <article class="metric-card">
+                    <p class="metric-label">Status</p>
+                    <strong class="metric-value is-mono">{{ import_file.get_status_display }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Processed rows</p>
+                    <strong class="metric-value is-mono">{{ import_file.processed_rows }}</strong>
+                </article>
+                <article class="metric-card">
+                    <p class="metric-label">Total rows</p>
+                    <strong class="metric-value is-mono">{{ import_file.total_rows }}</strong>
+                </article>
+            </div>
+            {% if staged_queue_remaining %}
+                <p class="notice">This file is processing now. The next staged file will open automatically after it completes.</p>
+            {% endif %}
+        </section>
+    {% elif import_file.status == "failed" %}
+        <section class="table-card">
+            <div class="table-head">
+                <div>
+                    <p class="section-kicker">Import status</p>
+                    <h2>Background import failed</h2>
+                    <p class="table-secondary">The worker stopped before the import completed. Review the saved error below.</p>
+                </div>
+            </div>
+            <p class="notice is-error">{{ import_file.error_message|default:"The import failed before a detailed error could be captured." }}</p>
+            {% if staged_queue_remaining %}
+                <div class="action-stack">
+                    <a class="button-link" href="{% url 'import_map_headers' %}">Continue with next staged file</a>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
 
     {% if import_result %}
         <section class="table-card">
@@ -96,7 +135,7 @@
         {% endif %}
     {% endif %}
 
-    {% if rows %}
+    {% if import_file.status == "completed" and rows %}
         <section class="table-card">
             <div class="table-head">
                 <div>
@@ -158,11 +197,21 @@
             </div>
             {% include "crm/includes/pagination.html" %}
         </section>
-    {% else %}
+    {% elif import_file.status == "completed" %}
         <section class="empty-state">
             <p class="section-kicker">No stored rows</p>
             <h2>This file has no persisted row data.</h2>
             <p>Try another import or revisit the upload flow to populate mapped rows for this file.</p>
         </section>
+    {% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+    {% if should_auto_refresh %}
+        <script>
+            window.setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+        </script>
     {% endif %}
 {% endblock %}

@@ -68,11 +68,106 @@ SOURCE_IMPORT_FIELD_MAP = {
     "country": "country",
 }
 
+SUGGEST_MAPPING_ALIASES = {
+    "company_name": (
+        "Company Name",
+        "Company",
+        "Organisation",
+        "Organization",
+    ),
+    "industry": (
+        "Industry",
+        "Business Type",
+        "Category",
+    ),
+    "company_size": (
+        "Company size",
+        "Company Size",
+        "Estimated Number of Employees",
+        "Employee Size",
+    ),
+    "revenue": ("Revenue",),
+    "website": (
+        "Website",
+        "Company URL",
+        "Company Website",
+        "Website URL",
+        "URL",
+    ),
+    "contact_name": (
+        "Contact Name",
+        "Full Name",
+        "Name",
+        "Owner/CEO Name",
+        "Owner name (if possible)",
+        "Owner Name",
+        "CEO Name",
+    ),
+    "contact_first_name": (
+        "First Name",
+        "FirstName",
+        "First_Name",
+    ),
+    "contact_last_name": (
+        "Last Name",
+        "LastName",
+        "Last_Name",
+    ),
+    "contact_title": (
+        "Contact Title",
+        "Title",
+        "Job Title",
+        "JobRole",
+        "Job Role",
+        "RoleTitle",
+    ),
+    "email": (
+        "Email Address",
+        "Email",
+        "Verified email address",
+    ),
+    "phone": (
+        "Phone Number",
+        "Phone",
+    ),
+    "person_source": (
+        "Person source",
+        "Linkedin",
+        "LinkedIn",
+        "LinkedIn Profile",
+        "LinkedIn profile",
+        "LinkedIn Profile (if available)",
+        "LinkedIn profile (if available)",
+    ),
+    "address": (
+        "Address",
+        "Location",
+        "City / location",
+    ),
+    "city": ("City",),
+    "state": (
+        "State",
+        "State/Province",
+    ),
+    "zip_code": (
+        "Zip Code",
+        "Zip",
+        "Postal Code",
+        "Postal",
+        "Postcode",
+    ),
+    "country": ("Country",),
+}
+
 
 def clean(value):
     if value is None:
         return ""
     return " ".join(str(value).replace("\r", " ").replace("\n", " ").split()).strip()
+
+
+def _normalize_mapping_header(value):
+    return "".join(character for character in clean(value).lower() if character.isalnum())
 
 
 def clean_for_model_field(model, field_name, value):
@@ -185,42 +280,52 @@ def detect_headers(csv_path):
 
 
 def suggest_mapping(headers):
-    normalized = {h.lower(): h for h in headers}
+    raw_headers = {}
+    normalized_headers = {}
+    for header in headers:
+        cleaned_header = clean(header)
+        if not cleaned_header:
+            continue
+        raw_headers.setdefault(cleaned_header.lower(), cleaned_header)
+        normalized_headers.setdefault(
+            _normalize_mapping_header(cleaned_header),
+            cleaned_header,
+        )
 
-    def pick(*candidates):
-        for c in candidates:
-            if c.lower() in normalized:
-                return normalized[c.lower()]
-        return ""
-
-    return {
-        "company_name": pick("Company Name", "Company"),
-        "industry": pick("Industry", "Business Type"),
-        "company_size": pick("Company size", "Company Size", "Estimated Number of Employees"),
-        "revenue": pick("Revenue"),
-        "website": pick("Website", "Company URL", "URL"),
-        "contact_name": pick("Contact Name", "Name"),
-        "contact_first_name": pick("First Name"),
-        "contact_last_name": pick("Last Name"),
-        "contact_title": pick("Contact Title", "Title"),
-        "email": pick("Email Address", "Email"),
-        "phone": pick("Phone Number", "Phone"),
-        "person_source": pick("Person source", "Linkedin"),
-        "address": pick("Address", "Location"),
-        "city": pick("City"),
-        "state": pick("State"),
-        "zip_code": pick("Zip Code", "Zip", "Postal Code", "Postal"),
-        "country": pick("Country"),
-    }
+    suggestions = {}
+    for field in TARGET_FIELDS:
+        suggestion = ""
+        for alias in SUGGEST_MAPPING_ALIASES.get(field, ()):
+            raw_alias = clean(alias).lower()
+            if raw_alias in raw_headers:
+                suggestion = raw_headers[raw_alias]
+                break
+        if not suggestion:
+            for alias in SUGGEST_MAPPING_ALIASES.get(field, ()):
+                normalized_alias = _normalize_mapping_header(alias)
+                if normalized_alias in normalized_headers:
+                    suggestion = normalized_headers[normalized_alias]
+                    break
+        suggestions[field] = suggestion
+    return suggestions
 
 
-@transaction.atomic
-def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
+def import_csv_with_mapping(
+    csv_path,
+    file_name,
+    mapping,
+    source_path="",
+    *,
+    import_file=None,
+    progress_callback=None,
+    progress_interval=25,
+):
     csv_path = Path(csv_path)
-    import_file, _ = ImportFile.objects.get_or_create(
-        file_name=file_name,
-        defaults={"source_path": source_path or str(csv_path)},
-    )
+    if import_file is None:
+        import_file, _ = ImportFile.objects.get_or_create(
+            file_name=file_name,
+            defaults={"source_path": source_path or str(csv_path)},
+        )
     if source_path and source_path != import_file.source_path:
         import_file.source_path = source_path
         import_file.save(update_fields=["source_path", "updated_at"])
@@ -242,6 +347,7 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
         "failed_rows": [],
     }
     seen_signatures = set()
+    progress_interval = max(int(progress_interval or 1), 1)
 
     with csv_path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -502,6 +608,12 @@ def import_csv_with_mapping(csv_path, file_name, mapping, source_path=""):
                         "reason": "Row did not create or match a company or contact.",
                     }
                 )
+
+            if progress_callback and stats["rows_processed"] % progress_interval == 0:
+                progress_callback(import_file, stats, final=False)
+
+    if progress_callback:
+        progress_callback(import_file, stats, final=True)
 
     return import_file, stats
 
