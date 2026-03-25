@@ -151,3 +151,32 @@ Access rules:
 - `app/data/uploads/` is a legacy path kept ignored for older records only; new uploads go to `app/media/`
 - Live deployments must mount `/app/media` to persistent storage or backend uploads will be lost on container replacement
 - The shared `local_proxy` network and HTTPS proxy live outside this repo
+
+## Live Server Deploy
+
+The repo includes a separate server deploy path that does not depend on Docker Hub:
+
+- `docker-compose.yml` is the local development stack and expects the external `local_proxy` network
+- `docker-compose.prod.yml` is the live server stack and publishes the app directly on `8000:8000`
+- `scripts/deploy_main.sh` updates the live checkout, rebuilds the app, runs migrations, and restarts the app services
+- `.github/workflows/deploy-main.yml` triggers that deploy script whenever `main` is updated
+
+### Required GitHub secrets
+
+- `DEPLOY_HOST`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_KEY`
+
+### Manual server deploy
+
+From the live server checkout:
+
+```bash
+bash scripts/deploy_main.sh
+```
+
+The default live checkout path assumed by the script is:
+
+```bash
+/home/ec2-user/crm_mvp_release
+```
