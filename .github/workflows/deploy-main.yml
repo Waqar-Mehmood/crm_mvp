@@ -30,8 +30,9 @@ jobs:
             git checkout "$BRANCH"
             git pull --ff-only origin "$BRANCH"
 
-            docker compose -f docker-compose.prod.yml up -d db
             docker compose -f docker-compose.prod.yml build web worker
-            docker compose -f docker-compose.prod.yml run --rm web python manage.py migrate
+            docker rm -f crm_mvp_release-db-1 >/dev/null 2>&1 || true
+            docker rm -f crm_web >/dev/null 2>&1 || true
             docker compose -f docker-compose.prod.yml up -d --remove-orphans web worker adminer
+            docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate
             docker compose -f docker-compose.prod.yml ps
