@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="{% static 'crm/favicon.svg' %}">
     <link rel="stylesheet" href="{% static 'crm/tailwind.css' %}">
     <link rel="stylesheet" href="{% static 'crm/site.css' %}">
+    {% block extra_styles %}{% endblock %}
 </head>
 <body>
     <div class="aurora aurora-one"></div>
@@ -45,15 +46,15 @@
             {% endif %}
         </header>
 
-        <main class="page-shell">
-            <section class="hero-panel">
-                <div class="hero-copy">
-                    <p class="eyebrow">{% block eyebrow %}Data observatory{% endblock %}</p>
-                    <h1 class="page-title">{% block page_title %}{{ site_brand }}{% endblock %}</h1>
-                    <p class="page-copy">{% block page_description %}A sharper view across companies, contacts, and imports.{% endblock %}</p>
+        <main class="{% block page_shell_class %}page-shell{% endblock %}">
+            <section class="{% block hero_panel_class %}hero-panel{% endblock %}">
+                <div class="{% block hero_copy_class %}hero-copy{% endblock %}">
+                    <p class="{% block eyebrow_class %}eyebrow{% endblock %}">{% block eyebrow %}Data observatory{% endblock %}</p>
+                    <h1 class="{% block page_title_class %}page-title{% endblock %}">{% block page_title %}{{ site_brand }}{% endblock %}</h1>
+                    <p class="{% block page_copy_class %}page-copy{% endblock %}">{% block page_description %}A sharper view across companies, contacts, and imports.{% endblock %}</p>
                     {% block hero_meta %}{% endblock %}
                 </div>
-                <div class="hero-side">
+                <div class="{% block hero_side_class %}hero-side{% endblock %}">
                     {% block hero_side %}{% endblock %}
                 </div>
             </section>

@@ -1,76 +1,79 @@
 {% extends "crm/base.html" %}
 
 {% block title %}Map Import Columns | {{ site_brand }}{% endblock %}
+{% block page_shell_class %}page-shell space-y-6{% endblock %}
+{% block hero_panel_class %}tw-import-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,30rem)] lg:items-start{% endblock %}
+{% block hero_copy_class %}space-y-4 text-paper-100{% endblock %}
+{% block hero_side_class %}space-y-4{% endblock %}
+{% block eyebrow_class %}tw-kicker text-paper-100/70{% endblock %}
+{% block page_title_class %}font-serif text-5xl leading-none text-paper-100 md:text-6xl{% endblock %}
+{% block page_copy_class %}max-w-3xl text-base leading-8 text-paper-100/80{% endblock %}
 {% block eyebrow %}Import configuration{% endblock %}
 {% block page_title %}Map import columns{% endblock %}
 {% block page_description %}Pair each incoming source column with the right CRM field, keep the suggested matches you trust, and import only what belongs.{% endblock %}
 {% block hero_side %}
-    <div class="metric-grid">
-        <article class="metric-card">
-            <p class="metric-label">Detected columns</p>
-            <strong class="metric-value">{{ headers|length }}</strong>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
+        <article class="tw-import-metric">
+            <p class="tw-kicker text-paper-100/60">Detected columns</p>
+            <strong class="mt-2 block text-2xl font-semibold">{{ headers|length }}</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Source type</p>
-            <strong class="metric-value is-mono">{{ source_type_label }}</strong>
+        <article class="tw-import-metric">
+            <p class="tw-kicker text-paper-100/60">Source type</p>
+            <strong class="mt-2 block text-lg font-semibold break-words">{{ source_type_label }}</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Display name</p>
-            <strong class="metric-value is-compact">{{ display_name|default:"Pending" }}</strong>
+        <article class="tw-import-metric sm:col-span-2">
+            <p class="tw-kicker text-paper-100/60">Display name</p>
+            <strong class="mt-2 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold" title="{{ display_name|default:'Pending' }}">{{ display_name|default:"Pending" }}</strong>
         </article>
         {% if queue_total > 1 %}
-            <article class="metric-card">
-                <p class="metric-label">Queue progress</p>
-                <strong class="metric-value is-mono">File {{ queue_position }} of {{ queue_total }}</strong>
+            <article class="tw-import-metric sm:col-span-2">
+                <p class="tw-kicker text-paper-100/60">Queue progress</p>
+                <strong class="mt-2 block text-lg font-semibold">File {{ queue_position }} of {{ queue_total }}</strong>
             </article>
         {% endif %}
     </div>
-    <div class="action-stack">
-        <a class="button-link is-secondary" href="{% url 'import_upload' %}?reset_queue=1">Swap file</a>
-        <a class="button-link is-secondary" href="{% url 'import_file_list' %}">Back to ledger</a>
+    <div class="flex flex-col gap-3">
+        <a class="tw-button-secondary w-full" href="{% url 'import_upload' %}?reset_queue=1">Swap file</a>
+        <a class="tw-button-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
 
 {% block content %}
-    <section class="split-layout">
-        <article class="column-card">
-            <div class="panel-head">
-                <div>
-                    <p class="section-kicker">Detected columns</p>
-                    <h2>{{ source_type_label }} preview</h2>
-                </div>
+    <section class="tw-import-grid">
+        <article class="tw-import-dark-card space-y-5">
+            <div class="space-y-2">
+                <p class="tw-kicker text-paper-100/60">Detected columns</p>
+                <h2 class="font-serif text-3xl text-paper-100">{{ source_type_label }} preview</h2>
             </div>
-            <ul class="column-list column-list-compact">
+            <ul class="grid gap-2 text-sm text-paper-100/85 sm:grid-cols-2">
                 {% for h in headers %}
-                    <li>{{ h }}</li>
+                    <li class="rounded-crm-sm border border-white/10 bg-white/[0.04] px-4 py-3 break-words">{{ h }}</li>
                 {% endfor %}
             </ul>
         </article>
 
-        <article class="form-card">
-            <div class="panel-head">
-                <div>
-                    <p class="section-kicker">Mapping matrix</p>
-                    <h2>Column pairing</h2>
-                </div>
+        <article class="tw-import-card space-y-5">
+            <div>
+                <p class="tw-import-kicker">Mapping matrix</p>
+                <h2 class="mt-2 font-serif text-3xl text-ink-900">Column pairing</h2>
             </div>
 
-            <form method="post" class="form-layout">
+            <form method="post" class="space-y-5">
                 {% csrf_token %}
 
-                <div class="field">
-                    <label for="file_name">File display name</label>
-                    <input type="text" id="file_name" name="file_name" value="{{ display_name }}" required>
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-panel-text" for="file_name">File display name</label>
+                    <input class="tw-import-input" type="text" id="file_name" name="file_name" value="{{ display_name }}" required>
                 </div>
 
                 {% if queue_total > 1 %}
-                    <p class="notice">You are mapping file {{ queue_position }} of {{ queue_total }}. This file will be queued for background import, and the next staged file will open automatically after it completes.</p>
+                    <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">You are mapping file {{ queue_position }} of {{ queue_total }}. This file will be queued for background import, and the next staged file will open automatically after it completes.</p>
                 {% endif %}
 
-                <p class="notice">Suggested matches are preselected. Review the highlighted fields first, then queue the import for background processing.</p>
+                <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">Suggested matches are preselected. Review the highlighted fields first, then queue the import for background processing.</p>
 
-                <div class="table-shell">
-                    <table class="data-table">
+                <div class="tw-import-table-wrap overflow-x-auto">
+                    <table class="tw-import-table min-w-[44rem]">
                         <thead>
                             <tr>
                                 <th>CRM field</th>
@@ -82,14 +85,14 @@
                             {% for field in mapping_fields %}
                                 <tr>
                                     <td>
-                                        <div class="table-primary">{{ field.label }}</div>
-                                        <div class="table-secondary">{{ field.requirement }}</div>
+                                        <div class="font-semibold text-panel-text">{{ field.label }}</div>
+                                        <div class="mt-1 text-xs text-panel-muted">{{ field.requirement }}</div>
                                     </td>
                                     <td>
-                                        <span class="path-chip">{{ field.status_label }}</span>
+                                        <span class="inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-accent">{{ field.status_label }}</span>
                                     </td>
                                     <td>
-                                        <select name="map_{{ field.key }}">
+                                        <select class="tw-import-select" name="map_{{ field.key }}">
                                             <option value="">-- Not mapped --</option>
                                             {% for h in headers %}
                                                 <option value="{{ h }}" {% if field.selected == h %}selected{% endif %}>{{ h }}</option>
@@ -102,9 +105,9 @@
                     </table>
                 </div>
 
-                <p class="notice">Tip: map either <strong>Contact Full Name</strong> or map both <strong>Contact First Name</strong> and <strong>Contact Last Name</strong>.</p>
+                <p class="rounded-crm-sm border border-[#ddcfb6] bg-white/70 px-4 py-3 text-sm text-panel-text">Tip: map either <strong>Contact Full Name</strong> or map both <strong>Contact First Name</strong> and <strong>Contact Last Name</strong>.</p>
 
-                <button type="submit">Queue import with mapping</button>
+                <button class="tw-button-primary w-full" type="submit">Queue import with mapping</button>
             </form>
         </article>
     </section>

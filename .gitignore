@@ -1,18 +1,32 @@
+# Environment and secrets
 .env
+*.pem
+
+# Python cache and local runtime files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.sqlite3
 *.log
-*.pem
+
+# Editor settings
 .vscode/
 .idea/
+
+# Frontend dependencies and generated assets
 node_modules/
+app/crm/static/crm/tailwind.css
+app/crm/static/crm_spa/
+
+# Docker and local service data
 postgres_data/
+
+# Django-generated runtime files
 app/data/uploads/
 app/staticfiles/
 app/media/
-app/crm/static/crm_spa/
+
+# Local notes and diagrams
 docs.md
 erDiagram.mmd

@@ -1,96 +1,97 @@
 {% extends "crm/base.html" %}
 
 {% block title %}{{ import_file.file_name }} | Import Detail{% endblock %}
+{% block page_shell_class %}page-shell space-y-6{% endblock %}
+{% block hero_panel_class %}tw-import-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] lg:items-start{% endblock %}
+{% block hero_copy_class %}space-y-4 text-paper-100{% endblock %}
+{% block hero_side_class %}space-y-4{% endblock %}
+{% block eyebrow_class %}tw-kicker text-paper-100/70{% endblock %}
+{% block page_title_class %}page-title{% endblock %}
+{% block page_copy_class %}max-w-3xl text-base leading-8 text-paper-100/80{% endblock %}
 {% block eyebrow %}Stored import detail{% endblock %}
 {% block page_title %}Import detail{% endblock %}
 {% block page_description %}Review import status, result summaries, and the stored source rows behind this import file.{% endblock %}
 {% block hero_meta %}
-    <div class="hero-meta">
-        <p class="hero-meta-label">File name</p>
-        <p class="hero-meta-value" title="{{ import_file.file_name }}">{{ import_file.file_name }}</p>
+    <div class="rounded-crm-md border border-white/10 bg-white/[0.05] px-4 py-3">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-paper-100/60">File name</p>
+        <p class="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold text-paper-100" title="{{ import_file.file_name }}">{{ import_file.file_name }}</p>
     </div>
 {% endblock %}
 {% block hero_side %}
-    <div class="metric-grid">
-        <article class="metric-card">
-            <p class="metric-label">Stored rows</p>
-            <strong class="metric-value">{{ page_obj.paginator.count }}</strong>
+    <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+        <article class="tw-import-metric">
+            <p class="tw-kicker text-paper-100/60">Stored rows</p>
+            <strong class="mt-2 block text-2xl font-semibold">{{ page_obj.paginator.count }}</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Import status</p>
-            <strong class="metric-value is-mono">{{ import_file.get_status_display }}</strong>
+        <article class="tw-import-metric">
+            <p class="tw-kicker text-paper-100/60">Import status</p>
+            <strong class="mt-2 block text-lg font-semibold">{{ import_file.get_status_display }}</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Progress</p>
-            <strong class="metric-value is-mono">{{ import_file.processed_rows }} / {{ import_file.total_rows }}</strong>
+        <article class="tw-import-metric">
+            <p class="tw-kicker text-paper-100/60">Progress</p>
+            <strong class="mt-2 block text-lg font-semibold">{{ import_file.processed_rows }} / {{ import_file.total_rows }}</strong>
         </article>
     </div>
-    <div class="action-stack">
-        <a class="button-link" href="{% url 'import_file_list' %}">Back to imports</a>
-        <a class="button-link is-secondary" href="{% url 'contact_list' %}">Open contacts</a>
+    <div class="flex flex-col gap-3">
+        <a class="tw-button-primary w-full" href="{% url 'import_file_list' %}">Back to imports</a>
+        <a class="tw-button-secondary w-full" href="{% url 'contact_list' %}">Open contacts</a>
     </div>
 {% endblock %}
 
 {% block content %}
     {% if import_file.status == "queued" or import_file.status == "running" %}
-        <section class="table-card">
-            <div class="table-head">
-                <div>
-                    <p class="section-kicker">Import status</p>
-                    <h2>Background import in progress</h2>
-                    <p class="table-secondary">This page refreshes automatically while the worker processes the file.</p>
-                </div>
+        <section class="tw-import-card space-y-5">
+            <div>
+                <p class="tw-import-kicker">Import status</p>
+                <h2 class="mt-2 font-serif text-3xl text-ink-900">Background import in progress</h2>
+                <p class="mt-2 text-sm text-panel-muted">This page refreshes automatically while the worker processes the file.</p>
             </div>
-            <div class="metric-grid">
-                <article class="metric-card">
-                    <p class="metric-label">Status</p>
-                    <strong class="metric-value is-mono">{{ import_file.get_status_display }}</strong>
+            <div class="grid gap-4 md:grid-cols-3">
+                <article class="tw-import-result-card">
+                    <p class="tw-import-kicker">Status</p>
+                    <strong class="mt-3 block text-2xl font-semibold text-panel-text">{{ import_file.get_status_display }}</strong>
                 </article>
-                <article class="metric-card">
-                    <p class="metric-label">Processed rows</p>
-                    <strong class="metric-value is-mono">{{ import_file.processed_rows }}</strong>
+                <article class="tw-import-result-card">
+                    <p class="tw-import-kicker">Processed rows</p>
+                    <strong class="mt-3 block text-2xl font-semibold text-panel-text">{{ import_file.processed_rows }}</strong>
                 </article>
-                <article class="metric-card">
-                    <p class="metric-label">Total rows</p>
-                    <strong class="metric-value is-mono">{{ import_file.total_rows }}</strong>
+                <article class="tw-import-result-card">
+                    <p class="tw-import-kicker">Total rows</p>
+                    <strong class="mt-3 block text-2xl font-semibold text-panel-text">{{ import_file.total_rows }}</strong>
                 </article>
             </div>
             {% if staged_queue_remaining %}
-                <p class="notice">This file is processing now. The next staged file will open automatically after it completes.</p>
+                <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">This file is processing now. The next staged file will open automatically after it completes.</p>
             {% endif %}
         </section>
     {% elif import_file.status == "failed" %}
-        <section class="table-card">
-            <div class="table-head">
-                <div>
-                    <p class="section-kicker">Import status</p>
-                    <h2>Background import failed</h2>
-                    <p class="table-secondary">The worker stopped before the import completed. Review the saved error below.</p>
-                </div>
+        <section class="tw-import-card space-y-5">
+            <div>
+                <p class="tw-import-kicker">Import status</p>
+                <h2 class="mt-2 font-serif text-3xl text-ink-900">Background import failed</h2>
+                <p class="mt-2 text-sm text-panel-muted">The worker stopped before the import completed. Review the saved error below.</p>
             </div>
-            <p class="notice is-error">{{ import_file.error_message|default:"The import failed before a detailed error could be captured." }}</p>
+            <p class="rounded-crm-sm border border-rose/30 bg-rose/10 px-4 py-3 text-sm text-panel-text">{{ import_file.error_message|default:"The import failed before a detailed error could be captured." }}</p>
             {% if staged_queue_remaining %}
-                <div class="action-stack">
-                    <a class="button-link" href="{% url 'import_map_headers' %}">Continue with next staged file</a>
+                <div class="flex">
+                    <a class="tw-button-primary" href="{% url 'import_map_headers' %}">Continue with next staged file</a>
                 </div>
             {% endif %}
         </section>
     {% endif %}
 
     {% if import_result %}
-        <section class="table-card">
-            <div class="table-head">
-                <div>
-                    <p class="section-kicker">Import review</p>
-                    <h2>Import result</h2>
-                    <p class="table-secondary">Review the latest import outcome before drilling into the stored row data.</p>
-                </div>
+        <section class="tw-import-card space-y-5">
+            <div>
+                <p class="tw-import-kicker">Import review</p>
+                <h2 class="mt-2 font-serif text-3xl text-ink-900">Import result</h2>
+                <p class="mt-2 text-sm text-panel-muted">Review the latest import outcome before drilling into the stored row data.</p>
             </div>
-            <div class="import-result-grid">
-                <article class="import-result-card import-result-card-hero">
-                    <p class="section-kicker">Rows processed</p>
-                    <strong class="import-result-value">{{ import_result.rows_processed }}</strong>
-                    <p class="import-result-copy">
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))]">
+                <article class="rounded-crm-md border border-accent/15 bg-gradient-to-br from-accent/15 to-[#fff4e8] p-6 shadow-sm">
+                    <p class="tw-import-kicker">Rows processed</p>
+                    <strong class="mt-3 block text-4xl font-semibold text-panel-text">{{ import_result.rows_processed }}</strong>
+                    <p class="mt-3 text-sm leading-7 text-panel-text">
                         {% if import_result.failed_rows_count %}
                             Import completed with {{ import_result.failed_rows_count }} failed row{{ import_result.failed_rows_count|pluralize }} to review.
                         {% elif import_result.rows_skipped %}
@@ -100,20 +101,20 @@
                         {% endif %}
                     </p>
                 </article>
-                <article class="import-result-card import-result-card-success">
-                    <p class="metric-label">Companies created</p>
-                    <strong class="import-result-stat">{{ import_result.companies_created }}</strong>
-                    <span class="import-result-note">New company records added from this file.</span>
+                <article class="tw-import-result-card border-l-4 border-l-teal">
+                    <p class="tw-import-kicker">Companies created</p>
+                    <strong class="mt-3 block text-3xl font-semibold text-panel-text">{{ import_result.companies_created }}</strong>
+                    <span class="mt-2 block text-sm text-panel-muted">New company records added from this file.</span>
                 </article>
-                <article class="import-result-card import-result-card-success">
-                    <p class="metric-label">Contacts created</p>
-                    <strong class="import-result-stat">{{ import_result.contacts_created }}</strong>
-                    <span class="import-result-note">New contact records created during import.</span>
+                <article class="tw-import-result-card border-l-4 border-l-teal">
+                    <p class="tw-import-kicker">Contacts created</p>
+                    <strong class="mt-3 block text-3xl font-semibold text-panel-text">{{ import_result.contacts_created }}</strong>
+                    <span class="mt-2 block text-sm text-panel-muted">New contact records created during import.</span>
                 </article>
-                <article class="import-result-card{% if import_result.rows_skipped %} import-result-card-warning{% endif %}">
-                    <p class="metric-label">Rows skipped</p>
-                    <strong class="import-result-stat">{{ import_result.rows_skipped }}</strong>
-                    <span class="import-result-note">
+                <article class="tw-import-result-card{% if import_result.rows_skipped %} border-l-4 border-l-accent{% endif %}">
+                    <p class="tw-import-kicker">Rows skipped</p>
+                    <strong class="mt-3 block text-3xl font-semibold text-panel-text">{{ import_result.rows_skipped }}</strong>
+                    <span class="mt-2 block text-sm text-panel-muted">
                         {% if import_result.rows_skipped %}
                             Rows were intentionally skipped after mapping.
                         {% else %}
@@ -121,10 +122,10 @@
                         {% endif %}
                     </span>
                 </article>
-                <article class="import-result-card{% if import_result.failed_rows_count %} import-result-card-danger{% endif %}">
-                    <p class="metric-label">Failed rows</p>
-                    <strong class="import-result-stat">{{ import_result.failed_rows_count }}</strong>
-                    <span class="import-result-note">
+                <article class="tw-import-result-card{% if import_result.failed_rows_count %} border-l-4 border-l-rose{% endif %}">
+                    <p class="tw-import-kicker">Failed rows</p>
+                    <strong class="mt-3 block text-3xl font-semibold text-panel-text">{{ import_result.failed_rows_count }}</strong>
+                    <span class="mt-2 block text-sm text-panel-muted">
                         {% if import_result.failed_rows_count %}
                             Review the failed-row table below.
                         {% else %}
@@ -136,16 +137,14 @@
         </section>
 
         {% if import_result.failed_rows %}
-            <section class="table-card">
-                <div class="table-head">
-                    <div>
-                        <p class="section-kicker">Exceptions</p>
-                        <h2>Failed rows</h2>
-                        <p class="table-secondary">These rows were skipped or could not be imported cleanly.</p>
-                    </div>
+            <section class="tw-import-card space-y-5">
+                <div>
+                    <p class="tw-import-kicker">Exceptions</p>
+                    <h2 class="mt-2 font-serif text-3xl text-ink-900">Failed rows</h2>
+                    <p class="mt-2 text-sm text-panel-muted">These rows were skipped or could not be imported cleanly.</p>
                 </div>
-                <div class="table-shell">
-                    <table class="data-table">
+                <div class="tw-import-table-wrap overflow-x-auto">
+                    <table class="tw-import-table">
                         <thead>
                             <tr>
                                 <th>Row</th>
@@ -154,7 +153,7 @@
                         </thead>
                         <tbody>
                             {% for failed_row in import_result.failed_rows %}
-                                <tr style="--stagger: {{ forloop.counter0 }};">
+                                <tr>
                                     <td>{{ failed_row.row_number }}</td>
                                     <td>{{ failed_row.reason }}</td>
                                 </tr>
@@ -167,15 +166,13 @@
     {% endif %}
 
     {% if import_file.status == "completed" and rows %}
-        <section class="table-card">
-            <div class="table-head">
-                <div>
-                    <p class="section-kicker">Rows</p>
-                    <h2>Captured import rows</h2>
-                </div>
+        <section class="tw-import-card space-y-5">
+            <div>
+                <p class="tw-import-kicker">Rows</p>
+                <h2 class="mt-2 font-serif text-3xl text-ink-900">Captured import rows</h2>
             </div>
-            <div class="table-shell">
-                <table class="data-table">
+            <div class="tw-import-table-wrap overflow-x-auto">
+                <table class="tw-import-table min-w-[80rem]">
                     <thead>
                         <tr>
                             <th>Row</th>
@@ -195,12 +192,12 @@
                     </thead>
                     <tbody>
                         {% for row in rows %}
-                            <tr style="--stagger: {{ forloop.counter0 }};">
+                            <tr>
                                 <td>{{ row.row_number }}</td>
                                 <td>{{ row.company_name|default:"-" }}</td>
                                 <td>
                                     {% if row.website %}
-                                        <a class="text-link" href="{{ row.website }}" target="_blank" rel="noreferrer">{{ row.website }}</a>
+                                        <a class="tw-import-link" href="{{ row.website }}" target="_blank" rel="noreferrer">{{ row.website }}</a>
                                     {% else %}
                                         -
                                     {% endif %}
@@ -211,7 +208,7 @@
                                 <td>{{ row.phone_number|default:"-" }}</td>
                                 <td>
                                     {% if row.person_source %}
-                                        <a class="text-link" href="{{ row.person_source }}" target="_blank" rel="noreferrer">Open source</a>
+                                        <a class="tw-import-link" href="{{ row.person_source }}" target="_blank" rel="noreferrer">Open source</a>
                                     {% else %}
                                         -
                                     {% endif %}
@@ -229,20 +226,18 @@
             {% include "crm/includes/pagination.html" %}
         </section>
     {% elif import_file.status == "completed" %}
-        <section class="empty-state">
-            <p class="section-kicker">No stored rows</p>
-            <h2>This file has no persisted row data.</h2>
-            <p>Try another import or revisit the upload flow to populate mapped rows for this file.</p>
+        <section class="tw-import-empty">
+            <p class="tw-import-kicker">No stored rows</p>
+            <h2 class="mt-2 font-serif text-3xl text-ink-900">This file has no persisted row data.</h2>
+            <p class="mt-3 text-sm leading-7 text-panel-text">Try another import or revisit the upload flow to populate mapped rows for this file.</p>
         </section>
     {% endif %}
 {% endblock %}
 
 {% block page_scripts %}
-    {% if should_auto_refresh %}
+    {% if import_file.status == "queued" or import_file.status == "running" %}
         <script>
-            window.setTimeout(() => {
-                window.location.reload();
-            }, 5000);
+            window.setTimeout(() => window.location.reload(), 4000);
         </script>
     {% endif %}
 {% endblock %}
