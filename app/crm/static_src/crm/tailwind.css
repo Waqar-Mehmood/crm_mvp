@@ -36,7 +36,7 @@
   }
 
   .tw-import-grid {
-    @apply grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,30rem)];
+    @apply grid gap-6 lg:grid-cols-2;
   }
 
   .tw-import-card {

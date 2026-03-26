@@ -74,9 +74,10 @@
                             <span class="hidden group-open:inline">Hide filters</span>
                         </span>
                     </summary>
-                    <div class="tw-import-subcard flex flex-col gap-4" data-disclosure-body>
-                        <form method="get" class="tw-import-filter-form">
-                            {% for item in preview_context.filter_form_hidden_items %}
+                    <div data-disclosure-body>
+                        <div class="tw-import-subcard flex flex-col gap-4 mt-2">
+                            <form method="get" class="tw-import-filter-form">
+                                {% for item in preview_context.filter_form_hidden_items %}
                                 <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
                             {% endfor %}
                             <div class="tw-import-filter-field">
@@ -113,6 +114,7 @@
                                     Showing all {{ preview_context.total_row_count }} source rows{% if preview_context.selected_sheet %} from {{ preview_context.selected_sheet }}{% endif %}.
                                 </p>
                             {% endif %}
+                        </div>
                         </div>
                     </div>
                 </details>

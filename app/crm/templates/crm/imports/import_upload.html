@@ -67,11 +67,12 @@
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div class="space-y-1">
                             <label class="block text-sm font-semibold text-panel-text" for="csv_file">Import file(s)</label>
-                            <p class="text-sm text-panel-muted">Choose one or more source files, then review or remove them before submitting.</p>
+                            <p class="text-sm text-panel-muted">Select your source files below. You can review or remove them before uploading.</p>
                         </div>
-                        <button class="tw-button-secondary w-full sm:w-auto" type="button" id="add-more-files">Add more files</button>
                     </div>
-                    <input class="tw-import-input file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-accent-strong" type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.json" multiple>
+                    <!-- Hidden file input, triggered by the button -->
+                    <input class="hidden" type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.json" multiple>
+                    <button class="tw-button-secondary w-full" type="button" id="add-more-files">Choose files</button>
                 </div>
 
                 <section aria-live="polite" aria-atomic="true" class="space-y-3 rounded-crm-md border border-[#ddcfb6] bg-white/60 p-4">
@@ -80,7 +81,7 @@
                         <h3 id="selected-files-heading" class="text-lg font-semibold text-panel-text">Selected files (0)</h3>
                     </div>
                     <p id="selected-files-empty" class="rounded-crm-sm border border-dashed border-[#ddcfb6] bg-white/70 px-4 py-3 text-sm text-panel-muted">No files selected yet.</p>
-                    <div id="selected-files-list" class="space-y-3"></div>
+                    <div id="selected-files-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
                 </section>
 
                 <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">Use one source type per run: upload one or more files, or paste a single Google Sheets URL.</p>
@@ -156,7 +157,7 @@
 
                 files.forEach(([key, file]) => {
                     const row = document.createElement("div");
-                    row.className = "flex flex-col gap-3 rounded-[20px] border border-[#ddcfb6] bg-white/75 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between";
+                    row.className = "flex items-center justify-between gap-3 rounded-lg border border-[#ddcfb6] bg-white/90 p-2.5 shadow-sm";
 
                     const copy = document.createElement("div");
                     copy.className = "min-w-0";
@@ -166,19 +167,25 @@
                     name.textContent = file.name;
 
                     const meta = document.createElement("p");
-                    meta.className = "mt-1 text-xs uppercase tracking-[0.16em] text-panel-muted";
+                    meta.className = "mt-0.5 text-xs text-panel-muted";
                     meta.textContent = formatBytes(file.size);
                     copy.append(name, meta);
 
                     const removeButton = document.createElement("button");
                     removeButton.type = "button";
-                    removeButton.className = "tw-button-secondary w-full sm:w-auto";
+                    removeButton.className = "text-rose text-sm font-semibold transition hover:text-rose/70 px-2 py-1";
                     removeButton.textContent = "Remove";
                     removeButton.addEventListener("click", () => removeFile(key));
 
                     row.append(copy, removeButton);
                     selectedList.append(row);
                 });
+
+                if (files.length > 0) {
+                    addMoreButton.textContent = "Add more files";
+                } else {
+                    addMoreButton.textContent = "Choose files";
+                }
             };
 
             fileInput.addEventListener("change", () => {

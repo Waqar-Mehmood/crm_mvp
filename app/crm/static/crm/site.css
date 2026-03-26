@@ -1185,6 +1185,9 @@ select:focus {
 .filter-disclosure-body {
     display: grid;
     gap: 20px;
+}
+
+[data-disclosure-body] {
     overflow: hidden;
     opacity: 1;
     transition: height 240ms ease, opacity 220ms ease;
