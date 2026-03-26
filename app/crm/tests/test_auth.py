@@ -126,7 +126,9 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
             reverse("contact_create"),
             reverse("contact_edit", args=[self.contact.pk]),
             reverse("import_file_list"),
+            reverse("import_file_download", args=[self.import_file.pk]),
             reverse("import_file_detail", args=[self.import_file.pk]),
+            reverse("import_file_raw_source", args=[self.import_file.pk]),
             reverse("import_upload"),
             reverse("import_map_headers"),
         ]
@@ -153,6 +155,7 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
             reverse("contact_list"),
             reverse("contact_detail", args=[self.contact.pk]),
             reverse("import_file_list"),
+            reverse("import_file_raw_source", args=[self.import_file.pk]),
             reverse("import_file_detail", args=[self.import_file.pk]),
         ]:
             with self.subTest(url=url):

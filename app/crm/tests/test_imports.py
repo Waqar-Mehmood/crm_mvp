@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import parse_qs, urlsplit
 
 from django.core.management import call_command
 from django.utils import timezone
@@ -9,6 +10,7 @@ from crm.views.import_views import _default_import_display_name
 from types import SimpleNamespace
 
 from . import (
+    BytesIO,
     CRMRoleTestMixin,
     Client,
     Contact,
@@ -40,6 +42,7 @@ from . import (
     parse_rows_from_source,
     parse_xlsx_file,
     patch,
+    load_workbook,
     requests,
     reverse,
     rows_to_temporary_csv,
@@ -532,19 +535,247 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
             return self.client.get(reverse("import_file_list"), params or {})
 
     def test_import_list_hides_stored_source_path(self):
-        source_path = "/tmp/imports/hidden-path-import.csv"
+        temp_path = Path(tempfile.mkstemp(suffix=".csv")[1])
+        self.addCleanup(temp_path.unlink, missing_ok=True)
+        temp_path.write_text("Company Name\nAcme Labs\n", encoding="utf-8")
         import_file = self._make_import_file(
-            import_id=1,
+            import_id=99,
             file_name="hidden-path-import.csv",
-            source_path=source_path,
-            stored_rows=0,
+            source_path=str(temp_path),
+            stored_rows=7,
         )
         response = self._render_import_list([import_file])
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Actions")
+        self.assertNotContains(response, "<th>ID</th>", html=False)
+        self.assertEqual(response.context["table_headers"][0]["label"], "#")
+        self.assertEqual(response.context["row_number_offset"], 0)
+        self.assertContains(response, "<td>1</td>", html=False)
         self.assertContains(response, "hidden-path-import.csv")
+        self.assertContains(response, reverse("import_file_download", args=[import_file.id]))
+        self.assertContains(response, reverse("import_file_raw_source", args=[import_file.id]))
+        self.assertContains(response, reverse("import_file_detail", args=[import_file.id]))
         self.assertNotContains(response, "Source path")
-        self.assertNotContains(response, source_path)
+        self.assertNotContains(response, str(temp_path))
+
+    def test_import_list_row_numbering_continues_across_pages(self):
+        response = self._render_import_list(
+            [
+                self._make_import_file(
+                    import_id=index + 100,
+                    file_name=f"completed-{index:02d}.csv",
+                    status="completed",
+                    updated_at=timezone.now() - timedelta(minutes=index),
+                    stored_rows=index + 20,
+                )
+                for index in range(1, 13)
+            ],
+            {"page": 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(response.context["row_number_offset"], 10)
+        self.assertContains(response, "<td>11</td>", html=False)
+        self.assertContains(response, "completed-11.csv")
+
+    def test_import_list_rows_menu_changes_page_size_and_preserves_filters_and_sort(self):
+        response = self._render_import_list(
+            [
+                self._make_import_file(
+                    import_id=index,
+                    file_name=f"completed-{index:02d}.csv",
+                    status="completed",
+                    updated_at=timezone.now() - timedelta(minutes=index),
+                    stored_rows=index,
+                )
+                for index in range(1, 13)
+            ],
+            {"per_page": 50, "q": "completed", "sort": "file_name", "direction": "asc"},
+        )
+
+        per_page_menu = {
+            item["value"]: item for item in response.context["per_page_menu_options"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["per_page"], 50)
+        self.assertEqual(response.context["page_obj"].paginator.per_page, 50)
+        self.assertContains(response, "Rows: 50")
+        self.assertTrue(per_page_menu[50]["is_active"])
+        query = parse_qs(urlsplit(per_page_menu[10]["url"]).query)
+        self.assertEqual(query["per_page"], ["10"])
+        self.assertEqual(query["q"], ["completed"])
+        self.assertEqual(query["sort"], ["file_name"])
+        self.assertEqual(query["direction"], ["asc"])
+        self.assertNotIn("page", query)
+
+    def test_import_list_defaults_to_updated_desc_sort(self):
+        newest = timezone.now()
+        items = [
+            self._make_import_file(
+                import_id=1,
+                file_name="older.csv",
+                updated_at=newest - timedelta(days=2),
+                stored_rows=2,
+            ),
+            self._make_import_file(
+                import_id=2,
+                file_name="newest.csv",
+                updated_at=newest,
+                stored_rows=4,
+            ),
+            self._make_import_file(
+                import_id=3,
+                file_name="middle.csv",
+                updated_at=newest - timedelta(days=1),
+                stored_rows=3,
+            ),
+        ]
+
+        response = self._render_import_list(items)
+
+        headers = {
+            item["label"]: item
+            for item in response.context["table_headers"]
+            if item["is_sortable"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item.file_name for item in response.context["import_files"]],
+            ["newest.csv", "middle.csv", "older.csv"],
+        )
+        self.assertEqual(response.context["sort"], "updated_at")
+        self.assertEqual(response.context["direction"], "desc")
+        self.assertTrue(headers["Updated"]["is_active"])
+        self.assertEqual(headers["Updated"]["direction"], "desc")
+        self.assertEqual(parse_qs(urlsplit(headers["Updated"]["url"]).query)["direction"], ["asc"])
+
+    def test_import_list_supports_sorting_each_data_column(self):
+        base_time = timezone.now()
+        items = [
+            self._make_import_file(
+                import_id=1,
+                file_name="beta.csv",
+                status="running",
+                updated_at=base_time - timedelta(days=1),
+                stored_rows=5,
+            ),
+            self._make_import_file(
+                import_id=2,
+                file_name="alpha.csv",
+                status="queued",
+                updated_at=base_time - timedelta(days=2),
+                stored_rows=8,
+            ),
+            self._make_import_file(
+                import_id=3,
+                file_name="gamma.csv",
+                status="completed",
+                updated_at=base_time - timedelta(days=3),
+                stored_rows=3,
+            ),
+        ]
+
+        cases = (
+            ({"sort": "file_name", "direction": "asc"}, ["alpha.csv", "beta.csv", "gamma.csv"]),
+            ({"sort": "file_name", "direction": "desc"}, ["gamma.csv", "beta.csv", "alpha.csv"]),
+            ({"sort": "status", "direction": "asc"}, ["gamma.csv", "alpha.csv", "beta.csv"]),
+            ({"sort": "status", "direction": "desc"}, ["beta.csv", "alpha.csv", "gamma.csv"]),
+            ({"sort": "stored_rows", "direction": "asc"}, ["gamma.csv", "beta.csv", "alpha.csv"]),
+            ({"sort": "stored_rows", "direction": "desc"}, ["alpha.csv", "beta.csv", "gamma.csv"]),
+            ({"sort": "updated_at", "direction": "asc"}, ["gamma.csv", "alpha.csv", "beta.csv"]),
+            ({"sort": "updated_at", "direction": "desc"}, ["beta.csv", "alpha.csv", "gamma.csv"]),
+        )
+
+        for params, expected_order in cases:
+            with self.subTest(params=params):
+                response = self._render_import_list(items, params)
+                self.assertEqual(
+                    [item.file_name for item in response.context["import_files"]],
+                    expected_order,
+                )
+
+    def test_import_list_sort_links_preserve_filters_and_rows_and_drop_page(self):
+        response = self._render_import_list(
+            [
+                self._make_import_file(
+                    import_id=index,
+                    file_name=f"queued-{index:02d}.csv",
+                    status="queued",
+                    updated_at=timezone.now() - timedelta(minutes=index),
+                    stored_rows=index,
+                )
+                for index in range(1, 13)
+            ],
+            {
+                "q": "queued",
+                "status": "queued",
+                "per_page": 50,
+                "page": 2,
+                "sort": "updated_at",
+                "direction": "desc",
+            },
+        )
+
+        headers = {
+            item["label"]: item
+            for item in response.context["table_headers"]
+            if item["is_sortable"]
+        }
+
+        query = parse_qs(urlsplit(headers["File"]["url"]).query)
+        self.assertEqual(query["q"], ["queued"])
+        self.assertEqual(query["status"], ["queued"])
+        self.assertEqual(query["per_page"], ["50"])
+        self.assertEqual(query["sort"], ["file_name"])
+        self.assertEqual(query["direction"], ["asc"])
+        self.assertNotIn("page", query)
+
+    def test_import_list_invalid_sort_params_fall_back_to_updated_desc(self):
+        newest = timezone.now()
+        items = [
+            self._make_import_file(
+                import_id=1,
+                file_name="older.csv",
+                updated_at=newest - timedelta(days=1),
+            ),
+            self._make_import_file(
+                import_id=2,
+                file_name="newer.csv",
+                updated_at=newest,
+            ),
+        ]
+
+        response = self._render_import_list(
+            items,
+            {"sort": "unknown", "direction": "sideways"},
+        )
+
+        self.assertEqual(response.context["sort"], "updated_at")
+        self.assertEqual(response.context["direction"], "desc")
+        self.assertEqual(
+            [item.file_name for item in response.context["import_files"]],
+            ["newer.csv", "older.csv"],
+        )
+
+    def test_import_list_disables_download_and_raw_actions_when_source_is_missing(self):
+        import_file = self._make_import_file(
+            import_id=1,
+            file_name="missing-actions.csv",
+            source_path="/tmp/imports/missing-actions.csv",
+            stored_rows=0,
+        )
+
+        response = self._render_import_list([import_file])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Stored source unavailable")
+        self.assertNotContains(response, reverse("import_file_download", args=[import_file.id]))
+        self.assertNotContains(response, reverse("import_file_raw_source", args=[import_file.id]))
+        self.assertContains(response, reverse("import_file_detail", args=[import_file.id]))
 
     def test_import_filters_narrow_results_and_keep_form_values(self):
         response = self._render_import_list(
@@ -663,22 +894,27 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
 
         self.assertContains(
             default_response,
-            '<details class="form-card filter-card import-filter-card filter-disclosure" data-animated-disclosure>',
+            '<details class="group space-y-2" data-animated-disclosure>',
             html=False,
         )
         self.assertContains(
             filtered_response,
-            '<details class="form-card filter-card import-filter-card filter-disclosure" data-animated-disclosure open>',
+            '<details class="group space-y-2" data-animated-disclosure open>',
             html=False,
         )
         self.assertContains(default_response, "Show filters")
         self.assertContains(filtered_response, "Hide filters")
         self.assertContains(default_response, ">Reset<", html=False)
-        self.assertContains(default_response, 'class="form-layout list-filter-form"', html=False)
-        self.assertContains(default_response, 'class="list-filter-control"', html=False)
-        self.assertContains(default_response, 'class="filter-actions list-filter-actions"', html=False)
-        self.assertContains(default_response, 'class="list-filter-submit"', html=False)
-        self.assertContains(default_response, 'class="button-link is-secondary list-filter-reset"', html=False)
+        self.assertContains(default_response, 'crm/vendor/choices/choices.min.css', html=False)
+        self.assertContains(default_response, 'crm/vendor/flatpickr/flatpickr.min.css', html=False)
+        self.assertContains(default_response, 'crm/vendor/choices/choices.min.js', html=False)
+        self.assertContains(default_response, 'crm/vendor/flatpickr/flatpickr.min.js', html=False)
+        self.assertContains(default_response, 'class="tw-import-filter-form"', html=False)
+        self.assertContains(default_response, 'class="tw-import-filter-grid"', html=False)
+        self.assertContains(default_response, 'data-import-status-select', html=False)
+        self.assertContains(default_response, 'data-import-date-field', html=False)
+        self.assertContains(default_response, 'class="tw-import-filter-actions"', html=False)
+        self.assertContains(default_response, 'class="tw-button-primary w-full sm:w-auto"', html=False)
 
     def test_import_detail_hides_stored_source_path(self):
         source_path = "/tmp/imports/hidden-path-import.csv"
@@ -773,6 +1009,9 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(import_file.status, ImportFile.Status.QUEUED)
         self.assertEqual(import_file.source_path, str(temp_path))
         self.assertTrue(Path(import_file.source_path).exists())
+        self.assertTrue(import_file.original_source_path)
+        self.assertTrue(Path(import_file.original_source_path).exists())
+        self.assertEqual(import_file.original_source_name, "frontend-import.csv")
         self.assertEqual(import_file.total_rows, 1)
         self.assertFalse(ImportRow.objects.filter(import_file=import_file).exists())
 
@@ -822,6 +1061,395 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
             f"<h1 class=\"page-title\">{import_file.file_name}</h1>",
             html=False,
         )
+
+    def test_raw_source_page_is_available_to_staff(self):
+        staff_user = self.create_user("staffer", role=ROLE_STAFF)
+        self.client.force_login(staff_user)
+        source_path = self.temp_media_root / "imports" / "staff-preview.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text("Company Name,Email\nAcme Labs,person@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="staff-preview.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Raw import source")
+        self.assertContains(response, "Normalized CSV snapshot")
+        self.assertContains(response, "Rows: 10")
+        self.assertContains(response, "Export")
+        self.assertContains(response, "Search this preview")
+
+    def test_download_source_route_is_available_to_staff(self):
+        staff_user = self.create_user("staff-download", role=ROLE_STAFF)
+        self.client.force_login(staff_user)
+        source_path = self.temp_media_root / "imports" / "staff-download.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text("Company Name,Email\nAcme Labs,person@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="staff-download.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_download", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("staff-download.csv", response["Content-Disposition"])
+        self.assertEqual(
+            b"".join(response.streaming_content),
+            source_path.read_bytes(),
+        )
+
+    def test_raw_source_page_falls_back_to_normalized_csv_without_exposing_paths(self):
+        self.client.force_login(self.team_lead_user)
+        source_path = self.temp_media_root / "imports" / "fallback.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text("Company Name,Email\nAcme Labs,person@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="fallback-import.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Viewing the normalized CSV snapshot")
+        self.assertContains(response, "Company Name")
+        self.assertContains(response, "Acme Labs")
+        self.assertTrue(response.context["preview_context"]["is_tabular"])
+        self.assertEqual(response.context["preview_context"]["filtered_row_count"], 1)
+        self.assertNotContains(response, str(source_path))
+
+    def test_raw_source_page_applies_search_filter_and_opens_disclosure(self):
+        self.client.force_login(self.team_lead_user)
+        source_path = self.temp_media_root / "imports" / "filtered-preview.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(
+            "Company Name,Email\nAcme Labs,acme@example.com\nBeta Labs,beta@example.com\n",
+            encoding="utf-8",
+        )
+        import_file = ImportFile.objects.create(
+            file_name="filtered-preview.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"q": "beta"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<details class="group flex flex-col gap-2" data-animated-disclosure open>',
+            html=False,
+        )
+        self.assertContains(response, "Beta Labs")
+        self.assertNotContains(response, "Acme Labs")
+        self.assertEqual(response.context["preview_context"]["filters"]["q"], "beta")
+        self.assertEqual(response.context["preview_context"]["filtered_row_count"], 1)
+
+    def test_raw_source_page_rows_menu_changes_page_size_and_preserves_filters(self):
+        self.client.force_login(self.team_lead_user)
+        source_path = self.temp_media_root / "imports" / "per-page-preview.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(
+            "Company Name,Email\n"
+            + "\n".join(
+                f"Acme Labs {index},person{index}@example.com"
+                for index in range(1, 13)
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        import_file = ImportFile.objects.create(
+            file_name="per-page-preview.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"per_page": 50, "q": "Acme"},
+        )
+
+        options = {
+            item["value"]: item for item in response.context["preview_context"]["per_page_menu_options"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["preview_context"]["page_obj"].paginator.per_page, 50)
+        self.assertContains(response, "Rows: 50")
+        self.assertIn("q=Acme", options[10]["url"])
+        self.assertEqual(parse_qs(urlsplit(options[10]["url"]).query)["per_page"], ["10"])
+
+    def test_raw_source_page_shows_unavailable_state_when_source_file_is_missing(self):
+        self.client.force_login(self.team_lead_user)
+        missing_path = self.temp_media_root / "imports" / "missing.csv"
+        import_file = ImportFile.objects.create(
+            file_name="missing-preview.csv",
+            source_path=str(missing_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No stored source file is available for this import.")
+
+    def test_raw_source_page_pretty_prints_original_json_upload(self):
+        self.client.force_login(self.team_lead_user)
+        original_path = self.temp_media_root / "imports" / "payload.json"
+        fallback_path = self.temp_media_root / "imports" / "payload.csv"
+        original_path.parent.mkdir(parents=True, exist_ok=True)
+        original_path.write_text(
+            json.dumps([{"Company Name": "Acme Labs", "Email": "person@example.com"}]),
+            encoding="utf-8",
+        )
+        fallback_path.write_text("Company Name,Email\nAcme Labs,person@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="payload-import.csv",
+            source_path=str(fallback_path),
+            original_source_path=str(original_path),
+            original_source_name="payload.json",
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Viewing the original uploaded source")
+        self.assertEqual(
+            response.context["preview_context"]["formatted_json"],
+            json.dumps(
+                [{"Company Name": "Acme Labs", "Email": "person@example.com"}],
+                indent=2,
+                ensure_ascii=False,
+            ),
+        )
+        self.assertContains(response, "&quot;Company Name&quot;: &quot;Acme Labs&quot;", html=False)
+        self.assertContains(response, "JSON")
+        self.assertFalse(response.context["preview_context"]["is_tabular"])
+        self.assertNotContains(response, "Rows:")
+        self.assertNotContains(response, "Export filtered preview as CSV")
+        self.assertNotContains(response, str(original_path))
+
+    def test_raw_source_page_renders_all_xlsx_sheet_tabs(self):
+        self.client.force_login(self.team_lead_user)
+        workbook_path = self.temp_media_root / "imports" / "workbook.xlsx"
+        fallback_path = self.temp_media_root / "imports" / "workbook.csv"
+        workbook_path.parent.mkdir(parents=True, exist_ok=True)
+        workbook = Workbook()
+        primary_sheet = workbook.active
+        primary_sheet.title = "Leads"
+        primary_sheet.append(["Company Name", "Email"])
+        primary_sheet.append(["Acme Labs", "lead@example.com"])
+        secondary_sheet = workbook.create_sheet("Customers")
+        secondary_sheet.append(["Company Name", "Email"])
+        secondary_sheet.append(["Beta Labs", "customer@example.com"])
+        workbook.save(workbook_path)
+        workbook.close()
+        fallback_path.write_text("Company Name,Email\nAcme Labs,lead@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="workbook-import.csv",
+            source_path=str(fallback_path),
+            original_source_path=str(workbook_path),
+            original_source_name="workbook.xlsx",
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"sheet": "Customers"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Leads")
+        self.assertContains(response, "Customers")
+        self.assertContains(response, "Beta Labs")
+        self.assertEqual(
+            response.context["preview_context"]["selected_sheet"],
+            "Customers",
+        )
+        self.assertNotContains(response, str(workbook_path))
+
+    def test_raw_source_xlsx_sheet_tabs_preserve_search_and_per_page(self):
+        self.client.force_login(self.team_lead_user)
+        workbook_path = self.temp_media_root / "imports" / "workbook-query.xlsx"
+        fallback_path = self.temp_media_root / "imports" / "workbook-query.csv"
+        workbook_path.parent.mkdir(parents=True, exist_ok=True)
+        workbook = Workbook()
+        primary_sheet = workbook.active
+        primary_sheet.title = "Leads"
+        primary_sheet.append(["Company Name", "Email"])
+        primary_sheet.append(["Acme Labs", "lead@example.com"])
+        secondary_sheet = workbook.create_sheet("Customers")
+        secondary_sheet.append(["Company Name", "Email"])
+        secondary_sheet.append(["Beta Labs", "customer@example.com"])
+        workbook.save(workbook_path)
+        workbook.close()
+        fallback_path.write_text("Company Name,Email\nAcme Labs,lead@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="workbook-query-import.csv",
+            source_path=str(fallback_path),
+            original_source_path=str(workbook_path),
+            original_source_name="workbook-query.xlsx",
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"sheet": "Customers", "q": "Beta", "per_page": 50},
+        )
+
+        tabs = {
+            item["name"]: item for item in response.context["preview_context"]["sheet_tabs"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("q=Beta", tabs["Leads"]["url"])
+        self.assertIn("per_page=50", tabs["Leads"]["url"])
+        self.assertIn("sheet=Leads", tabs["Leads"]["url"])
+
+    def test_raw_source_preview_export_csv_returns_filtered_rows(self):
+        self.client.force_login(self.team_lead_user)
+        source_path = self.temp_media_root / "imports" / "export-preview.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(
+            "Company Name,Email\nAcme Labs,acme@example.com\nBeta Labs,beta@example.com\n",
+            encoding="utf-8",
+        )
+        import_file = ImportFile.objects.create(
+            file_name="export-preview.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"q": "Beta", "export": "csv"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn('attachment; filename="export-preview-export-', response["Content-Disposition"])
+        rows = response.content.decode("utf-8").splitlines()
+        self.assertEqual(rows[0], "Company Name,Email")
+        self.assertIn("Beta Labs,beta@example.com", rows[1])
+        self.assertEqual(len(rows), 2)
+
+    def test_raw_source_preview_export_xlsx_uses_selected_sheet_and_filters(self):
+        self.client.force_login(self.team_lead_user)
+        workbook_path = self.temp_media_root / "imports" / "export-workbook.xlsx"
+        fallback_path = self.temp_media_root / "imports" / "export-workbook.csv"
+        workbook_path.parent.mkdir(parents=True, exist_ok=True)
+        workbook = Workbook()
+        primary_sheet = workbook.active
+        primary_sheet.title = "Leads"
+        primary_sheet.append(["Company Name", "Email"])
+        primary_sheet.append(["Acme Labs", "lead@example.com"])
+        secondary_sheet = workbook.create_sheet("Customers")
+        secondary_sheet.append(["Company Name", "Email"])
+        secondary_sheet.append(["Beta Labs", "customer@example.com"])
+        workbook.save(workbook_path)
+        workbook.close()
+        fallback_path.write_text("Company Name,Email\nAcme Labs,lead@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="export-workbook.csv",
+            source_path=str(fallback_path),
+            original_source_path=str(workbook_path),
+            original_source_name="export-workbook.xlsx",
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(
+            reverse("import_file_raw_source", args=[import_file.id]),
+            {"sheet": "Customers", "q": "Beta", "export": "xlsx"},
+        )
+
+        workbook = load_workbook(BytesIO(response.content))
+        worksheet = workbook.active
+        rows = list(worksheet.iter_rows(values_only=True))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response["Content-Type"])
+        self.assertEqual(worksheet.title, "Customers")
+        self.assertEqual(rows[0], ("Company Name", "Email"))
+        self.assertEqual(rows[1], ("Beta Labs", "customer@example.com"))
+        self.assertEqual(len(rows), 2)
+
+    def test_download_source_route_falls_back_to_normalized_csv_snapshot(self):
+        self.client.force_login(self.team_lead_user)
+        source_path = self.temp_media_root / "imports" / "fallback-download.csv"
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text("Company Name,Email\nAcme Labs,person@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="fallback-download.csv",
+            source_path=str(source_path),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_download", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("fallback-download.csv", response["Content-Disposition"])
+        self.assertEqual(
+            b"".join(response.streaming_content),
+            source_path.read_bytes(),
+        )
+        self.assertEqual(response["Content-Type"], "text/csv")
+
+    def test_download_source_route_prefers_original_uploaded_xlsx(self):
+        self.client.force_login(self.team_lead_user)
+        workbook_path = self.temp_media_root / "imports" / "download-workbook.xlsx"
+        fallback_path = self.temp_media_root / "imports" / "download-workbook.csv"
+        workbook_path.parent.mkdir(parents=True, exist_ok=True)
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Leads"
+        worksheet.append(["Company Name", "Email"])
+        worksheet.append(["Acme Labs", "lead@example.com"])
+        workbook.save(workbook_path)
+        workbook.close()
+        fallback_path.write_text("Company Name,Email\nAcme Labs,lead@example.com\n", encoding="utf-8")
+        import_file = ImportFile.objects.create(
+            file_name="download-workbook.csv",
+            source_path=str(fallback_path),
+            original_source_path=str(workbook_path),
+            original_source_name="download-workbook.xlsx",
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_download", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("download-workbook.xlsx", response["Content-Disposition"])
+        self.assertEqual(
+            b"".join(response.streaming_content),
+            workbook_path.read_bytes(),
+        )
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    def test_download_source_route_returns_404_when_source_is_missing(self):
+        self.client.force_login(self.team_lead_user)
+        import_file = ImportFile.objects.create(
+            file_name="missing-download.csv",
+            source_path=str(self.temp_media_root / "imports" / "missing-download.csv"),
+            status=ImportFile.Status.COMPLETED,
+        )
+
+        response = self.client.get(reverse("import_file_download", args=[import_file.id]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_mapping_page_renders_for_csv_source(self):
         self.client.force_login(self.team_lead_user)
@@ -1186,6 +1814,9 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(import_file.status, ImportFile.Status.QUEUED)
         self.assertEqual(import_file.source_path, str(temp_path))
         self.assertTrue(Path(import_file.source_path).exists())
+        self.assertTrue(import_file.original_source_path)
+        self.assertEqual(import_file.original_source_name, "frontend-import.xlsx")
+        self.assertTrue(Path(import_file.original_source_path).exists())
 
         self._run_import_worker_once()
         import_file.refresh_from_db()
@@ -1196,6 +1827,78 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(detail_response.context["import_result"]["rows_processed"], 1)
         self.assertEqual(detail_response.context["import_result"]["companies_created"], 1)
         self.assertEqual(detail_response.context["import_result"]["failed_rows_count"], 0)
+
+    def test_frontend_json_mapping_submission_preserves_original_source_upload(self):
+        self.client.force_login(self.team_lead_user)
+
+        upload_response = self.client.post(
+            reverse("import_upload"),
+            {"csv_file": make_json_file("frontend-import.json")},
+        )
+
+        self.assertRedirects(upload_response, reverse("import_map_headers"))
+        session = self.client.session
+        temp_path = Path(session["import_csv_temp_path"])
+
+        map_response = self.client.post(
+            reverse("import_map_headers"),
+            {
+                "file_name": "frontend-import.json",
+                "map_company_name": "Company Name",
+                "map_email": "Email",
+            },
+        )
+        import_file = ImportFile.objects.get(file_name="frontend-import.json")
+
+        self.assertRedirects(map_response, reverse("import_file_detail", args=[import_file.id]))
+        self.assertEqual(import_file.status, ImportFile.Status.QUEUED)
+        self.assertEqual(import_file.source_path, str(temp_path))
+        self.assertTrue(Path(import_file.source_path).exists())
+        self.assertTrue(import_file.original_source_path)
+        self.assertEqual(import_file.original_source_name, "frontend-import.json")
+        self.assertTrue(Path(import_file.original_source_path).exists())
+
+        raw_response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(raw_response.status_code, 200)
+        self.assertContains(raw_response, "Viewing the original uploaded source")
+        self.assertContains(raw_response, "JSON")
+        self.assertNotContains(raw_response, import_file.original_source_path)
+
+    @patch("crm.services.google_sheets.fetch_google_sheet_rows")
+    def test_google_sheets_import_file_keeps_original_source_fields_blank(self, mock_fetch):
+        self.client.force_login(self.team_lead_user)
+        mock_fetch.return_value = [
+            {"Company Name": "Acme Labs", "Email": "person@example.com"},
+        ]
+
+        upload_response = self.client.post(
+            reverse("import_upload"),
+            {"sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0"},
+        )
+
+        self.assertRedirects(upload_response, reverse("import_map_headers"))
+
+        map_response = self.client.post(
+            reverse("import_map_headers"),
+            {
+                "file_name": "Google Sheet - test-sheet.csv",
+                "map_company_name": "Company Name",
+                "map_email": "Email",
+            },
+        )
+        import_file = ImportFile.objects.get(file_name="Google Sheet - test-sheet.csv")
+
+        self.assertRedirects(map_response, reverse("import_file_detail", args=[import_file.id]))
+        self.assertEqual(import_file.original_source_path, "")
+        self.assertEqual(import_file.original_source_name, "")
+
+        raw_response = self.client.get(reverse("import_file_raw_source", args=[import_file.id]))
+
+        self.assertEqual(raw_response.status_code, 200)
+        self.assertContains(raw_response, "Viewing the normalized CSV snapshot")
+        self.assertContains(raw_response, "Acme Labs")
+        self.assertNotContains(raw_response, import_file.source_path)
 
     def test_mapping_submission_uses_cleaned_display_name_when_left_unchanged(self):
         self.client.force_login(self.team_lead_user)

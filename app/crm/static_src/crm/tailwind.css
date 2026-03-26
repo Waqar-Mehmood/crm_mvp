@@ -43,6 +43,10 @@
     @apply rounded-crm-lg border border-[#ddcfb6]/80 bg-gradient-to-br from-paper-100 to-[#efe5d0] p-6 text-panel-text shadow-crm-soft;
   }
 
+  .tw-import-subcard {
+    @apply rounded-crm-md border border-[#ddcfb6] bg-white/70 p-5 shadow-sm;
+  }
+
   .tw-import-dark-card {
     @apply rounded-crm-lg border border-white/10 bg-white/[0.04] p-6 text-paper-100 shadow-crm backdrop-blur;
   }
@@ -61,6 +65,190 @@
 
   .tw-import-select {
     @apply min-h-[48px] w-full rounded-[18px] border border-[#d9ccb5] bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
+
+  .tw-import-filter-form {
+    @apply space-y-4;
+  }
+
+  .tw-import-filter-grid {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-5;
+  }
+
+  .tw-import-filter-field {
+    @apply space-y-2;
+  }
+
+  .tw-import-filter-label {
+    @apply block pl-1 text-sm font-semibold text-panel-text;
+  }
+
+  .tw-import-filter-shell {
+    @apply relative;
+  }
+
+  .tw-import-filter-input {
+    @apply min-h-[52px] rounded-[20px] border-[#d7c7ac] bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-teal focus:ring-teal/20;
+  }
+
+  .tw-import-filter-actions {
+    @apply flex flex-col gap-3 border-t border-[#ddcfb6]/90 pt-4 sm:flex-row sm:items-center sm:justify-end;
+  }
+
+  .tw-import-filter-reset {
+    @apply inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border border-[#d7c7ac] bg-white px-[18px] font-bold text-panel-text no-underline transition duration-200 hover:-translate-y-px hover:border-accent hover:text-accent sm:w-auto;
+  }
+
+  .tw-import-filter-icon {
+    @apply pointer-events-none absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#f3ead8] text-panel-muted transition;
+  }
+
+  .tw-import-filter-icon svg {
+    @apply h-4 w-4;
+  }
+
+  .tw-import-filter-shell:focus-within .tw-import-filter-icon {
+    @apply bg-teal/10 text-teal;
+  }
+
+  .tw-import-filter-date-input::-webkit-calendar-picker-indicator {
+    @apply opacity-0;
+  }
+
+  .tw-import-filter-date-input::-webkit-clear-button {
+    @apply hidden;
+  }
+
+  .tw-import-filter-select-shell .choices {
+    @apply mb-0 text-sm;
+  }
+
+  .tw-import-filter-select-shell .choices__inner {
+    @apply min-h-[52px] rounded-[20px] border border-[#d7c7ac] bg-white/95 px-4 py-0 text-sm text-panel-text shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition;
+  }
+
+  .tw-import-filter-select-shell .choices__list--single {
+    @apply flex min-h-[50px] items-center px-0 py-0 pr-8;
+  }
+
+  .tw-import-filter-select-shell .choices__list--single .choices__item {
+    @apply text-sm text-panel-text;
+  }
+
+  .tw-import-filter-select-shell .choices[data-type*="select-one"]::after {
+    @apply right-5 mt-[-3px] h-2.5 w-2.5 rotate-45 border-0 border-b-2 border-r-2 border-[#79644a] transition;
+    content: "";
+  }
+
+  .tw-import-filter-select-shell .choices.is-focused .choices__inner,
+  .tw-import-filter-select-shell .choices.is-open .choices__inner {
+    @apply border-teal shadow-[0_0_0_4px_rgba(19,145,139,0.16),0_18px_36px_rgba(15,23,42,0.1)];
+  }
+
+  .tw-import-filter-select-shell .choices__list--dropdown,
+  .tw-import-filter-select-shell .choices__list[aria-expanded] {
+    @apply z-30 mt-2 overflow-hidden rounded-[20px] border border-[#d7c7ac] bg-[#fffdf8] p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
+  }
+
+  .tw-import-filter-select-shell .choices__list--dropdown .choices__item,
+  .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item {
+    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-panel-text;
+  }
+
+  .tw-import-filter-select-shell .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    @apply bg-teal/10 text-teal;
+  }
+
+  .tw-import-filter-select-shell .choices__placeholder {
+    @apply opacity-100 text-panel-muted;
+  }
+
+  .tw-import-filter-date-shell .flatpickr-input[readonly],
+  .tw-import-filter-date-shell .flatpickr-input[readonly="readonly"] {
+    @apply cursor-pointer bg-white/95;
+  }
+
+  .tw-import-date-alt {
+    @apply min-h-[52px] rounded-[20px] border-[#d7c7ac] bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-teal focus:ring-teal/20;
+  }
+
+  .tw-import-date-alt:focus {
+    @apply border-teal ring-2 ring-teal/20;
+  }
+
+  .tw-import-datepicker.flatpickr-calendar {
+    @apply rounded-[24px] border border-[#d7c7ac] bg-[#fffdf8] p-3 shadow-[0_28px_70px_rgba(15,23,42,0.22)];
+  }
+
+  .tw-import-datepicker.arrowTop::before,
+  .tw-import-datepicker.arrowTop::after,
+  .tw-import-datepicker.arrowBottom::before,
+  .tw-import-datepicker.arrowBottom::after {
+    @apply hidden;
+  }
+
+  .tw-import-datepicker .flatpickr-months {
+    @apply items-center gap-2 pb-2;
+  }
+
+  .tw-import-datepicker .flatpickr-month {
+    @apply text-panel-text;
+  }
+
+  .tw-import-datepicker .flatpickr-current-month {
+    @apply flex items-center gap-1 py-1 text-[0.95rem] font-semibold text-panel-text;
+  }
+
+  .tw-import-datepicker .flatpickr-current-month .flatpickr-monthDropdown-months,
+  .tw-import-datepicker .flatpickr-current-month input.cur-year {
+    @apply rounded-[12px] border border-transparent bg-[#f4ebd7] px-2 py-1 text-panel-text;
+  }
+
+  .tw-import-datepicker .flatpickr-prev-month,
+  .tw-import-datepicker .flatpickr-next-month {
+    @apply relative top-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-panel-text transition hover:bg-teal/10 hover:text-teal;
+  }
+
+  .tw-import-datepicker .flatpickr-weekdays {
+    @apply mb-1 rounded-[16px] bg-[#f4ebd7] px-2 py-1;
+  }
+
+  .tw-import-datepicker span.flatpickr-weekday {
+    @apply text-[0.72rem] font-bold uppercase tracking-[0.14em] text-panel-muted;
+  }
+
+  .tw-import-datepicker .dayContainer {
+    @apply gap-y-1;
+  }
+
+  .tw-import-datepicker .flatpickr-day {
+    @apply rounded-[14px] border-transparent text-panel-text transition;
+  }
+
+  .tw-import-datepicker .flatpickr-day.today {
+    @apply border border-teal/30 text-teal;
+  }
+
+  .tw-import-datepicker .flatpickr-day:hover {
+    @apply border-transparent bg-teal/10 text-teal;
+  }
+
+  .tw-import-datepicker .flatpickr-day.selected,
+  .tw-import-datepicker .flatpickr-day.startRange,
+  .tw-import-datepicker .flatpickr-day.endRange {
+    @apply border-transparent bg-gradient-to-br from-teal to-accent text-white;
+  }
+
+  .tw-import-datepicker .flatpickr-day.inRange {
+    @apply border-transparent bg-teal/10 text-teal;
+  }
+
+  .tw-import-datepicker .flatpickr-day.flatpickr-disabled,
+  .tw-import-datepicker .flatpickr-day.flatpickr-disabled:hover,
+  .tw-import-datepicker .flatpickr-day.prevMonthDay,
+  .tw-import-datepicker .flatpickr-day.nextMonthDay {
+    @apply text-slate-300;
   }
 
   .tw-import-table-wrap {
@@ -87,6 +275,26 @@
     @apply transition-colors hover:bg-[#f5ede0];
   }
 
+  .tw-import-sort-link {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-paper-100/80 no-underline transition hover:text-paper-100;
+  }
+
+  .tw-import-sort-link-active {
+    @apply text-paper-100;
+  }
+
+  .tw-import-sort-icon {
+    @apply inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-paper-100/70;
+  }
+
+  .tw-import-sort-link-active .tw-import-sort-icon {
+    @apply border-white/20 bg-white/10 text-paper-100;
+  }
+
+  .tw-import-sort-icon svg {
+    @apply h-3 w-3;
+  }
+
   .tw-import-kicker {
     @apply m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-panel-muted;
   }
@@ -95,8 +303,76 @@
     @apply font-semibold text-accent no-underline transition hover:text-accent-strong;
   }
 
+  .tw-import-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .tw-import-action-button {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d7c7ac] bg-white text-panel-text no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-accent hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent/25;
+  }
+
+  .tw-import-action-button svg {
+    @apply h-[1.05rem] w-[1.05rem];
+  }
+
+  .tw-import-action-button-disabled {
+    @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 shadow-none hover:translate-y-0 hover:border-slate-200 hover:text-slate-400 focus:ring-0;
+  }
+
   .tw-import-empty {
     @apply rounded-crm-lg border border-[#ddcfb6]/80 bg-gradient-to-br from-paper-100 to-[#efe5d0] p-8 text-center text-panel-text shadow-crm-soft;
+  }
+
+  .tw-import-preview-toolbar {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .tw-import-preview-menu {
+    @apply relative;
+  }
+
+  .tw-import-preview-menu-summary {
+    @apply inline-flex min-h-[46px] cursor-pointer list-none items-center justify-center rounded-full border border-[#d7c7ac] bg-white px-5 py-3 text-sm font-semibold text-panel-text shadow-sm transition hover:-translate-y-px hover:border-accent hover:text-accent;
+  }
+
+  .tw-import-preview-menu-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .tw-import-preview-menu-summary::marker {
+    content: "";
+  }
+
+  .tw-import-preview-menu[open] .tw-import-preview-menu-summary {
+    @apply border-accent text-accent;
+  }
+
+  .tw-import-preview-menu-summary-accent {
+    @apply border-accent/35 bg-gradient-to-br from-paper-100 to-[#f1dcc3] text-ink-900;
+  }
+
+  .tw-import-preview-menu-panel {
+    @apply absolute right-0 z-30 mt-2 flex min-w-[14rem] flex-col gap-1 rounded-[20px] border border-[#d7c7ac] bg-[#fffdf8] p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
+  }
+
+  .tw-import-preview-menu-link {
+    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-panel-text no-underline transition hover:bg-teal/10 hover:text-teal;
+  }
+
+  .tw-import-preview-menu-link.is-active {
+    @apply bg-teal/10 text-teal;
+  }
+
+  .tw-import-preview-scroll-shell {
+    @apply block w-full max-w-full max-h-[38rem] overflow-x-auto overflow-y-auto rounded-crm-md border border-[#ddcfb6] bg-white/85 scroll-smooth;
+  }
+
+  .tw-import-preview-table {
+    @apply w-full min-w-[60rem] border-collapse text-left text-sm text-panel-text;
+  }
+
+  .tw-import-preview-table th {
+    @apply sticky top-0 z-10 bg-ink-900;
   }
 
   .tw-pagination {
@@ -117,14 +393,6 @@
 
   .tw-pagination-link-disabled {
     @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400;
-  }
-
-  .form-card.filter-card.import-filter-card.filter-disclosure {
-    @apply border-0 bg-transparent p-0 shadow-none;
-  }
-
-  .form-card.filter-card.import-filter-card.filter-disclosure > .tw-import-card {
-    @apply shadow-crm-soft;
   }
 
   .form-layout.list-filter-form {

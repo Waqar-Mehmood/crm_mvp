@@ -14,7 +14,9 @@ from .views import (
     contact_list,
     dashboard_home,
     import_file_detail,
+    import_file_download,
     import_file_list,
+    import_file_raw_source,
     import_google_sheets_preview,
     import_map_headers,
     import_upload,
@@ -46,5 +48,7 @@ urlpatterns = [
     path("imports/", import_file_list, name="import_file_list"),
     path("imports/upload/", import_upload, name="import_upload"),
     path("imports/map/", import_map_headers, name="import_map_headers"),
+    path("imports/<int:file_id>/download/", import_file_download, name="import_file_download"),
+    path("imports/<int:file_id>/raw/", import_file_raw_source, name="import_file_raw_source"),
     path("imports/<int:file_id>/", import_file_detail, name="import_file_detail"),
 ]

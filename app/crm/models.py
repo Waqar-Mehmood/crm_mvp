@@ -134,6 +134,8 @@ class ImportFile(models.Model):
 
     file_name = models.CharField(max_length=255, unique=True)
     source_path = models.TextField(blank=True)
+    original_source_path = models.TextField(blank=True)
+    original_source_name = models.CharField(max_length=255, blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

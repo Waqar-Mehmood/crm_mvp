@@ -1,43 +1,7 @@
 {% extends "crm/base.html" %}
+{% load static %}
 
 {% block title %}Imports | {{ site_brand }}{% endblock %}
-{% block extra_styles %}
-    <style>
-        .form-card.filter-card.import-filter-card.filter-disclosure {
-            display: block !important;
-            padding: 0 !important;
-            border: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            gap: 0 !important;
-        }
-
-        .form-card.filter-card.import-filter-card.filter-disclosure summary.tw-import-card,
-        .form-card.filter-card.import-filter-card.filter-disclosure [data-disclosure-body].tw-import-card {
-            padding: 1.75rem !important;
-        }
-
-        .form-card.filter-card.import-filter-card.filter-disclosure [data-disclosure-body].tw-import-card {
-            margin-top: 0.75rem !important;
-            gap: 1.25rem !important;
-        }
-
-        .form-card.filter-card.import-filter-card.filter-disclosure .list-filter-actions {
-            margin: 1.5rem 0 0 !important;
-            padding-top: 1.25rem !important;
-            border-top: 1px solid rgba(221, 207, 182, 0.9) !important;
-            margin-bottom: 0 !important;
-        }
-
-        .form-card.filter-card.import-filter-card.filter-disclosure .list-filter-submit,
-        .form-card.filter-card.import-filter-card.filter-disclosure .list-filter-reset.button-link.is-secondary {
-            min-height: 46px !important;
-            height: 46px !important;
-            border-radius: 999px !important;
-            padding: 0 1.25rem !important;
-        }
-    </style>
-{% endblock %}
 {% block page_shell_class %}page-shell space-y-6{% endblock %}
 {% block hero_panel_class %}tw-import-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:items-start{% endblock %}
 {% block hero_copy_class %}space-y-4 text-paper-100{% endblock %}
@@ -70,52 +34,73 @@
     </div>
 {% endblock %}
 
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'crm/vendor/choices/choices.min.css' %}">
+    <link rel="stylesheet" href="{% static 'crm/vendor/flatpickr/flatpickr.min.css' %}">
+{% endblock %}
+
 {% block content %}
     {% if has_import_records or filters_active %}
-        <details class="form-card filter-card import-filter-card filter-disclosure" data-animated-disclosure{% if filters_active %} open{% endif %}>
-            <summary class="tw-import-card flex cursor-pointer list-none flex-col gap-3 rounded-crm-md px-7 py-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <details class="group space-y-2" data-animated-disclosure{% if filters_active %} open{% endif %}>
+            <summary class="tw-import-card flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="tw-import-kicker">Advanced filters</p>
                     <h2 class="mt-2 font-serif text-3xl text-ink-900">Refine import history</h2>
                 </div>
-                <span class="inline-flex items-center justify-center rounded-full border border-[#d7c7ac] bg-white px-5 py-3 text-sm font-semibold text-panel-text shadow-sm transition hover:border-accent hover:text-accent filter-disclosure-toggle">
-                    <span class="filter-disclosure-label filter-disclosure-label-closed">Show filters</span>
-                    <span class="filter-disclosure-label filter-disclosure-label-open">Hide filters</span>
+                <span class="inline-flex items-center justify-center rounded-full border border-[#d7c7ac] bg-white px-5 py-3 text-sm font-semibold text-panel-text shadow-sm transition hover:border-accent hover:text-accent">
+                    <span class="group-open:hidden">Show filters</span>
+                    <span class="hidden group-open:inline">Hide filters</span>
                 </span>
             </summary>
-            <div class="tw-import-card mt-3 space-y-5 rounded-crm-md" data-disclosure-body>
-                <form method="get" class="form-layout list-filter-form">
+            <div class="tw-import-card space-y-4 p-5 sm:p-6" data-disclosure-body>
+                <form method="get" class="tw-import-filter-form">
                     {% for item in filter_form_hidden_items %}
                         <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
                     {% endfor %}
-                    <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                        <div class="space-y-2 md:col-span-2">
-                            <label class="block text-sm font-semibold text-panel-text" for="import-q">Search</label>
-                            <input id="import-q" class="list-filter-control" type="text" name="q" value="{{ filters.q }}" placeholder="Search file names">
+                    <div class="tw-import-filter-grid">
+                        <div class="tw-import-filter-field md:col-span-2">
+                            <label class="tw-import-filter-label" for="import-q">Search</label>
+                            <div class="tw-import-filter-shell">
+                                <input id="import-q" class="tw-import-input tw-import-filter-input" type="text" name="q" value="{{ filters.q }}" placeholder="Search file names">
+                            </div>
                         </div>
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-panel-text" for="import-status">Status</label>
-                            <select id="import-status" class="list-filter-control" name="status">
-                                <option value="">All statuses</option>
-                                {% for value, label in status_options %}
-                                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="tw-import-filter-field">
+                            <label class="tw-import-filter-label" for="import-status">Status</label>
+                            <div class="tw-import-filter-shell tw-import-filter-select-shell">
+                                <select id="import-status" class="tw-import-select" name="status" data-import-status-select>
+                                    <option value="">All statuses</option>
+                                    {% for value, label in status_options %}
+                                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-panel-text" for="import-updated-from">Updated from</label>
-                            <input id="import-updated-from" class="list-filter-control" type="date" name="updated_from" value="{{ filters.updated_from }}">
+                        <div class="tw-import-filter-field">
+                            <label class="tw-import-filter-label" for="import-updated-from">Updated from</label>
+                            <div class="tw-import-filter-shell tw-import-filter-date-shell">
+                                <input id="import-updated-from" class="tw-import-input tw-import-filter-input tw-import-filter-date-input" type="date" name="updated_from" value="{{ filters.updated_from }}" data-import-date-field placeholder="mm/dd/yyyy">
+                                <span class="tw-import-filter-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Z"></path>
+                                    </svg>
+                                </span>
+                            </div>
                         </div>
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-panel-text" for="import-updated-to">Updated to</label>
-                            <input id="import-updated-to" class="list-filter-control" type="date" name="updated_to" value="{{ filters.updated_to }}">
+                        <div class="tw-import-filter-field">
+                            <label class="tw-import-filter-label" for="import-updated-to">Updated to</label>
+                            <div class="tw-import-filter-shell tw-import-filter-date-shell">
+                                <input id="import-updated-to" class="tw-import-input tw-import-filter-input tw-import-filter-date-input" type="date" name="updated_to" value="{{ filters.updated_to }}" data-import-date-field placeholder="mm/dd/yyyy">
+                                <span class="tw-import-filter-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <path fill="currentColor" d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Z"></path>
+                                    </svg>
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-5">
-                        <div class="filter-actions list-filter-actions">
-                            <input class="list-filter-submit" type="submit" value="Apply filters">
-                            <a class="button-link is-secondary list-filter-reset" href="{{ filter_reset_url }}">Reset</a>
-                        </div>
+                    <div class="tw-import-filter-actions">
+                        <button class="tw-button-primary w-full sm:w-auto" type="submit">Apply filters</button>
+                        <a class="tw-import-filter-reset" href="{{ filter_reset_url }}">Reset</a>
                     </div>
                 </form>
                 <div class="rounded-crm-md border border-[#ddcfb6] bg-white/65 p-4">
@@ -138,27 +123,64 @@
     {% endif %}
 
     {% if import_files %}
-        <section class="tw-import-card space-y-5">
-            <div>
-                <p class="tw-import-kicker">Import table</p>
-                <h2 class="mt-2 font-serif text-3xl text-ink-900">Stored file batches</h2>
+        <section class="tw-import-card flex flex-col gap-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <p class="tw-import-kicker">Import table</p>
+                    <h2 class="mt-2 font-serif text-3xl text-ink-900">Stored file batches</h2>
+                </div>
+                <div class="tw-import-preview-toolbar">
+                    <details class="tw-import-preview-menu">
+                        <summary class="tw-import-preview-menu-summary">Rows: {{ per_page }}</summary>
+                        <div class="tw-import-preview-menu-panel">
+                            {% for option in per_page_menu_options %}
+                                <a class="tw-import-preview-menu-link{% if option.is_active %} is-active{% endif %}" href="{{ option.url }}">{{ option.label }}</a>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
             </div>
             <div class="tw-import-table-wrap overflow-x-auto">
                 <table class="tw-import-table w-full min-w-[72rem]">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>File</th>
-                            <th>Status</th>
-                            <th>Rows</th>
-                            <th>Updated</th>
-                            <th>Open</th>
+                            {% for header in table_headers %}
+                                <th{% if header.aria_sort %} aria-sort="{{ header.aria_sort }}"{% endif %}>
+                                    {% if header.is_sortable %}
+                                        <a
+                                            class="tw-import-sort-link{% if header.is_active %} tw-import-sort-link-active{% endif %}"
+                                            href="{{ header.url }}"
+                                            aria-label="{{ header.action_label }}"
+                                            title="{{ header.action_label }}"
+                                        >
+                                            <span>{{ header.label }}</span>
+                                            <span class="tw-import-sort-icon" aria-hidden="true">
+                                                {% if header.is_active and header.direction == "asc" %}
+                                                    <svg viewBox="0 0 24 24" focusable="false">
+                                                        <path fill="currentColor" d="M12 4a1 1 0 0 1 .7.3l5 5a1 1 0 1 1-1.4 1.4L13 7.42V20a1 1 0 1 1-2 0V7.41l-3.3 3.3a1 1 0 0 1-1.4-1.42l5-5A1 1 0 0 1 12 4Z"></path>
+                                                    </svg>
+                                                {% elif header.is_active and header.direction == "desc" %}
+                                                    <svg viewBox="0 0 24 24" focusable="false">
+                                                        <path fill="currentColor" d="M12 20a1 1 0 0 1-.7-.3l-5-5a1 1 0 0 1 1.4-1.4L11 16.58V4a1 1 0 1 1 2 0v12.59l3.3-3.3a1 1 0 0 1 1.4 1.42l-5 5A1 1 0 0 1 12 20Z"></path>
+                                                    </svg>
+                                                {% else %}
+                                                    <svg viewBox="0 0 24 24" focusable="false">
+                                                        <path fill="currentColor" d="M12 4a1 1 0 0 1 .7.3l4 4a1 1 0 1 1-1.4 1.4L13 7.41V17a1 1 0 1 1-2 0V7.42L8.7 9.7a1 1 0 0 1-1.4-1.4l4-4A1 1 0 0 1 12 4Zm4.7 10.3a1 1 0 0 1 0 1.4l-4 4A1 1 0 0 1 12 20a1 1 0 0 1-.7-.3l-4-4a1 1 0 0 1 1.4-1.4l2.3 2.29V17a1 1 0 1 1 2 0v2.59l2.3-2.3a1 1 0 0 1 1.4 0Z"></path>
+                                                    </svg>
+                                                {% endif %}
+                                            </span>
+                                        </a>
+                                    {% else %}
+                                        {{ header.label }}
+                                    {% endif %}
+                                </th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in import_files %}
                             <tr>
-                                <td>{{ item.id }}</td>
+                                <td>{{ row_number_offset|add:forloop.counter }}</td>
                                 <td><div class="font-semibold text-panel-text break-words">{{ item.file_name }}</div></td>
                                 <td>
                                     <div class="font-semibold text-panel-text">{{ item.get_status_display }}</div>
@@ -168,7 +190,59 @@
                                 </td>
                                 <td>{{ item.stored_rows }}</td>
                                 <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
-                                <td><a class="tw-import-link" href="{% url 'import_file_detail' item.id %}">Open detail</a></td>
+                                <td>
+                                    <div class="tw-import-actions">
+                                        {% if item.preview_source.available %}
+                                            <a
+                                                class="tw-import-action-button"
+                                                href="{% url 'import_file_download' item.id %}"
+                                                aria-label="Download source file"
+                                                title="Download source file"
+                                            >
+                                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 3.99a1 1 0 0 1-1.4 0l-4-3.99a1 1 0 0 1 1.4-1.41l2.3 2.29V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"></path>
+                                                </svg>
+                                            </a>
+                                            <a
+                                                class="tw-import-action-button"
+                                                href="{% url 'import_file_raw_source' item.id %}"
+                                                aria-label="Open raw source"
+                                                title="Open raw source"
+                                            >
+                                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M14.7 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 1 1-1.4-1.4L19 12l-4.3-4.3a1 1 0 0 1 0-1.4ZM9.3 6.3a1 1 0 0 1 0 1.4L5 12l4.3 4.3a1 1 0 1 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z"></path>
+                                                </svg>
+                                            </a>
+                                        {% else %}
+                                            <span
+                                                class="tw-import-action-button tw-import-action-button-disabled"
+                                                title="Stored source unavailable"
+                                            >
+                                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 3.99a1 1 0 0 1-1.4 0l-4-3.99a1 1 0 0 1 1.4-1.41l2.3 2.29V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"></path>
+                                                </svg>
+                                            </span>
+                                            <span
+                                                class="tw-import-action-button tw-import-action-button-disabled"
+                                                title="Stored source unavailable"
+                                            >
+                                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M14.7 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 1 1-1.4-1.4L19 12l-4.3-4.3a1 1 0 0 1 0-1.4ZM9.3 6.3a1 1 0 0 1 0 1.4L5 12l4.3 4.3a1 1 0 1 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z"></path>
+                                                </svg>
+                                            </span>
+                                        {% endif %}
+                                        <a
+                                            class="tw-import-action-button"
+                                            href="{% url 'import_file_detail' item.id %}"
+                                            aria-label="View imported data"
+                                            title="View imported data"
+                                        >
+                                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M5 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5Zm0 2h14v3H5V6Zm0 5h4v7H5v-7Zm6 0h8v3h-8v-3Zm0 5h8v2h-8v-2Z"></path>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -204,4 +278,67 @@
             </div>
         </section>
     {% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+    <script src="{% static 'crm/vendor/choices/choices.min.js' %}"></script>
+    <script src="{% static 'crm/vendor/flatpickr/flatpickr.min.js' %}"></script>
+    <script>
+        (() => {
+            const statusSelect = document.querySelector("[data-import-status-select]");
+            if (statusSelect && window.Choices) {
+                new Choices(statusSelect, {
+                    searchEnabled: false,
+                    shouldSort: false,
+                    itemSelectText: "",
+                    allowHTML: false,
+                    position: "bottom",
+                    placeholder: true,
+                    placeholderValue: "All statuses",
+                    classNames: {
+                        containerOuter: ["choices", "tw-import-choices"],
+                    },
+                });
+            }
+
+            if (!window.flatpickr) {
+                return;
+            }
+
+            document.querySelectorAll("[data-import-date-field]").forEach((input) => {
+                const fieldLabel = document.querySelector(`label[for="${input.id}"]`);
+                flatpickr(input, {
+                    altInput: true,
+                    altFormat: "m/d/Y",
+                    altInputClass: "tw-import-input tw-import-filter-input tw-import-date-alt",
+                    allowInput: true,
+                    dateFormat: "Y-m-d",
+                    disableMobile: true,
+                    position: "auto left",
+                    onReady(_selectedDates, _dateStr, instance) {
+                        instance.calendarContainer.classList.add("tw-import-datepicker");
+                        if (instance.altInput) {
+                            instance.altInput.placeholder = "mm/dd/yyyy";
+                            instance.altInput.setAttribute(
+                                "aria-label",
+                                input.getAttribute("aria-label")
+                                || fieldLabel?.textContent?.trim()
+                                || "Date",
+                            );
+                            instance.altInput.addEventListener("keydown", (event) => {
+                                if (event.key === "Escape") {
+                                    instance.clear();
+                                }
+                            });
+                            instance.altInput.addEventListener("blur", () => {
+                                if (!instance.altInput.value.trim()) {
+                                    instance.clear();
+                                }
+                            });
+                        }
+                    },
+                });
+            });
+        })();
+    </script>
 {% endblock %}

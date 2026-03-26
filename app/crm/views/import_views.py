@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from mimetypes import guess_type
 from pathlib import Path
 import re
 
@@ -9,7 +10,8 @@ from django.contrib import messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import UploadedFile
 from django.db.models import Count
-from django.http import HttpRequest, HttpResponse
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -22,6 +24,12 @@ from crm.services.import_components import (
     UploadHandler,
 )
 from crm.services.import_jobs import count_csv_rows, queue_import_job
+from crm.services.import_source_preview import (
+    build_json_preview,
+    build_tabular_preview,
+    filter_tabular_preview_rows,
+    resolve_preview_source,
+)
 from crm.services.import_workflow import (
     TARGET_FIELDS,
 )
@@ -32,8 +40,13 @@ from crm.services.import_service import (
 from crm.upload_storage import save_import_upload
 from ._shared import (
     PAGE_SIZE,
+    PAGE_SIZE_OPTIONS,
     _add_active_filter,
+    _clean_export_format,
+    _clean_per_page,
     _clean_text,
+    _export_query,
+    _export_response,
     _page_query,
     _paginate,
     _parse_date_value,
@@ -60,7 +73,11 @@ FIELD_REQUIREMENTS = {
 STAGED_IMPORTS_SESSION_KEY = "import_staged_sources"
 ACTIVE_IMPORT_JOB_SESSION_KEY = "import_active_job_id"
 IMPORT_FILTER_KEYS = frozenset({"q", "status", "updated_from", "updated_to"})
+RAW_PREVIEW_FILTER_KEYS = frozenset({"q"})
 IMPORT_STATUS_LABELS = dict(ImportFile.Status.choices)
+IMPORT_SORT_KEYS = frozenset({"file_name", "status", "stored_rows", "updated_at"})
+IMPORT_DEFAULT_SORT = "updated_at"
+IMPORT_DEFAULT_DIRECTION = "desc"
 LEGACY_STAGED_SOURCE_KEYS = (
     "import_csv_temp_path",
     "import_csv_original_name",
@@ -80,6 +97,77 @@ DISPLAY_NAME_SUFFIX_PATTERN = re.compile(
 def _clean_import_status(value: str | None) -> str:
     value = _clean_text(value).lower()
     return value if value in IMPORT_STATUS_LABELS else ""
+
+
+def _clean_import_sort(value: str | None) -> str:
+    value = _clean_text(value)
+    return value if value in IMPORT_SORT_KEYS else IMPORT_DEFAULT_SORT
+
+
+def _clean_sort_direction(value: str | None) -> str:
+    value = _clean_text(value).lower()
+    return value if value in {"asc", "desc"} else IMPORT_DEFAULT_DIRECTION
+
+
+def _import_ordering(sort_key: str, direction: str) -> tuple[str, ...]:
+    primary = f"-{sort_key}" if direction == "desc" else sort_key
+    if sort_key == "updated_at":
+        return (primary, "-id")
+    return (primary, "-updated_at", "-id")
+
+
+def _build_import_sort_headers(
+    request: HttpRequest,
+    current_sort: str,
+    current_direction: str,
+) -> list[dict[str, object]]:
+    import_list_url = reverse("import_file_list")
+    headers: list[dict[str, object]] = [
+        {
+            "label": "#",
+            "is_sortable": False,
+            "aria_sort": "",
+        }
+    ]
+    sortable_headers = (
+        ("file_name", "File"),
+        ("status", "Status"),
+        ("stored_rows", "Rows"),
+        ("updated_at", "Updated"),
+    )
+    for sort_key, label in sortable_headers:
+        is_active = current_sort == sort_key
+        next_direction = "desc" if is_active and current_direction == "asc" else "asc"
+        query_string = _query_string(
+            request,
+            remove_keys={"page", "export"},
+            extra={"sort": sort_key, "direction": next_direction},
+        )
+        headers.append(
+            {
+                "label": label,
+                "is_sortable": True,
+                "is_active": is_active,
+                "direction": current_direction if is_active else "",
+                "aria_sort": (
+                    "ascending"
+                    if is_active and current_direction == "asc"
+                    else "descending"
+                    if is_active
+                    else "none"
+                ),
+                "action_label": f"Sort by {label} { 'descending' if next_direction == 'desc' else 'ascending'}",
+                "url": f"{import_list_url}?{query_string}" if query_string else import_list_url,
+            }
+        )
+    headers.append(
+        {
+            "label": "Actions",
+            "is_sortable": False,
+            "aria_sort": "",
+        }
+    )
+    return headers
 
 
 def _default_import_display_name(original_name: str) -> str:
@@ -196,6 +284,8 @@ def _build_staged_entry_from_rows(
     original_name: str,
     *,
     source_type: str,
+    original_source_path: str | None = None,
+    original_source_name: str = "",
 ) -> dict[str, object]:
     headers = get_row_headers(rows)
     if not headers:
@@ -214,12 +304,18 @@ def _build_staged_entry_from_rows(
     finally:
         FileManager.cleanup_temp_file(temp_csv_path)
 
+    cleanup_paths = [str(source_path)]
+    if original_source_path:
+        cleanup_paths.append(str(original_source_path))
+
     return {
         "temp_path": str(source_path),
         "original_name": original_name,
         "headers": headers,
         "source_type": source_type,
-        "cleanup_paths": [str(source_path)],
+        "original_source_path": str(original_source_path) if original_source_path else "",
+        "original_source_name": original_source_name or "",
+        "cleanup_paths": cleanup_paths,
     }
 
 
@@ -229,12 +325,36 @@ def _build_staged_upload_entry(
     source_type_override: str | None = None,
 ) -> dict[str, object]:
     original_name = Path(getattr(uploaded, "name", "import.csv")).name
-    processed = UploadHandler.process_uploaded_file(uploaded)
-    return _build_staged_entry_from_rows(
-        processed["rows"],
-        original_name,
-        source_type=source_type_override or processed["source_type"],
-    )
+    uploaded_bytes = uploaded.read()
+    if hasattr(uploaded, "seek"):
+        uploaded.seek(0)
+
+    upload_content_type = getattr(uploaded, "content_type", "application/octet-stream")
+    original_source_path: Path | None = None
+    try:
+        original_upload = SimpleUploadedFile(
+            original_name,
+            uploaded_bytes,
+            content_type=upload_content_type,
+        )
+        parse_upload = SimpleUploadedFile(
+            original_name,
+            uploaded_bytes,
+            content_type=upload_content_type,
+        )
+        original_source_path = save_import_upload(original_upload)
+        processed = UploadHandler.process_uploaded_file(parse_upload)
+        return _build_staged_entry_from_rows(
+            processed["rows"],
+            original_name,
+            source_type=source_type_override or processed["source_type"],
+            original_source_path=str(original_source_path),
+            original_source_name=original_name,
+        )
+    except Exception:
+        if original_source_path:
+            FileManager.cleanup_temp_file(original_source_path)
+        raise
 
 
 def _stage_entries_for_mapping(
@@ -347,13 +467,15 @@ def _import_file_list_state(request: HttpRequest) -> dict[str, object]:
         "updated_from": _clean_text(request.GET.get("updated_from")),
         "updated_to": _clean_text(request.GET.get("updated_to")),
     }
+    per_page = _clean_per_page(request.GET.get("per_page"))
+    sort = _clean_import_sort(request.GET.get("sort"))
+    direction = _clean_sort_direction(request.GET.get("direction"))
     total_imports = ImportFile.objects.count()
     has_import_records = total_imports > 0
 
     import_files_qs = (
         ImportFile.objects
         .annotate(stored_rows=Count("rows"))
-        .order_by("-updated_at", "-id")
     )
 
     if import_filters["q"]:
@@ -369,6 +491,8 @@ def _import_file_list_state(request: HttpRequest) -> dict[str, object]:
         import_files_qs = import_files_qs.filter(updated_at__date__gte=updated_from)
     if updated_to:
         import_files_qs = import_files_qs.filter(updated_at__date__lte=updated_to)
+
+    import_files_qs = import_files_qs.order_by(*_import_ordering(sort, direction))
 
     active_filters = []
     _add_active_filter(active_filters, "Search", import_filters["q"])
@@ -406,6 +530,9 @@ def _import_file_list_state(request: HttpRequest) -> dict[str, object]:
         "total_imports": total_imports,
         "has_import_records": has_import_records,
         "status_options": ImportFile.Status.choices,
+        "per_page": per_page,
+        "sort": sort,
+        "direction": direction,
         "filter_form_hidden_items": _query_items(
             request,
             remove_keys=IMPORT_FILTER_KEYS | {"page"},
@@ -414,17 +541,70 @@ def _import_file_list_state(request: HttpRequest) -> dict[str, object]:
     }
 
 
+def _attach_import_source_state(import_files: list[object]) -> list[object]:
+    for import_file in import_files:
+        setattr(import_file, "preview_source", resolve_preview_source(import_file))
+    return import_files
+
+
+def _raw_preview_export_columns(headers: list[str]) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        (header, header or f"Column {index}")
+        for index, header in enumerate(headers, start=1)
+    )
+
+
+def _raw_preview_export_base_name(
+    import_file: ImportFile,
+    preview_source: dict[str, object],
+    *,
+    selected_sheet: str = "",
+) -> str:
+    base_name = Path(str(preview_source.get("file_name") or import_file.file_name or "import-preview")).stem
+    base_name = re.sub(r"[^A-Za-z0-9._-]+", "-", base_name).strip("-._") or "import-preview"
+    if selected_sheet:
+        sheet_slug = re.sub(r"[^A-Za-z0-9._-]+", "-", selected_sheet).strip("-._")
+        if sheet_slug:
+            return f"{base_name}-{sheet_slug}"
+    return base_name
+
+
 @crm_role_required(ROLE_STAFF)
 def import_file_list(request):
     state = _import_file_list_state(request)
-    page_obj = _paginate(request, state["queryset"])
+    import_list_url = reverse("import_file_list")
+    per_page_menu_options = []
+    for option in PAGE_SIZE_OPTIONS:
+        query_string = _query_string(
+            request,
+            remove_keys={"page", "export"},
+            extra={"per_page": option},
+        )
+        per_page_menu_options.append(
+            {
+                "value": option,
+                "label": str(option),
+                "is_active": option == state["per_page"],
+                "url": f"{import_list_url}?{query_string}" if query_string else import_list_url,
+            }
+        )
+
+    page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
+    import_files = _attach_import_source_state(list(page_obj.object_list))
     return render(
         request,
         "crm/imports/import_file_list.html",
         {
-            "import_files": page_obj.object_list,
+            "import_files": import_files,
             "page_obj": page_obj,
             "page_query": _page_query(request),
+            "row_number_offset": page_obj.start_index() - 1 if page_obj.paginator.count else 0,
+            "per_page_menu_options": per_page_menu_options,
+            "table_headers": _build_import_sort_headers(
+                request,
+                state["sort"],
+                state["direction"],
+            ),
             **state,
         },
     )
@@ -522,6 +702,148 @@ def import_file_detail(request, file_id):
             "staged_queue_remaining": len(staged_queue),
             "is_active_import_job": active_import_job_id == str(import_file.id),
         },
+    )
+
+
+@crm_role_required(ROLE_STAFF)
+def import_file_raw_source(request, file_id):
+    import_file = get_object_or_404(ImportFile, pk=file_id)
+    preview_source = resolve_preview_source(import_file)
+    preview_context: dict[str, object] = {}
+    page_query = ""
+
+    if preview_source["available"]:
+        if preview_source["source_type"] == "json":
+            preview_context = build_json_preview(preview_source["path"])
+            preview_context["is_tabular"] = False
+        else:
+            filters = {
+                "q": _clean_text(request.GET.get("q")),
+            }
+            per_page = _clean_per_page(request.GET.get("per_page"))
+            export_format = _clean_export_format(request.GET.get("export"))
+            selected_sheet = (
+                (request.GET.get("sheet") or "").strip() or None
+                if preview_source["source_type"] == "xlsx"
+                else None
+            )
+
+            preview_context = build_tabular_preview(
+                preview_source["path"],
+                source_type=str(preview_source["source_type"]),
+                sheet_name=selected_sheet,
+            )
+            filtered_rows = filter_tabular_preview_rows(
+                preview_context["rows"],
+                preview_context["headers"],
+                filters["q"],
+            )
+            export_columns = _raw_preview_export_columns(preview_context["headers"])
+            if export_format:
+                return _export_response(
+                    export_format,
+                    _raw_preview_export_base_name(
+                        import_file,
+                        preview_source,
+                        selected_sheet=str(preview_context.get("selected_sheet") or ""),
+                    ),
+                    str(preview_context.get("selected_sheet") or "Preview"),
+                    export_columns,
+                    filtered_rows,
+                )
+
+            paginator = Paginator(filtered_rows, per_page)
+            preview_context["page_obj"] = paginator.get_page(request.GET.get("page"))
+            preview_context["page_rows"] = [
+                [row.get(header, "") for header in preview_context["headers"]]
+                for row in preview_context["page_obj"].object_list
+            ]
+            preview_context["page_row_count"] = len(preview_context["page_obj"].object_list)
+            preview_context["filtered_row_count"] = len(filtered_rows)
+            preview_context["total_row_count"] = preview_context["row_count"]
+            preview_context["is_tabular"] = True
+            preview_context["filters"] = filters
+            preview_context["filters_active"] = bool(filters["q"])
+            active_filters: list[dict[str, str]] = []
+            _add_active_filter(active_filters, "Search", filters["q"])
+            preview_context["active_filters"] = active_filters
+            preview_context["per_page"] = per_page
+            preview_context["per_page_menu_options"] = []
+            preview_context["filter_form_hidden_items"] = _query_items(
+                request,
+                remove_keys=RAW_PREVIEW_FILTER_KEYS | {"page", "export"},
+            )
+            preview_context["sheet_tabs"] = []
+
+            raw_source_url = reverse("import_file_raw_source", args=[import_file.id])
+            for option in PAGE_SIZE_OPTIONS:
+                query_string = _query_string(
+                    request,
+                    remove_keys={"page", "export"},
+                    extra={"per_page": option},
+                )
+                preview_context["per_page_menu_options"].append(
+                    {
+                        "value": option,
+                        "label": str(option),
+                        "is_active": option == per_page,
+                        "url": f"{raw_source_url}?{query_string}" if query_string else raw_source_url,
+                    },
+                )
+
+            if preview_context["sheet_names"]:
+                for sheet_name in preview_context["sheet_names"]:
+                    query_string = _query_string(
+                        request,
+                        remove_keys={"page", "export"},
+                        extra={"sheet": sheet_name},
+                    )
+                    preview_context["sheet_tabs"].append(
+                        {
+                            "name": sheet_name,
+                            "is_active": preview_context["selected_sheet"] == sheet_name,
+                            "url": f"{raw_source_url}?{query_string}" if query_string else raw_source_url,
+                        },
+                    )
+
+            filter_reset_query = _query_string(
+                request,
+                remove_keys=RAW_PREVIEW_FILTER_KEYS | {"page", "export"},
+            )
+            preview_context["filter_reset_url"] = raw_source_url
+            if filter_reset_query:
+                preview_context["filter_reset_url"] = f"{raw_source_url}?{filter_reset_query}"
+
+            preview_context["export_csv_query"] = _export_query(request, "csv")
+            preview_context["export_xlsx_query"] = _export_query(request, "xlsx")
+            page_query = _query_string(request, remove_keys={"page", "export"})
+
+    return render(
+        request,
+        "crm/imports/import_file_raw.html",
+        {
+            "import_file": import_file,
+            "preview_source": preview_source,
+            "preview_context": preview_context,
+            "page_query": page_query,
+        },
+    )
+
+
+@crm_role_required(ROLE_STAFF)
+def import_file_download(request, file_id):
+    import_file = get_object_or_404(ImportFile, pk=file_id)
+    preview_source = resolve_preview_source(import_file)
+    if not preview_source["available"] or not preview_source["path"]:
+        raise Http404("No stored source file is available for this import.")
+
+    download_name = str(preview_source["file_name"])
+    content_type, _encoding = guess_type(download_name)
+    return FileResponse(
+        Path(preview_source["path"]).open("rb"),
+        as_attachment=True,
+        filename=download_name,
+        content_type=content_type or "application/octet-stream",
     )
 
 
@@ -636,6 +958,8 @@ def import_map_headers(request):
             source_path=temp_path,
             mapping=mapping,
             total_rows=count_csv_rows(temp_path),
+            original_source_path=current_entry.get("original_source_path") or None,
+            original_source_name=current_entry.get("original_source_name", ""),
         )
         _set_active_import_job(request, import_file)
 

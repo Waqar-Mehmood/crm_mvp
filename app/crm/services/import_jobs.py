@@ -30,13 +30,20 @@ def queue_import_job(
     source_path: str | Path,
     mapping: dict[str, str],
     total_rows: int,
+    original_source_path: str | Path | None = None,
+    original_source_name: str = "",
 ) -> ImportFile:
     normalized_source_path = str(Path(source_path))
     import_file, _ = ImportFile.objects.get_or_create(
         file_name=file_name,
         defaults={"source_path": normalized_source_path},
     )
+    normalized_original_source_path = (
+        str(Path(original_source_path)) if original_source_path else ""
+    )
     import_file.source_path = normalized_source_path
+    import_file.original_source_path = normalized_original_source_path
+    import_file.original_source_name = original_source_name or ""
     import_file.status = ImportFile.Status.QUEUED
     import_file.mapping = mapping
     import_file.total_rows = total_rows
@@ -48,6 +55,8 @@ def queue_import_job(
     import_file.save(
         update_fields=[
             "source_path",
+            "original_source_path",
+            "original_source_name",
             "status",
             "mapping",
             "total_rows",

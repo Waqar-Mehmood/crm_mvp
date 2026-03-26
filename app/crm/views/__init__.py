@@ -23,7 +23,9 @@ from .contact_views import (
 )
 from .import_views import (
     import_file_detail,
+    import_file_download,
     import_file_list,
+    import_file_raw_source,
     import_google_sheets_preview,
     import_map_headers,
     import_upload,
@@ -43,7 +45,9 @@ __all__ = [
     "contact_edit",
     "contact_list",
     "import_file_detail",
+    "import_file_download",
     "import_file_list",
+    "import_file_raw_source",
     "import_google_sheets_preview",
     "import_map_headers",
     "import_upload",
