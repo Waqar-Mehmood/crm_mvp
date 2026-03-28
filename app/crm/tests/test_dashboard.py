@@ -40,14 +40,18 @@ class DashboardViewTests(CRMRoleTestMixin, TestCase):
             row_number=1,
             company=self.company,
             contact=self.contact,
-            company_name="Acme Labs",
-            contact_name="Jane Example",
+            mapped_payload={
+                "company_name": "Acme Labs",
+                "contact_name": "Jane Example",
+            },
         )
         ImportRow.objects.create(
             import_file=self.import_file,
             row_number=2,
-            company_name="Unlinked Prospect",
-            contact_name="Missing Match",
+            mapped_payload={
+                "company_name": "Unlinked Prospect",
+                "contact_name": "Missing Match",
+            },
         )
         ImportFile.objects.filter(pk=self.import_file.pk).update(updated_at=timezone.now())
 

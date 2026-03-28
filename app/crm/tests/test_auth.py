@@ -103,8 +103,10 @@ class FrontendRoleAccessTests(CRMRoleTestMixin, TestCase):
         ImportRow.objects.create(
             import_file=self.import_file,
             row_number=1,
-            company_name="Acme Labs",
-            contact_name="Jane Example",
+            mapped_payload={
+                "company_name": "Acme Labs",
+                "contact_name": "Jane Example",
+            },
         )
 
     def prime_import_session(self):

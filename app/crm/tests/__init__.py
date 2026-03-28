@@ -179,12 +179,12 @@ class AdvancedFilterTestMixin(CRMRoleTestMixin):
         self.carla = Contact.objects.create(
             full_name="Carla Recruiter",
             title="Owner / Recruiter",
-            email="carla@example.com",
-            phone="555-0199",
         )
 
-        ContactEmail.objects.create(contact=self.alice, email="alice@acme.com", label="work")
-        ContactPhone.objects.create(contact=self.alice, phone="555-0101", label="work")
+        ContactEmail.objects.create(contact=self.alice, email="alice@acme.com", label="work", is_primary=True)
+        ContactPhone.objects.create(contact=self.alice, phone="555-0101", label="work", is_primary=True)
+        ContactEmail.objects.create(contact=self.carla, email="carla@example.com", label="work", is_primary=True)
+        ContactPhone.objects.create(contact=self.carla, phone="555-0199", label="work", is_primary=True)
         ContactSocialLink.objects.create(contact=self.alice, platform="linkedin", url="https://example.com/alice")
         self.acme.contacts.add(self.alice)
         self.cedar.contacts.add(self.carla)

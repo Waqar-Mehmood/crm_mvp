@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Value, When
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -17,7 +17,7 @@ from crm.forms.contacts import (
     ContactSocialLinkFormSet,
 )
 from crm.models import Company, Contact, ContactEmail, ContactPhone, ContactSocialLink
-from crm.services.contacts import save_contact_bundle
+from crm.services.contacts import annotate_contact_primary_channels, save_contact_bundle
 from crm.services.export_service import (
     CONTACT_EXPORT_COLUMNS,
     serialize_contact_export_row,
@@ -297,8 +297,8 @@ def _contact_ordering(sort_key: str, direction: str) -> tuple[str, ...]:
     ordering_map = {
         "contact": ("full_name", "id"),
         "title": ("title", "full_name", "id"),
-        "email": ("email", "full_name", "id"),
-        "phone": ("phone", "full_name", "id"),
+        "email": ("primary_email_value", "full_name", "id"),
+        "phone": ("primary_phone_value", "full_name", "id"),
     }
     fields = ordering_map.get(sort_key, ordering_map[CONTACT_DEFAULT_SORT])
     if direction == "desc":
@@ -843,7 +843,9 @@ def _contact_list_state(request):
     has_contact_records = total_contacts > 0
     company_link_model = Contact.companies.through
     contacts_qs = (
-        Contact.objects.prefetch_related("companies", "phones", "emails", "social_links")
+        annotate_contact_primary_channels(
+            Contact.objects.prefetch_related("companies", "phones", "emails", "social_links")
+        )
         .annotate(
             has_related_email=Exists(
                 ContactEmail.objects.filter(contact_id=OuterRef("pk"))
@@ -858,20 +860,6 @@ def _contact_list_state(request):
                 ContactSocialLink.objects.filter(contact_id=OuterRef("pk"))
             ),
         )
-        .annotate(
-            has_email_data=Case(
-                When(email__gt="", then=Value(True)),
-                When(has_related_email=True, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField(),
-            ),
-            has_phone_data=Case(
-                When(phone__gt="", then=Value(True)),
-                When(has_related_phone=True, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField(),
-            ),
-        )
     )
 
     needs_distinct = False
@@ -881,8 +869,6 @@ def _contact_list_state(request):
             Q(full_name__icontains=query)
             | Q(title__icontains=query)
             | Q(notes__icontains=query)
-            | Q(email__icontains=query)
-            | Q(phone__icontains=query)
             | Q(companies__name__icontains=query)
             | Q(emails__email__icontains=query)
             | Q(phones__phone__icontains=query)
@@ -903,10 +889,10 @@ def _contact_list_state(request):
         contacts_qs = contacts_qs.filter(created_at__date__lte=created_to)
 
     contacts_qs = _apply_toggle_filter(
-        contacts_qs, "has_email_data", contact_filters["has_email"]
+        contacts_qs, "has_related_email", contact_filters["has_email"]
     )
     contacts_qs = _apply_toggle_filter(
-        contacts_qs, "has_phone_data", contact_filters["has_phone"]
+        contacts_qs, "has_related_phone", contact_filters["has_phone"]
     )
     contacts_qs = _apply_toggle_filter(
         contacts_qs, "has_company_data", contact_filters["has_company"]

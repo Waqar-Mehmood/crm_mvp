@@ -10,11 +10,13 @@ from crm.models import (
     ImportFile,
     ImportRow,
 )
+from crm.services.contacts import get_primary_contact_email, get_primary_contact_phone, sync_primary_contact_channels
 from crm.services.import_components import (
     DataCleaner,
     FieldMapper,
     ImportOrchestrator,
 )
+from crm.services.import_rows import get_import_row_field_value, payload_key_for_import_row_field
 
 
 TARGET_FIELDS = [
@@ -230,7 +232,7 @@ def _csv_lookup_for_sources(import_file, source_fields, mapping_overrides=None):
 
 
 def _row_value_for_source(import_row, source_field, csv_lookup_row):
-    import_row_value = clean(getattr(import_row, source_field, ""))
+    import_row_value = clean(get_import_row_field_value(import_row, source_field))
     if import_row_value:
         return import_row_value
     return clean((csv_lookup_row or {}).get(source_field))
@@ -361,13 +363,18 @@ def apply_updates_from_import_file(import_file, selected_fields, mapping_overrid
         company = row.company
         contact = row.contact
 
-        if not company and clean(row.company_name):
-            company = Company.objects.filter(name=clean(row.company_name)).first()
-        if not contact and clean(row.contact_name):
-            contact = Contact.objects.filter(full_name=clean(row.contact_name)).first()
+        row_company_name = clean(get_import_row_field_value(row, "company_name"))
+        row_contact_name = clean(get_import_row_field_value(row, "contact_name"))
+
+        if not company and row_company_name:
+            company = Company.objects.filter(name=row_company_name).first()
+        if not contact and row_contact_name:
+            contact = Contact.objects.filter(full_name=row_contact_name).first()
 
         company_changed = False
         contact_changed = False
+        contact_scalar_changed = False
+        contact_channel_updates = {}
         if company:
             stats["companies_matched"] += 1
         if contact:
@@ -387,16 +394,36 @@ def apply_updates_from_import_file(import_file, selected_fields, mapping_overrid
                     stats["field_updates"] += 1
             if config["entity"] == "contact" and contact:
                 target = config["target"]
-                if clean(getattr(contact, target, "")) != value:
-                    setattr(contact, target, value)
-                    contact_changed = True
+                current_value = (
+                    get_primary_contact_email(contact)
+                    if target == "email"
+                    else get_primary_contact_phone(contact)
+                    if target == "phone"
+                    else clean(getattr(contact, target, ""))
+                )
+                if current_value != value:
+                    if target in {"email", "phone"}:
+                        contact_channel_updates[target] = value
+                    else:
+                        setattr(contact, target, value)
+                        contact_scalar_changed = True
                     stats["field_updates"] += 1
+
+        if contact and contact_channel_updates:
+            sync_primary_contact_channels(
+                contact,
+                email=contact_channel_updates.get("email", get_primary_contact_email(contact)),
+                phone=contact_channel_updates.get("phone", get_primary_contact_phone(contact)),
+            )
+            contact_changed = True
 
         if company_changed:
             company.save()
             stats["companies_updated"] += 1
-        if contact_changed:
+        if contact_scalar_changed:
             contact.save()
+            contact_changed = True
+        if contact_changed:
             stats["contacts_updated"] += 1
 
     return stats
@@ -436,10 +463,13 @@ def analyze_updates_from_import_file(import_file, selected_fields, mapping_overr
         company = row.company
         contact = row.contact
 
-        if not company and clean(row.company_name):
-            company = Company.objects.filter(name=clean(row.company_name)).first()
-        if not contact and clean(row.contact_name):
-            contact = Contact.objects.filter(full_name=clean(row.contact_name)).first()
+        row_company_name = clean(get_import_row_field_value(row, "company_name"))
+        row_contact_name = clean(get_import_row_field_value(row, "contact_name"))
+
+        if not company and row_company_name:
+            company = Company.objects.filter(name=row_company_name).first()
+        if not contact and row_contact_name:
+            contact = Contact.objects.filter(full_name=row_contact_name).first()
 
         if company:
             stats["companies_matched"] += 1
@@ -459,7 +489,13 @@ def analyze_updates_from_import_file(import_file, selected_fields, mapping_overr
                 continue
 
             row_field_stats["matched"] += 1
-            current_value = clean(getattr(target_obj, config["target"], ""))
+            current_value = (
+                get_primary_contact_email(target_obj)
+                if config["entity"] == "contact" and config["target"] == "email"
+                else get_primary_contact_phone(target_obj)
+                if config["entity"] == "contact" and config["target"] == "phone"
+                else clean(getattr(target_obj, config["target"], ""))
+            )
             if current_value != value:
                 row_field_stats["will_change"] += 1
                 stats["field_updates"] += 1
@@ -517,12 +553,28 @@ def hydrate_import_rows_from_source(import_file, source_fields, mapping_override
             if not updates:
                 continue
 
-            updated = ImportRow.objects.filter(
+            import_row = ImportRow.objects.filter(
                 import_file=import_file,
                 row_number=row_number,
-            ).update(**updates)
-            if updated:
-                stats["rows_touched"] += 1
-                stats["field_values_written"] += len(updates)
+            ).first()
+            if not import_row:
+                continue
+
+            payload = dict(import_row.mapped_payload or {})
+            values_written = 0
+            for field_name, value in updates.items():
+                payload_key = payload_key_for_import_row_field(field_name)
+                if clean(payload.get(payload_key, "")) == value:
+                    continue
+                payload[payload_key] = value
+                values_written += 1
+
+            if not values_written:
+                continue
+
+            import_row.mapped_payload = payload
+            import_row.save(update_fields=["mapped_payload", "updated_at"])
+            stats["rows_touched"] += 1
+            stats["field_values_written"] += values_written
 
     return stats

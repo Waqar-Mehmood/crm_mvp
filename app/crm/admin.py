@@ -44,6 +44,7 @@ from .services.import_workflow import (
     import_csv_with_mapping,
     suggest_mapping,
 )
+from .services.import_rows import payload_key_for_import_row_field
 from .models import (
     Company,
     CompanyPhone,
@@ -588,8 +589,8 @@ class CompanyAdmin(admin.ModelAdmin):
         "zip_code",
         "country",
         "contacts__full_name",
-        "contacts__email",
-        "contacts__phone",
+        "contacts__emails__email",
+        "contacts__phones__phone",
         "phones__phone",
         "emails__email",
         "social_links__url",
@@ -746,8 +747,6 @@ class ContactAdmin(admin.ModelAdmin):
     list_display = ("full_name", "title", "emails_display", "phones_display", "social_links_display")
     search_fields = (
         "full_name",
-        "email",
-        "phone",
         "title",
         "emails__email",
         "phones__phone",
@@ -1020,18 +1019,41 @@ class ImportRowAdmin(admin.ModelAdmin):
     )
     search_fields = (
         "import_file__file_name",
-        "company_name",
-        "contact_name",
-        "email_address",
-        "phone_number",
-        "website",
-        "person_source",
-        "city",
-        "state",
-        "zip_code",
-        "country",
     )
     list_filter = ("import_file",)
+
+    def get_search_results(self, request, queryset, search_term):
+        if not search_term:
+            return queryset, False
+
+        try:
+            terms = shlex.split(search_term)
+        except ValueError:
+            terms = search_term.split()
+
+        payload_fields = (
+            "company_name",
+            "contact_name",
+            "email_address",
+            "phone_number",
+            "website",
+            "person_source",
+            "city",
+            "state",
+            "zip_code",
+            "country",
+        )
+        filtered = queryset
+        for term in terms:
+            term_query = Q(import_file__file_name__icontains=term)
+            for field_name in payload_fields:
+                term_query |= Q(
+                    **{
+                        f"mapped_payload__{payload_key_for_import_row_field(field_name)}__icontains": term
+                    }
+                )
+            filtered = filtered.filter(term_query)
+        return filtered.distinct(), True
 
     def get_model_perms(self, request):
         return {}

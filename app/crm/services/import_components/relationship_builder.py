@@ -41,7 +41,7 @@ class RelationshipBuilder:
         email_row, _ = ContactEmail.objects.get_or_create(
             contact=contact,
             email=cleaned_email,
-            defaults={"label": "work"},
+            defaults={"label": "work", "is_primary": not contact.emails.exists()},
         )
         return email_row
 
@@ -53,7 +53,7 @@ class RelationshipBuilder:
         phone_row, _ = ContactPhone.objects.get_or_create(
             contact=contact,
             phone=cleaned_phone,
-            defaults={"label": "work"},
+            defaults={"label": "work", "is_primary": not contact.phones.exists()},
         )
         return phone_row
 

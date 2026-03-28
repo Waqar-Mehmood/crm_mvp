@@ -32,6 +32,7 @@ from crm.services.import_components import (
     UploadHandler,
 )
 from crm.services.import_jobs import count_csv_rows, queue_import_job
+from crm.services.import_rows import annotate_import_row_payload_values, import_row_annotation_name
 from crm.services.import_source_preview import (
     build_json_preview,
     build_tabular_preview,
@@ -1611,7 +1612,8 @@ def _clean_captured_rows_sort(value: str | None) -> str:
 
 
 def _captured_rows_ordering(sort_key: str, direction: str) -> tuple[str, ...]:
-    primary = f"-{sort_key}" if direction == "desc" else sort_key
+    ordering_key = sort_key if sort_key == "row_number" else import_row_annotation_name(sort_key)
+    primary = f"-{ordering_key}" if direction == "desc" else ordering_key
     if sort_key == "row_number":
         return (primary,)
     return (primary, "row_number")
@@ -1917,23 +1919,18 @@ def import_file_detail(request, file_id):
     }
     rows_sort = _clean_captured_rows_sort(request.GET.get("rows_sort"))
     rows_direction = _clean_sort_direction(request.GET.get("rows_direction"), CAPTURED_ROWS_DEFAULT_DIRECTION)
-    rows_qs = import_file.rows.select_related("company", "contact")
+    rows_qs = annotate_import_row_payload_values(
+        import_file.rows.select_related("company", "contact"),
+        CAPTURED_ROWS_SORT_KEYS,
+    )
     if rows_filters["rows_q"]:
         query = rows_filters["rows_q"]
-        rows_qs = rows_qs.filter(
-            Q(company_name__icontains=query)
-            | Q(website__icontains=query)
-            | Q(contact_name__icontains=query)
-            | Q(contact_title__icontains=query)
-            | Q(email_address__icontains=query)
-            | Q(phone_number__icontains=query)
-            | Q(person_source__icontains=query)
-            | Q(address__icontains=query)
-            | Q(city__icontains=query)
-            | Q(state__icontains=query)
-            | Q(zip_code__icontains=query)
-            | Q(country__icontains=query)
-        )
+        query_filter = Q()
+        for field_name in CAPTURED_ROWS_SORT_KEYS:
+            if field_name == "row_number":
+                continue
+            query_filter |= Q(**{f"{import_row_annotation_name(field_name)}__icontains": query})
+        rows_qs = rows_qs.filter(query_filter)
     rows_qs = rows_qs.order_by(*_captured_rows_ordering(rows_sort, rows_direction))
     rows_page_obj = _paginate(request, rows_qs, page_key="rows_page")
     rows_active_filters: list[dict[str, str]] = []

@@ -275,11 +275,21 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
         self.contact = Contact.objects.create(
             full_name="Jane Example",
             title="Operations Lead",
-            email="jane@example.com",
-            phone="555-0100",
             notes="Main buying contact",
         )
         self.contact.companies.add(self.primary_company)
+        ContactPhone.objects.create(
+            contact=self.contact,
+            label="primary",
+            phone="555-0100",
+            is_primary=True,
+        )
+        ContactEmail.objects.create(
+            contact=self.contact,
+            label="primary",
+            email="jane@example.com",
+            is_primary=True,
+        )
         self.contact_phone = ContactPhone.objects.create(
             contact=self.contact,
             label="Work",
@@ -406,18 +416,27 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
 
         response = self.client.get(reverse("contact_edit", args=[self.contact.pk]))
 
-        existing_phone_choices = list(response.context["phone_formset"].forms[0].fields["label"].choices)
+        existing_phone_choice_sets = [
+            list(form.fields["label"].choices)
+            for form in response.context["phone_formset"].forms
+        ]
         new_phone_choices = list(response.context["phone_formset"].empty_form.fields["label"].choices)
-        existing_email_choices = list(response.context["email_formset"].forms[0].fields["label"].choices)
+        existing_email_choice_sets = [
+            list(form.fields["label"].choices)
+            for form in response.context["email_formset"].forms
+        ]
         new_email_choices = list(response.context["email_formset"].empty_form.fields["label"].choices)
-        existing_profile_choices = list(response.context["social_link_formset"].forms[0].fields["platform"].choices)
+        existing_profile_choice_sets = [
+            list(form.fields["platform"].choices)
+            for form in response.context["social_link_formset"].forms
+        ]
         new_profile_choices = list(response.context["social_link_formset"].empty_form.fields["platform"].choices)
 
-        self.assertIn(("Work", "Work"), existing_phone_choices)
+        self.assertTrue(any(("Work", "Work") in choices for choices in existing_phone_choice_sets))
         self.assertNotIn(("Work", "Work"), new_phone_choices)
-        self.assertIn(("Work", "Work"), existing_email_choices)
+        self.assertTrue(any(("Work", "Work") in choices for choices in existing_email_choice_sets))
         self.assertNotIn(("Work", "Work"), new_email_choices)
-        self.assertIn(("LinkedIn", "LinkedIn"), existing_profile_choices)
+        self.assertTrue(any(("LinkedIn", "LinkedIn") in choices for choices in existing_profile_choice_sets))
         self.assertNotIn(("LinkedIn", "LinkedIn"), new_profile_choices)
 
     def test_contact_create_succeeds_for_team_lead_and_redirects_with_message(self):
@@ -433,10 +452,16 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
         self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
         self.assertContains(response, "Contact created.")
         self.assertEqual(created_contact.companies.count(), 2)
-        self.assertEqual(created_contact.phones.get().phone, "555-3000")
-        self.assertEqual(created_contact.phones.get().label, "mobile")
-        self.assertEqual(created_contact.emails.get().email, "chris.vector@example.com")
-        self.assertEqual(created_contact.emails.get().label, "work")
+        self.assertEqual(created_contact.phone, "555-2222")
+        self.assertEqual(created_contact.email, "chris@example.com")
+        self.assertEqual(
+            set(created_contact.phones.values_list("phone", flat=True)),
+            {"555-2222", "555-3000"},
+        )
+        self.assertEqual(
+            set(created_contact.emails.values_list("email", flat=True)),
+            {"chris@example.com", "chris.vector@example.com"},
+        )
         self.assertEqual(created_contact.social_links.get().url, "https://example.com/chris")
         self.assertEqual(created_contact.social_links.get().platform, "linkedin")
 
@@ -455,8 +480,10 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
 
         created_contact = Contact.objects.get(full_name="Chris Vector")
         self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
-        self.assertEqual(created_contact.phones.count(), 0)
-        self.assertEqual(created_contact.emails.count(), 0)
+        self.assertEqual(created_contact.phone, "555-2222")
+        self.assertEqual(created_contact.email, "chris@example.com")
+        self.assertEqual(created_contact.phones.count(), 1)
+        self.assertEqual(created_contact.emails.count(), 1)
         self.assertEqual(created_contact.social_links.count(), 0)
 
     def test_contact_create_ignores_completely_blank_related_rows(self):
@@ -479,8 +506,10 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
 
         created_contact = Contact.objects.get(full_name="Chris Vector")
         self.assertRedirects(response, reverse("contact_detail", args=[created_contact.pk]))
-        self.assertEqual(created_contact.phones.count(), 0)
-        self.assertEqual(created_contact.emails.count(), 0)
+        self.assertEqual(created_contact.phone, "555-2222")
+        self.assertEqual(created_contact.email, "chris@example.com")
+        self.assertEqual(created_contact.phones.count(), 1)
+        self.assertEqual(created_contact.emails.count(), 1)
         self.assertEqual(created_contact.social_links.count(), 0)
 
     def test_contact_create_rejects_partially_filled_email_row(self):
@@ -521,13 +550,13 @@ class ContactCrudTests(CRMRoleTestMixin, TestCase):
             list(self.contact.companies.values_list("name", flat=True)),
             ["Blue Orbit"],
         )
-        self.assertEqual(set(self.contact.phones.values_list("phone", flat=True)), {"222-222", "333-333"})
-        self.assertEqual(set(self.contact.phones.values_list("label", flat=True)), {"work", "mobile"})
+        self.assertEqual(set(self.contact.phones.values_list("phone", flat=True)), {"555-0200", "222-222", "333-333"})
+        self.assertEqual(self.contact.phone, "555-0200")
         self.assertEqual(
             set(self.contact.emails.values_list("email", flat=True)),
-            {"ops@example.com", "jane.personal@example.com"},
+            {"jane.smith@example.com", "ops@example.com", "jane.personal@example.com"},
         )
-        self.assertEqual(set(self.contact.emails.values_list("label", flat=True)), {"work", "personal"})
+        self.assertEqual(self.contact.email, "jane.smith@example.com")
         self.assertEqual(
             set(self.contact.social_links.values_list("url", flat=True)),
             {"https://example.com/jane-smith", "https://jane.example.com"},

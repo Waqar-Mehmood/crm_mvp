@@ -16,6 +16,8 @@ from . import (
     CompanyPhone,
     CompanySocialLink,
     Contact,
+    ContactEmail,
+    ContactPhone,
     ROLE_STAFF,
     ROLE_TEAM_LEAD,
     TestCase,
@@ -294,13 +296,28 @@ class CompanyCrudTests(CRMRoleTestMixin, TestCase):
         self.primary_contact = Contact.objects.create(
             full_name="Jane Example",
             title="Operations Lead",
-            email="jane@example.com",
-            phone="555-0100",
         )
         self.secondary_contact = Contact.objects.create(
             full_name="Sam Seller",
             title="Account Executive",
+        )
+        ContactEmail.objects.create(
+            contact=self.primary_contact,
+            email="jane@example.com",
+            label="work",
+            is_primary=True,
+        )
+        ContactPhone.objects.create(
+            contact=self.primary_contact,
+            phone="555-0100",
+            label="work",
+            is_primary=True,
+        )
+        ContactEmail.objects.create(
+            contact=self.secondary_contact,
             email="sam@example.com",
+            label="work",
+            is_primary=True,
         )
         self.company.contacts.add(self.primary_contact)
         self.company_phone = CompanyPhone.objects.create(

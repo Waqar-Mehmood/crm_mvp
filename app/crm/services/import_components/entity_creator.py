@@ -21,8 +21,6 @@ class EntityCreator:
     }
     _CONTACT_FIELD_MAP = {
         "title": "title",
-        "email": "email",
-        "phone": "phone",
     }
 
     @classmethod

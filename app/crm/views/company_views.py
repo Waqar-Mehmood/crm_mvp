@@ -29,6 +29,7 @@ from crm.forms.companies import (
 )
 from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink, Contact
 from crm.services.companies import save_company_bundle
+from crm.services.contacts import annotate_contact_primary_channels
 from crm.services.export_service import (
     COMPANY_EXPORT_COLUMNS,
     serialize_company_export_row,
@@ -110,7 +111,10 @@ DETAIL_CHANNEL_LIST_TEMPLATE = "crm/components/record_detail/body_channel_list.h
 
 def _company_detail_queryset():
     return Company.objects.prefetch_related(
-        Prefetch("contacts", queryset=Contact.objects.order_by("full_name")),
+        Prefetch(
+            "contacts",
+            queryset=Contact.objects.prefetch_related("emails", "phones").order_by("full_name"),
+        ),
         "phones",
         "emails",
         "social_links",
@@ -873,12 +877,14 @@ def company_contact_search(request):
         return JsonResponse({"results": []})
 
     contacts = (
-        Contact.objects.filter(
+        annotate_contact_primary_channels(Contact.objects.filter(
             Q(full_name__icontains=query)
-            | Q(email__icontains=query)
+            | Q(emails__email__icontains=query)
             | Q(title__icontains=query)
-            | Q(phone__icontains=query)
-        )
+            | Q(phones__phone__icontains=query)
+        ))
+        .prefetch_related("emails", "phones")
+        .distinct()
         .order_by("full_name")[:RELATION_SEARCH_LIMIT]
     )
     return JsonResponse(

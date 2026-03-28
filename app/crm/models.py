@@ -1,4 +1,26 @@
 from django.db import models
+from django.db.models import Q
+
+
+IMPORT_ROW_PAYLOAD_PROPERTY_MAP = {
+    "company_name": "company_name",
+    "industry": "industry",
+    "company_size": "company_size",
+    "revenue": "revenue",
+    "website": "website",
+    "contact_name": "contact_name",
+    "contact_first_name": "contact_first_name",
+    "contact_last_name": "contact_last_name",
+    "contact_title": "contact_title",
+    "email_address": "email",
+    "phone_number": "phone",
+    "person_source": "person_source",
+    "address": "address",
+    "city": "city",
+    "state": "state",
+    "zip_code": "zip_code",
+    "country": "country",
+}
 
 
 class SiteBranding(models.Model):
@@ -76,14 +98,54 @@ class CompanySocialLink(models.Model):
 
 class Contact(models.Model):
     full_name = models.CharField(max_length=255, db_index=True)
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=50, blank=True)
+    first_name = models.CharField(max_length=255, blank=True)
+    middle_name = models.CharField(max_length=255, blank=True)
+    last_name = models.CharField(max_length=255, blank=True)
     title = models.CharField(max_length=100, blank=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return self.full_name
+
+    def _primary_related_row(self, related_name):
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+        if related_name in prefetched:
+            rows = list(prefetched[related_name])
+        elif not self.pk:
+            rows = []
+        else:
+            rows = list(getattr(self, related_name).all())
+        if not rows:
+            return None
+        rows.sort(key=lambda row: (not bool(getattr(row, "is_primary", False)), row.pk or 0))
+        return rows[0]
+
+    @property
+    def primary_email_row(self):
+        return self._primary_related_row("emails")
+
+    @property
+    def primary_phone_row(self):
+        return self._primary_related_row("phones")
+
+    @property
+    def primary_email(self):
+        row = self.primary_email_row
+        return row.email if row else ""
+
+    @property
+    def primary_phone(self):
+        row = self.primary_phone_row
+        return row.phone if row else ""
+
+    @property
+    def email(self):
+        return self.primary_email
+
+    @property
+    def phone(self):
+        return self.primary_phone
 
 
 class ContactPhone(models.Model):
@@ -94,6 +156,17 @@ class ContactPhone(models.Model):
     )
     phone = models.CharField(max_length=50)
     label = models.CharField(max_length=50, blank=True)  # e.g. work, mobile
+    is_primary = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["contact"],
+                condition=Q(is_primary=True),
+                name="unique_primary_contact_phone",
+            )
+        ]
+        ordering = ("-is_primary", "id")
 
     def __str__(self):
         return f"{self.contact.full_name} - {self.phone}"
@@ -107,6 +180,17 @@ class ContactEmail(models.Model):
     )
     email = models.EmailField()
     label = models.CharField(max_length=50, blank=True)  # e.g. personal, work
+    is_primary = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["contact"],
+                condition=Q(is_primary=True),
+                name="unique_primary_contact_email",
+            )
+        ]
+        ordering = ("-is_primary", "id")
 
     def __str__(self):
         return f"{self.contact.full_name} - {self.email}"
@@ -177,18 +261,7 @@ class ImportRow(models.Model):
         blank=True,
         related_name="import_rows",
     )
-    company_name = models.CharField(max_length=255, blank=True)
-    website = models.URLField(blank=True)
-    contact_name = models.CharField(max_length=255, blank=True)
-    contact_title = models.CharField(max_length=255, blank=True)
-    email_address = models.EmailField(blank=True)
-    phone_number = models.CharField(max_length=50, blank=True)
-    person_source = models.URLField(blank=True)
-    address = models.CharField(max_length=255, blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    state = models.CharField(max_length=100, blank=True)
-    zip_code = models.CharField(max_length=20, blank=True)
-    country = models.CharField(max_length=100, blank=True)
+    mapped_payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -202,3 +275,77 @@ class ImportRow(models.Model):
 
     def __str__(self):
         return f"{self.import_file.file_name} - row {self.row_number}"
+
+    def _payload_value(self, field_name):
+        payload = self.mapped_payload or {}
+        payload_key = IMPORT_ROW_PAYLOAD_PROPERTY_MAP.get(field_name, field_name)
+        value = payload.get(payload_key, "")
+        return "" if value is None else value
+
+    @property
+    def company_name(self):
+        return self._payload_value("company_name")
+
+    @property
+    def industry(self):
+        return self._payload_value("industry")
+
+    @property
+    def company_size(self):
+        return self._payload_value("company_size")
+
+    @property
+    def revenue(self):
+        return self._payload_value("revenue")
+
+    @property
+    def website(self):
+        return self._payload_value("website")
+
+    @property
+    def contact_name(self):
+        return self._payload_value("contact_name")
+
+    @property
+    def contact_first_name(self):
+        return self._payload_value("contact_first_name")
+
+    @property
+    def contact_last_name(self):
+        return self._payload_value("contact_last_name")
+
+    @property
+    def contact_title(self):
+        return self._payload_value("contact_title")
+
+    @property
+    def email_address(self):
+        return self._payload_value("email_address")
+
+    @property
+    def phone_number(self):
+        return self._payload_value("phone_number")
+
+    @property
+    def person_source(self):
+        return self._payload_value("person_source")
+
+    @property
+    def address(self):
+        return self._payload_value("address")
+
+    @property
+    def city(self):
+        return self._payload_value("city")
+
+    @property
+    def state(self):
+        return self._payload_value("state")
+
+    @property
+    def zip_code(self):
+        return self._payload_value("zip_code")
+
+    @property
+    def country(self):
+        return self._payload_value("country")

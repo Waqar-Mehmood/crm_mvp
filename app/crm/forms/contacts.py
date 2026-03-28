@@ -11,9 +11,15 @@ from crm.channel_choices import (
 )
 from crm.forms._styling import apply_crm_widget_classes
 from crm.models import Company, Contact, ContactEmail, ContactPhone, ContactSocialLink
+from crm.services.contacts import get_primary_contact_email, get_primary_contact_phone
 
 
 class ContactForm(forms.ModelForm):
+    email = forms.EmailField(required=False)
+    phone = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"type": "tel"}),
+    )
     companies = forms.ModelMultipleChoiceField(
         queryset=Company.objects.none(),
         required=False,
@@ -25,13 +31,10 @@ class ContactForm(forms.ModelForm):
         model = Contact
         fields = [
             "full_name",
-            "email",
-            "phone",
             "title",
             "notes",
         ]
         widgets = {
-            "phone": forms.TextInput(attrs={"type": "tel"}),
             "notes": forms.Textarea(attrs={"rows": 5}),
         }
 
@@ -50,6 +53,8 @@ class ContactForm(forms.ModelForm):
         elif self.instance.pk:
             self.fields["companies"].queryset = self.instance.companies.order_by("name")
             self.fields["companies"].initial = self.fields["companies"].queryset
+            self.fields["email"].initial = get_primary_contact_email(self.instance)
+            self.fields["phone"].initial = get_primary_contact_phone(self.instance)
         self.order_fields(
             [
                 "full_name",

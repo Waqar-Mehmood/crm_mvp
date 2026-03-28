@@ -7,11 +7,13 @@ from urllib.parse import urlparse
 from django.db import transaction
 
 from crm.models import ImportFile, ImportRow
+from crm.services.contacts import merge_import_contact_channels
 from crm.services.import_components.data_cleaner import DataCleaner
 from crm.services.import_components.entity_creator import EntityCreator
 from crm.services.import_components.field_mapper import FieldMapper
 from crm.services.import_components.import_stats import ImportStats
 from crm.services.import_components.relationship_builder import RelationshipBuilder
+from crm.services.import_rows import build_import_row_payload
 
 
 class ImportOrchestrator:
@@ -271,15 +273,17 @@ class ImportOrchestrator:
                             row_values["email"]
                             and not contact.emails.filter(email=row_values["email"]).exists()
                         )
-                        RelationshipBuilder.create_contact_email(contact, row_values["email"])
-                        if email_created:
-                            stats.email_rows_created += 1
-
                         phone_created = bool(
                             row_values["phone"]
                             and not contact.phones.filter(phone=row_values["phone"]).exists()
                         )
-                        RelationshipBuilder.create_contact_phone(contact, row_values["phone"])
+                        merge_import_contact_channels(
+                            contact,
+                            email=row_values["email"],
+                            phone=row_values["phone"],
+                        )
+                        if email_created:
+                            stats.email_rows_created += 1
                         if phone_created:
                             stats.phone_rows_created += 1
 
@@ -309,24 +313,15 @@ class ImportOrchestrator:
                             stats.company_social_rows_created += 1
 
                     if import_file is not None:
+                        payload_values = dict(row_values)
+                        payload_values["contact_title"] = row_values["import_row_contact_title"]
                         _, row_created = ImportRow.objects.update_or_create(
                             import_file=import_file,
                             row_number=row_number,
                             defaults={
                                 "company": company,
                                 "contact": contact,
-                                "company_name": row_values["company_name"],
-                                "website": row_values["website"],
-                                "contact_name": row_values["contact_name"],
-                                "contact_title": row_values["import_row_contact_title"],
-                                "email_address": row_values["email"],
-                                "phone_number": row_values["phone"],
-                                "person_source": row_values["person_source"],
-                                "address": row_values["address"],
-                                "city": row_values["city"],
-                                "state": row_values["state"],
-                                "zip_code": row_values["zip_code"],
-                                "country": row_values["country"],
+                                "mapped_payload": build_import_row_payload(payload_values),
                             },
                         )
                         if row_created:
