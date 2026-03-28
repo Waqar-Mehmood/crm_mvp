@@ -390,13 +390,16 @@ class GoogleSheetsImportFlowTests(CRMRoleTestMixin, TestCase):
                 "sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0",
                 "action": "preview",
             },
+            follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("import_google_sheets"))
         self.assertEqual(response.context["headers"], ["Company Name", "Email"])
         self.assertEqual(len(response.context["preview_rows"]), 3)
         self.assertEqual(response.context["total_rows"], 3)
         self.assertContains(response, "Continue to mapping")
+        self.assertContains(response, "Search this preview")
 
     @patch("crm.services.google_sheets.fetch_google_sheet_rows")
     def test_google_sheets_import_action_reuses_mapping_session_flow(self, mock_fetch):
@@ -404,6 +407,15 @@ class GoogleSheetsImportFlowTests(CRMRoleTestMixin, TestCase):
             {"Company Name": "Acme", "Email": "hello@acme.com"},
             {"Company Name": "Beta", "Email": "team@beta.com"},
         ]
+
+        preview_response = self.client.post(
+            reverse("import_google_sheets"),
+            {
+                "sheet_url": "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=0#gid=0",
+                "action": "preview",
+            },
+        )
+        self.assertRedirects(preview_response, reverse("import_google_sheets"))
 
         response = self.client.post(
             reverse("import_google_sheets"),
@@ -1096,6 +1108,7 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "Rows: 10")
         self.assertContains(response, "Export")
         self.assertContains(response, "Search this preview")
+        self.assertContains(response, "Copy row as JSON")
 
     def test_download_source_route_is_available_to_staff(self):
         staff_user = self.create_user("staff-download", role=ROLE_STAFF)
@@ -1159,11 +1172,8 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            '<details class="group flex flex-col gap-2" data-animated-disclosure open>',
-            html=False,
-        )
+        self.assertContains(response, "data-animated-disclosure")
+        self.assertContains(response, "data-animated-disclosure open")
         self.assertContains(response, "Beta Labs")
         self.assertNotContains(response, "Acme Labs")
         self.assertEqual(response.context["preview_context"]["filters"]["q"], "beta")
@@ -1514,6 +1524,8 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, 'value="Organisation" selected')
         self.assertContains(response, 'value="FirstName" selected')
         self.assertContains(response, 'value="LastName" selected')
+        self.assertContains(response, "Actions")
+        self.assertContains(response, "Restore suggested match")
 
     def test_mapping_page_renders_for_xlsx_source(self):
         self.client.force_login(self.team_lead_user)

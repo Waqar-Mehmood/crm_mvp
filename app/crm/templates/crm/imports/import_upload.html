@@ -22,8 +22,8 @@
         </article>
     </div>
     <div class="flex flex-col gap-3">
-        <a class="tw-button-primary w-full" href="{% url 'import_google_sheets' %}">Open Sheets Preview</a>
-        <a class="tw-button-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
+        <a class="tw-button-hero-primary w-full" href="{% url 'import_google_sheets' %}">Open Sheets Preview</a>
+        <a class="tw-button-hero-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
 
@@ -67,7 +67,7 @@
                     </div>
                     <!-- Hidden file input, triggered by the button -->
                     <input class="hidden" type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.json" multiple data-import-upload-input>
-                    <button class="tw-button-secondary w-full" type="button" id="add-more-files" data-import-upload-trigger>Choose files</button>
+                    <button class="tw-button-surface w-full" type="button" id="add-more-files" data-import-upload-trigger>Choose files</button>
                 </div>
 
                 <section aria-live="polite" aria-atomic="true" class="space-y-3 rounded-crm-md border border-[#ddcfb6] bg-white/60 p-4">

@@ -1,0 +1,9 @@
+{% if workspace.filter_panel %}
+    {% include "crm/components/list_workspace/filter_disclosure.html" with panel=workspace.filter_panel ui=workspace.filter_ui only %}
+{% endif %}
+
+{% if workspace.table_rows %}
+    {% include "crm/components/list_workspace/table_section.html" with ui=workspace.table_ui menus=workspace.toolbar_menus table_headers=workspace.table_headers table_rows=workspace.table_rows page_obj=workspace.page_obj page_query=workspace.page_query only %}
+{% else %}
+    {% include "crm/components/list_workspace/empty_state.html" with state=workspace.empty_state actions_template=workspace.empty_actions_template|default:"crm/components/list_workspace/action_stack.html" action_tone=workspace.empty_action_tone|default:"surface" only %}
+{% endif %}

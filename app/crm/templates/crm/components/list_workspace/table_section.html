@@ -44,5 +44,5 @@
             </tbody>
         </table>
     </div>
-    {% include "crm/includes/pagination.html" %}
+    {% include "crm/includes/pagination.html" with page_obj=page_obj page_query=page_query page_param=ui.page_param only %}
 </section>

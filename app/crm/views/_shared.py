@@ -23,13 +23,13 @@ BOOLEAN_FILTER_LABELS = {
 }
 
 
-def _paginate(request, queryset, per_page=PAGE_SIZE):
+def _paginate(request, queryset, per_page=PAGE_SIZE, page_key="page"):
     paginator = Paginator(queryset, per_page)
-    return paginator.get_page(request.GET.get("page"))
+    return paginator.get_page(request.GET.get(page_key))
 
 
-def _query_string(request, remove_keys=None, extra=None):
-    query = request.GET.copy()
+def _query_string(request, remove_keys=None, extra=None, query=None):
+    query = (query or request.GET).copy()
     for key in remove_keys or ():
         query.pop(key, None)
     for key, value in (extra or {}).items():
@@ -40,15 +40,22 @@ def _query_string(request, remove_keys=None, extra=None):
     return query.urlencode()
 
 
-def _page_query(request):
-    return _query_string(request, remove_keys={"page", "export"})
+def _page_query(request, *, page_key="page", remove_keys=None, query=None):
+    keys_to_remove = {"export", page_key}
+    if remove_keys:
+        keys_to_remove.update(remove_keys)
+    return _query_string(request, remove_keys=keys_to_remove, query=query)
 
 
-def _export_query(request, export_format):
+def _export_query(request, export_format, *, page_key="page", remove_keys=None, query=None):
+    keys_to_remove = {"export", page_key}
+    if remove_keys:
+        keys_to_remove.update(remove_keys)
     return _query_string(
         request,
-        remove_keys={"page", "export"},
+        remove_keys=keys_to_remove,
         extra={"export": export_format},
+        query=query,
     )
 
 
@@ -64,6 +71,11 @@ def _clean_export_format(value):
 def _clean_toggle(value):
     value = _clean_text(value).lower()
     return value if value in BOOLEAN_FILTER_LABELS else ""
+
+
+def _clean_sort_direction(value, default="asc"):
+    value = _clean_text(value).lower()
+    return value if value in {"asc", "desc"} else default
 
 
 def _parse_int(value):
@@ -119,8 +131,8 @@ def _apply_toggle_filter(queryset, field_name, toggle_value):
     return queryset
 
 
-def _query_items(request, remove_keys=None, extra=None):
-    query = request.GET.copy()
+def _query_items(request, remove_keys=None, extra=None, query=None):
+    query = (query or request.GET).copy()
     for key in remove_keys or ():
         query.pop(key, None)
     for key, value in (extra or {}).items():

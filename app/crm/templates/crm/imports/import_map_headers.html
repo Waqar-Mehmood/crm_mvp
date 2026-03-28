@@ -32,8 +32,8 @@
         {% endif %}
     </div>
     <div class="flex flex-col gap-3">
-        <a class="tw-button-secondary w-full" href="{% url 'import_upload' %}?reset_queue=1">Swap file</a>
-        <a class="tw-button-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
+        <a class="tw-button-hero-secondary w-full" href="{% url 'import_upload' %}?reset_queue=1">Swap file</a>
+        <a class="tw-button-hero-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
 
@@ -57,6 +57,8 @@
                 <h2 class="mt-2 font-serif text-3xl text-ink-900">Column pairing</h2>
             </div>
 
+            {% include "crm/components/list_workspace/filter_disclosure.html" with panel=mapping_table_workspace.filter_panel ui=mapping_table_workspace.filter_ui only %}
+
             <form method="post" class="space-y-5">
                 {% csrf_token %}
 
@@ -71,38 +73,11 @@
 
                 <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">Suggested matches are preselected. Review the highlighted fields first, then queue the import for background processing.</p>
 
-                <div class="tw-import-table-wrap overflow-x-auto">
-                    <table class="tw-import-table min-w-[44rem]">
-                        <thead>
-                            <tr>
-                                <th>CRM field</th>
-                                <th>Status</th>
-                                <th>Source column</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for field in mapping_fields %}
-                                <tr>
-                                    <td>
-                                        <div class="font-semibold text-panel-text">{{ field.label }}</div>
-                                        <div class="mt-1 text-xs text-panel-muted">{{ field.requirement }}</div>
-                                    </td>
-                                    <td>
-                                        <span class="inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-accent">{{ field.status_label }}</span>
-                                    </td>
-                                    <td>
-                                        <select class="tw-import-select" name="map_{{ field.key }}">
-                                            <option value="">-- Not mapped --</option>
-                                            {% for h in headers %}
-                                                <option value="{{ h }}" {% if field.selected == h %}selected{% endif %}>{{ h }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                {% if mapping_table_workspace.table_rows %}
+                    {% include "crm/components/list_workspace/table_section.html" with ui=mapping_table_workspace.table_ui menus=mapping_table_workspace.toolbar_menus table_headers=mapping_table_workspace.table_headers table_rows=mapping_table_workspace.table_rows page_obj=mapping_table_workspace.page_obj page_query=mapping_table_workspace.page_query only %}
+                {% else %}
+                    {% include "crm/components/list_workspace/empty_state.html" with state=mapping_table_workspace.empty_state actions_template="crm/components/list_workspace/action_stack.html" action_tone="surface" only %}
+                {% endif %}
 
                 <p class="rounded-crm-sm border border-[#ddcfb6] bg-white/70 px-4 py-3 text-sm text-panel-text">Tip: map either <strong>Contact Full Name</strong> or map both <strong>Contact First Name</strong> and <strong>Contact Last Name</strong>.</p>
 

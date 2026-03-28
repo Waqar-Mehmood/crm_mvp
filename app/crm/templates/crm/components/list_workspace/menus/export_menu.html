@@ -1,13 +1,13 @@
-<details class="group/export relative">
-    <summary class="inline-flex min-h-[40px] cursor-pointer list-none items-center justify-center gap-2 rounded-[0.8rem] border border-brand-accent/30 bg-brand-gradient-accent-soft px-4 text-sm font-semibold text-brand-text-strong shadow-brand-button transition duration-200 hover:-translate-y-px hover:border-brand-accent/50">
+<details class="tw-dropdown-menu group/export" data-dropdown-menu>
+    <summary class="tw-control-button-accent">
         <span>{{ menu.label }}</span>
         <svg class="h-3 w-3 transition duration-200 group-open/export:rotate-180" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
             <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
         </svg>
     </summary>
-    <div class="absolute right-0 z-20 mt-2 flex min-w-[13rem] flex-col gap-1 rounded-[1rem] border border-brand-surface-borderSoft bg-white/96 p-2 shadow-brand-panel backdrop-blur">
+    <div class="tw-dropdown-panel min-w-[13rem]">
         {% for link in menu.links %}
-            <a class="rounded-[0.85rem] px-3 py-2 text-sm font-medium text-brand-text-muted no-underline transition duration-150 hover:bg-brand-surface-soft hover:text-brand-text-base" href="{{ link.url }}">{{ link.label }}</a>
+            <a class="tw-dropdown-link" href="{{ link.url }}">{{ link.label }}</a>
         {% endfor %}
     </div>
 </details>

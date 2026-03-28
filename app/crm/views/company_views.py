@@ -40,6 +40,7 @@ from ._shared import (
     _clean_column_list,
     _clean_export_format,
     _clean_per_page,
+    _clean_sort_direction,
     _clean_text,
     _clean_toggle,
     _distinct_nonempty_values,
@@ -86,6 +87,9 @@ COMPANY_FILTER_KEYS = frozenset(
         "created_to",
     }
 )
+COMPANY_SORT_KEYS = frozenset({"company", "industry", "address", "size", "revenue", "location"})
+COMPANY_DEFAULT_SORT = "company"
+COMPANY_DEFAULT_DIRECTION = "asc"
 COMPANY_TABLE_CELL_TEMPLATES = {
     "row": "crm/components/list_workspace/cells/text.html",
     "company": "crm/components/list_workspace/cells/single_link.html",
@@ -97,6 +101,7 @@ COMPANY_TABLE_CELL_TEMPLATES = {
     "phones": "crm/components/company_list/cells/channel_list.html",
     "emails": "crm/components/company_list/cells/channel_list.html",
     "profiles": "crm/components/list_workspace/cells/stacked_links.html",
+    "actions": "crm/components/list_workspace/cells/action_buttons.html",
 }
 DETAIL_CARDS_TEMPLATE = "crm/components/content_panels/body_detail_cards.html"
 DETAIL_FIELD_GRID_TEMPLATE = "crm/components/record_detail/body_field_grid.html"
@@ -605,6 +610,26 @@ def _build_company_table_ui():
     }
 
 
+def _clean_company_sort(value: str | None) -> str:
+    value = _clean_text(value)
+    return value if value in COMPANY_SORT_KEYS else COMPANY_DEFAULT_SORT
+
+
+def _company_ordering(sort_key: str, direction: str) -> tuple[str, ...]:
+    ordering_map = {
+        "company": ("name", "id"),
+        "industry": ("industry", "name", "id"),
+        "address": ("address", "name", "id"),
+        "size": ("size_number", "name", "id"),
+        "revenue": ("revenue", "name", "id"),
+        "location": ("city", "state", "country", "name", "id"),
+    }
+    fields = ordering_map.get(sort_key, ordering_map[COMPANY_DEFAULT_SORT])
+    if direction == "desc":
+        return tuple(f"-{field}" for field in fields)
+    return fields
+
+
 def _normalize_company_channels(items, *, value_attr, fallback_label):
     normalized = []
     for item in items:
@@ -629,18 +654,96 @@ def _normalize_company_links(items, *, label_attr, href_attr, fallback_label):
     ]
 
 
-def _build_company_table_headers(visible_columns):
-    return [
+def _build_company_table_headers(request, visible_columns, current_sort, current_direction):
+    headers = []
+    company_list_url = reverse("company_list")
+    sortable_labels = {
+        "company": "Company",
+        "industry": "Industry",
+        "address": "Address",
+        "size": "Size",
+        "revenue": "Revenue",
+        "location": "Location",
+    }
+    for key, label in COMPANY_COLUMN_OPTIONS:
+        if key not in visible_columns:
+            continue
+
+        if key == "row":
+            headers.append({"key": key, "label": "#", "is_sortable": False, "aria_sort": ""})
+            continue
+
+        if key in COMPANY_SORT_KEYS:
+            is_active = current_sort == key
+            next_direction = "desc" if is_active and current_direction == "asc" else "asc"
+            query_string = _query_string(
+                request,
+                remove_keys={"page", "export"},
+                extra={"sort": key, "direction": next_direction},
+            )
+            headers.append(
+                {
+                    "key": key,
+                    "label": sortable_labels[key],
+                    "is_sortable": True,
+                    "is_active": is_active,
+                    "direction": current_direction if is_active else "",
+                    "aria_sort": (
+                        "ascending"
+                        if is_active and current_direction == "asc"
+                        else "descending"
+                        if is_active
+                        else "none"
+                    ),
+                    "action_label": f"Sort by {sortable_labels[key]} {'descending' if next_direction == 'desc' else 'ascending'}",
+                    "url": f"{company_list_url}?{query_string}" if query_string else company_list_url,
+                }
+            )
+            continue
+
+        headers.append(
+            {
+                "key": key,
+                "label": label,
+                "is_sortable": False,
+                "aria_sort": "",
+            }
+        )
+
+    headers.append(
         {
-            "key": key,
-            "label": "#" if key == "row" else label,
+            "key": "actions",
+            "label": "Actions",
+            "is_sortable": False,
+            "aria_sort": "",
+            "header_class": "w-[1%] whitespace-nowrap",
         }
-        for key, label in COMPANY_COLUMN_OPTIONS
-        if key in visible_columns
+    )
+    return headers
+
+
+def _build_company_row_actions(company, *, can_manage_records):
+    actions = [
+        {
+            "label": "View detail",
+            "title": "View detail",
+            "href": reverse("company_detail", args=[company.id]),
+            "icon": "view",
+        },
     ]
+    if can_manage_records:
+        actions.append(
+            {
+                "label": "Edit company",
+                "title": "Edit company",
+                "href": reverse("company_edit", args=[company.id]),
+                "icon": "edit",
+            }
+        )
+    return actions
 
 
-def _build_company_table_rows(companies, table_headers, row_number_offset):
+def _build_company_table_rows(companies, table_headers, row_number_offset, *, can_manage_records):
     rows = []
     for index, company in enumerate(companies, start=row_number_offset + 1):
         phones = list(company.phones.all())
@@ -711,6 +814,10 @@ def _build_company_table_rows(companies, table_headers, row_number_offset):
                     href_attr="url",
                     fallback_label="Website",
                 ),
+            },
+            "actions": {
+                "template": COMPANY_TABLE_CELL_TEMPLATES["actions"],
+                "actions": _build_company_row_actions(company, can_manage_records=can_manage_records),
             },
         }
 
@@ -820,6 +927,8 @@ def company_industry_search(request):
 
 def _company_list_state(request):
     per_page = _clean_per_page(request.GET.get("per_page"))
+    sort = _clean_company_sort(request.GET.get("sort"))
+    direction = _clean_sort_direction(request.GET.get("direction"), COMPANY_DEFAULT_DIRECTION)
     visible_columns = _clean_column_list(
         request.GET.get("columns"),
         [key for key, _label in COMPANY_COLUMN_OPTIONS],
@@ -867,7 +976,6 @@ def _company_list_state(request):
                 output_field=IntegerField(),
             ),
         )
-        .order_by("name")
     )
 
     query = company_filters["q"]
@@ -919,6 +1027,7 @@ def _company_list_state(request):
     companies_qs = _apply_toggle_filter(
         companies_qs, "has_profile_data", company_filters["has_profile"]
     )
+    companies_qs = companies_qs.order_by(*_company_ordering(sort, direction))
 
     active_filters = []
     _add_active_filter(active_filters, "Search", company_filters["q"])
@@ -974,6 +1083,8 @@ def _company_list_state(request):
         ],
         "per_page": per_page,
         "per_page_options": PAGE_SIZE_OPTIONS,
+        "sort": sort,
+        "direction": direction,
     }
 
 
@@ -1018,9 +1129,19 @@ def company_list(request):
 
     page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
     row_number_offset = page_obj.start_index() - 1 if page_obj.paginator.count else 0
-    table_headers = _build_company_table_headers(state["visible_columns"])
-    table_rows = _build_company_table_rows(page_obj.object_list, table_headers, row_number_offset)
     can_manage_records = user_has_minimum_crm_role(request.user, ROLE_TEAM_LEAD)
+    table_headers = _build_company_table_headers(
+        request,
+        state["visible_columns"],
+        state["sort"],
+        state["direction"],
+    )
+    table_rows = _build_company_table_rows(
+        page_obj.object_list,
+        table_headers,
+        row_number_offset,
+        can_manage_records=can_manage_records,
+    )
     hero_metrics = _build_company_hero_metrics(
         page_obj,
         total_companies=state["total_companies"],
@@ -1072,6 +1193,19 @@ def company_list(request):
         filter_reset_url=filter_reset_url,
         can_import=can_manage_records,
     )
+    table_workspace = {
+        "filter_panel": filter_panel,
+        "filter_ui": filter_ui,
+        "toolbar_menus": toolbar_menus,
+        "table_ui": table_ui,
+        "table_headers": table_headers,
+        "table_rows": table_rows,
+        "page_obj": page_obj,
+        "page_query": _page_query(request),
+        "empty_state": empty_state,
+        "empty_actions_template": "crm/components/list_workspace/action_stack.html",
+        "empty_action_tone": "surface",
+    }
     return render(
         request,
         "crm/companies/company_list.html",
@@ -1097,6 +1231,7 @@ def company_list(request):
             "table_headers": table_headers,
             "table_rows": table_rows,
             "empty_state": empty_state,
+            "table_workspace": table_workspace,
         },
     )
 

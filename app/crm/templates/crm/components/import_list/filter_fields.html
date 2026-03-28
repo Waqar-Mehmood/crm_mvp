@@ -7,8 +7,17 @@
     </div>
     <div class="tw-import-filter-field">
         <label class="tw-import-filter-label" for="import-status">Status</label>
-        <div class="tw-import-filter-shell tw-import-filter-select-shell">
-            <select id="import-status" class="tw-import-select" name="status" data-import-status-select>
+        <div class="tw-import-filter-shell tw-choice-shell">
+            <select
+                id="import-status"
+                class="tw-select"
+                name="status"
+                data-import-status-select
+                data-choice-select="true"
+                data-choice-search-enabled="false"
+                data-choice-should-sort="false"
+                data-choice-placeholder="All statuses"
+            >
                 <option value="">All statuses</option>
                 {% for value, label in panel.status_options %}
                     <option value="{{ value }}" {% if panel.filters.status == value %}selected{% endif %}>{{ label }}</option>

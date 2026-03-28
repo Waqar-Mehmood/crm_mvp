@@ -1,10 +1,26 @@
-<a
-    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-surface-border bg-white text-brand-text-base no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-accent hover:text-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/25"
-    href="{{ action.href }}"
-    aria-label="{{ action.label }}"
-    title="{{ action.title|default:action.label }}"
->
-    <span class="h-[1.05rem] w-[1.05rem]">
-        {% include "crm/components/list_workspace/action_icon.html" with icon=action.icon only %}
-    </span>
-</a>
+{% if action.href %}
+    <a
+        class="tw-button-icon"
+        href="{{ action.href }}"
+        aria-label="{{ action.label }}"
+        title="{{ action.title|default:action.label }}"
+    >
+        <span class="h-[1.05rem] w-[1.05rem]">
+            {% include "crm/components/list_workspace/action_icon.html" with icon=action.icon only %}
+        </span>
+    </a>
+{% else %}
+    <button
+        class="tw-button-icon"
+        type="{{ action.button_type|default:'button' }}"
+        aria-label="{{ action.label }}"
+        title="{{ action.title|default:action.label }}"
+        {% for attr in action.data_attrs %}
+            {{ attr.name }}="{{ attr.value }}"
+        {% endfor %}
+    >
+        <span class="h-[1.05rem] w-[1.05rem]">
+            {% include "crm/components/list_workspace/action_icon.html" with icon=action.icon only %}
+        </span>
+    </button>
+{% endif %}

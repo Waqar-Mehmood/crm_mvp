@@ -1,21 +1,4 @@
 export const initImportLedger = (root = document) => {
-    const statusSelect = root.querySelector("[data-import-status-select]");
-    if (statusSelect && window.Choices) {
-        // Choices styles remain page-specific until another workspace needs them.
-        new window.Choices(statusSelect, {
-            searchEnabled: false,
-            shouldSort: false,
-            itemSelectText: "",
-            allowHTML: false,
-            position: "bottom",
-            placeholder: true,
-            placeholderValue: "All statuses",
-            classNames: {
-                containerOuter: ["choices", "tw-import-choices"],
-            },
-        });
-    }
-
     if (!window.flatpickr) {
         return;
     }

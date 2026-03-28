@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 {{ field.wrapper_class|default:'' }}">
             <label class="text-sm font-semibold text-brand-text-soft" for="{{ field.id_prefix|default:id_prefix|default:'field' }}-{{ field.name }}">{{ field.label }}</label>
             {% if field.type == "select" %}
-                <select id="{{ field.id_prefix|default:id_prefix|default:'field' }}-{{ field.name }}" name="{{ field.name }}" class="min-h-[50px] rounded-[1rem] border border-brand-surface-border bg-white/94 px-4 text-sm text-brand-text-base shadow-sm outline-none transition duration-200 focus:border-brand-teal/40 focus:ring-4 focus:ring-brand-teal/10">
+                <select id="{{ field.id_prefix|default:id_prefix|default:'field' }}-{{ field.name }}" name="{{ field.name }}" class="tw-select">
                     {% for option in field.options %}
                         <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
                     {% endfor %}

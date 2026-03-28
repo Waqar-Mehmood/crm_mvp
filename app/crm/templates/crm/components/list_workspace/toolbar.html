@@ -3,7 +3,7 @@
         <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ kicker }}</p>
         <h2 class="m-0 pt-2 font-serif text-[1.72rem] leading-[1.05] text-brand-text-heading">{{ title }}</h2>
     </div>
-    <div class="flex flex-wrap items-center gap-3 xl:pt-1">
+    <div class="flex flex-wrap items-center gap-3 xl:pt-1" data-dropdown-group>
         {% for menu in menus %}
             {% if menu.kind == "rows" %}
                 {% include "crm/components/list_workspace/menus/rows_menu.html" with menu=menu only %}

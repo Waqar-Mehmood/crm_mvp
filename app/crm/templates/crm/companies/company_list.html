@@ -10,11 +10,5 @@
 {% endblock %}
 
 {% block content %}
-    {% include "crm/components/list_workspace/filter_disclosure.html" with panel=filter_panel ui=filter_ui only %}
-
-    {% if companies %}
-        {% include "crm/components/list_workspace/table_section.html" with ui=table_ui menus=toolbar_menus table_headers=table_headers table_rows=table_rows page_obj=page_obj page_query=page_query only %}
-    {% else %}
-        {% include "crm/components/list_workspace/empty_state.html" with state=empty_state actions_template="crm/components/list_workspace/action_stack.html" action_tone="surface" only %}
-    {% endif %}
+    {% include "crm/components/list_workspace/table_workspace.html" with workspace=table_workspace only %}
 {% endblock %}

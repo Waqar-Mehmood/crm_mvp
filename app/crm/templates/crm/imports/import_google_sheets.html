@@ -22,8 +22,8 @@
         </article>
     </div>
     <div class="flex flex-col gap-3">
-        <a class="tw-button-primary w-full" href="{% url 'import_upload' %}">Open CSV upload</a>
-        <a class="tw-button-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
+        <a class="tw-button-hero-primary w-full" href="{% url 'import_upload' %}">Open CSV upload</a>
+        <a class="tw-button-hero-secondary w-full" href="{% url 'import_file_list' %}">Back to ledger</a>
     </div>
 {% endblock %}
 
@@ -72,13 +72,13 @@
         </article>
     </section>
 
-    {% if headers and preview_rows %}
+    {% if preview_workspace %}
         <section class="tw-import-card space-y-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p class="tw-import-kicker">Preview table</p>
                     <h2 class="mt-2 font-serif text-3xl text-ink-900">Google Sheets rows</h2>
-                    <p class="mt-2 text-sm text-panel-muted">Showing the first {{ preview_rows|length }} of {{ total_rows }} rows.</p>
+                    <p class="mt-2 text-sm text-panel-muted">Review the fetched Google Sheets rows with the same filter, sort, and action pattern used elsewhere in the CRM.</p>
                 </div>
                 <form method="post">
                     {% csrf_token %}
@@ -86,26 +86,7 @@
                     <button class="tw-button-primary w-full lg:w-auto" type="submit" name="action" value="import">Continue to mapping</button>
                 </form>
             </div>
-            <div class="tw-import-table-wrap overflow-x-auto">
-                <table class="tw-import-table min-w-[44rem]">
-                    <thead>
-                        <tr>
-                            {% for header in headers %}
-                                <th>{{ header }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in preview_rows %}
-                            <tr>
-                                {% for key, value in row.items %}
-                                    <td>{{ value|default:"-" }}</td>
-                                {% endfor %}
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% include "crm/components/list_workspace/table_workspace.html" with workspace=preview_workspace only %}
         </section>
     {% elif sheet_url and not error %}
         <section class="tw-import-empty">

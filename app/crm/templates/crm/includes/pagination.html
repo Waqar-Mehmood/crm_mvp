@@ -1,11 +1,12 @@
 {% if page_obj.paginator.num_pages > 1 %}
+    {% with page_param=page_param|default:"page" %}
     <nav class="pagination-bar tw-pagination" aria-label="Pagination">
         <div class="pagination-meta">
             Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
         </div>
         <div class="pagination-links tw-pagination-links">
             {% if page_obj.has_previous %}
-                <a class="pagination-link tw-pagination-link" href="?page={{ page_obj.previous_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Previous</a>
+                <a class="pagination-link tw-pagination-link" href="?{{ page_param }}={{ page_obj.previous_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Previous</a>
             {% else %}
                 <span class="pagination-link is-disabled tw-pagination-link tw-pagination-link-disabled">Previous</span>
             {% endif %}
@@ -14,15 +15,16 @@
                 {% if page_number == page_obj.number %}
                     <span class="pagination-link is-active tw-pagination-link tw-pagination-link-active">{{ page_number }}</span>
                 {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
-                    <a class="pagination-link tw-pagination-link" href="?page={{ page_number }}{% if page_query %}&{{ page_query }}{% endif %}">{{ page_number }}</a>
+                    <a class="pagination-link tw-pagination-link" href="?{{ page_param }}={{ page_number }}{% if page_query %}&{{ page_query }}{% endif %}">{{ page_number }}</a>
                 {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
-                <a class="pagination-link tw-pagination-link" href="?page={{ page_obj.next_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Next</a>
+                <a class="pagination-link tw-pagination-link" href="?{{ page_param }}={{ page_obj.next_page_number }}{% if page_query %}&{{ page_query }}{% endif %}">Next</a>
             {% else %}
                 <span class="pagination-link is-disabled tw-pagination-link tw-pagination-link-disabled">Next</span>
             {% endif %}
         </div>
     </nav>
+    {% endwith %}
 {% endif %}

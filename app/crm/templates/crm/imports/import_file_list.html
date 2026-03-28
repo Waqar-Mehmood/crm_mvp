@@ -12,22 +12,14 @@
 {% endblock %}
 
 {% block extra_styles %}
-    <link rel="stylesheet" href="{% static 'crm/vendor/choices/choices.min.css' %}">
     <link rel="stylesheet" href="{% static 'crm/vendor/flatpickr/flatpickr.min.css' %}">
 {% endblock %}
 
 {% block content %}
-    {% include "crm/components/list_workspace/filter_disclosure.html" with panel=filter_panel ui=filter_ui only %}
-
-    {% if import_files %}
-        {% include "crm/components/list_workspace/table_section.html" with ui=table_ui menus=toolbar_menus table_headers=table_headers table_rows=table_rows page_obj=page_obj page_query=page_query only %}
-    {% else %}
-        {% include "crm/components/list_workspace/empty_state.html" with state=empty_state actions_template="crm/components/list_workspace/action_stack.html" action_tone="surface" only %}
-    {% endif %}
+    {% include "crm/components/list_workspace/table_workspace.html" with workspace=table_workspace only %}
 {% endblock %}
 
 {% block page_scripts %}
-    <script src="{% static 'crm/vendor/choices/choices.min.js' %}"></script>
     <script src="{% static 'crm/vendor/flatpickr/flatpickr.min.js' %}"></script>
     <script type="module" src="{% static 'crm/js/import_workspace/importLedger.js' %}"></script>
 {% endblock %}

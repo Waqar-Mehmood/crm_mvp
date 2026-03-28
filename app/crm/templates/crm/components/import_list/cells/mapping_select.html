@@ -1,0 +1,8 @@
+<td class="align-top px-5 py-[14px]">
+    <select class="tw-select" id="{{ cell.field_id }}" name="{{ cell.name }}">
+        <option value="">-- Not mapped --</option>
+        {% for option in cell.options %}
+            <option value="{{ option }}"{% if cell.selected == option %} selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+    </select>
+</td>

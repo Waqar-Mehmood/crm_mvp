@@ -1,0 +1,10 @@
+<td class="align-top px-5 py-[14px]">
+    <span
+        id="{{ cell.badge_id }}"
+        class="{% if cell.tone == 'suggested' %}{{ cell.suggested_class }}{% elif cell.tone == 'mapped' %}inline-flex rounded-full bg-brand-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal{% else %}{{ cell.review_class }}{% endif %}"
+        data-status-class-suggested="{{ cell.suggested_class }}"
+        data-status-class-review="{{ cell.review_class }}"
+    >
+        {{ cell.label }}
+    </span>
+</td>

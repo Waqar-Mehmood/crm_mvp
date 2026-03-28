@@ -36,9 +36,16 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
         )
         self.assertEqual(
             [header["key"] for header in response.context["table_headers"]],
-            ["row", "contact", "title", "email", "phone", "companies", "profiles"],
+            ["row", "contact", "title", "email", "phone", "companies", "profiles", "actions"],
         )
         self.assertEqual(response.context["table_headers"][0]["label"], "#")
+        self.assertEqual(response.context["table_headers"][-1]["label"], "Actions")
+        self.assertEqual(response.context["sort"], "contact")
+        self.assertEqual(response.context["direction"], "asc")
+        header_map = {header["key"]: header for header in response.context["table_headers"]}
+        self.assertTrue(header_map["contact"]["is_sortable"])
+        self.assertTrue(header_map["title"]["is_sortable"])
+        self.assertFalse(header_map["companies"]["is_sortable"])
         self.assertEqual(
             response.context["filter_ui"]["fields_template"],
             "crm/components/list_workspace/filter_fields.html",
@@ -130,8 +137,31 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
         self.assertEqual(response.context["visible_columns"], ["row", "contact", "companies"])
         self.assertEqual(
             [header["key"] for header in response.context["table_headers"]],
-            ["row", "contact", "companies"],
+            ["row", "contact", "companies", "actions"],
         )
+
+    def test_contact_list_supports_sorting_and_preserves_filters_in_sort_links(self):
+        response = self.client.get(
+            reverse("contact_list"),
+            {"title": "Analyst", "sort": "contact", "direction": "desc"},
+        )
+
+        header_map = {
+            item["key"]: item
+            for item in response.context["table_headers"]
+            if item["is_sortable"]
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["sort"], "contact")
+        self.assertEqual(response.context["direction"], "desc")
+        self.assertTrue(header_map["contact"]["is_active"])
+        self.assertEqual(header_map["contact"]["direction"], "desc")
+        query = parse_qs(urlsplit(header_map["title"]["url"]).query)
+        self.assertEqual(query["title"], ["Analyst"])
+        self.assertEqual(query["sort"], ["title"])
+        self.assertEqual(query["direction"], ["asc"])
+        self.assertNotIn("page", query)
 
     def test_contact_row_numbers_continue_across_pages_and_per_page_changes(self):
         paged_response = self.client.get(

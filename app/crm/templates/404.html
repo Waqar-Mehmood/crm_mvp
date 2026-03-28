@@ -26,11 +26,11 @@
         </div>
         <div class="flex flex-col gap-4">
             {% if request.user.is_authenticated %}
-                <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-strong no-underline shadow-brand-button-strong transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" href="{% url 'company_list' %}">Back to companies</a>
+                <a class="tw-button-primary w-full px-6 text-[1rem] tracking-[-0.01em]" href="{% url 'company_list' %}">Back to companies</a>
             {% else %}
-                <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-strong no-underline shadow-brand-button-strong transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" href="{% url 'login' %}">Go to login</a>
+                <a class="tw-button-primary w-full px-6 text-[1rem] tracking-[-0.01em]" href="{% url 'login' %}">Go to login</a>
             {% endif %}
-            <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-surface-borderSoft bg-white/88 px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-soft no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base" href="/">Open home</a>
+            <a class="tw-button-surface w-full px-6 text-[1rem] tracking-[-0.01em]" href="/">Open home</a>
         </div>
     </section>
 {% endblock %}

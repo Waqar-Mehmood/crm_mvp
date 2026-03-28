@@ -13,6 +13,60 @@
     scroll-behavior: smooth;
   }
 
+  :root,
+  [data-theme="light"] {
+    --crm-brand-shell-950: 8 19 30;
+    --crm-brand-shell-900: 16 32 49;
+    --crm-brand-shell-800: 19 39 63;
+    --crm-brand-surface-base: 247 241 227;
+    --crm-brand-surface-warm: 239 229 208;
+    --crm-brand-surface-soft: 255 253 248;
+    --crm-brand-surface-border: 221 207 182;
+    --crm-brand-surface-border-soft: 234 223 202;
+    --crm-brand-surface-chrome: 244 235 215;
+    --crm-brand-text-base: 20 34 51;
+    --crm-brand-text-strong: 17 32 51;
+    --crm-brand-text-heading: 74 85 104;
+    --crm-brand-text-soft: 65 82 104;
+    --crm-brand-text-muted: 94 107 119;
+    --crm-brand-text-subtle: 101 116 134;
+    --crm-brand-text-inverse: 247 241 227;
+    --crm-brand-accent: 209 125 47;
+    --crm-brand-accent-strong: 184 95 23;
+    --crm-brand-accent-soft: 243 212 171;
+    --crm-brand-accent-start: 245 201 148;
+    --crm-brand-accent-end: 238 142 66;
+    --crm-brand-accent-glow: 247 176 103;
+    --crm-brand-teal: 29 139 138;
+    --crm-brand-danger: 211 110 95;
+    --crm-brand-chip-work-bg: 224 242 236;
+    --crm-brand-chip-work-border: 184 221 212;
+    --crm-brand-chip-work-text: 13 118 109;
+    --crm-brand-chip-personal-bg: 237 247 241;
+    --crm-brand-chip-personal-border: 206 229 215;
+    --crm-brand-chip-personal-text: 47 122 97;
+    --crm-brand-chip-neutral-bg: 238 243 245;
+    --crm-brand-chip-neutral-border: 216 225 230;
+    --crm-brand-chip-neutral-text: 90 107 120;
+
+    --crm-shadow-crm: 0 28px 80px rgb(3 9 17 / 0.28);
+    --crm-shadow-crm-soft: 0 20px 40px rgb(6 14 24 / 0.16);
+    --crm-shadow-brand-card: 0 22px 56px rgb(15 23 42 / 0.14);
+    --crm-shadow-brand-panel: 0 18px 38px rgb(15 23 42 / 0.12);
+    --crm-shadow-brand-button: 0 12px 24px rgb(var(--crm-brand-accent) / 0.16);
+    --crm-shadow-brand-button-strong: 0 12px 28px rgb(var(--crm-brand-accent) / 0.20);
+    --crm-shadow-brand-dark-inset: inset 0 1px 0 rgb(255 255 255 / 0.04);
+    --crm-shadow-brand-surface-inset: inset 0 1px 0 rgb(255 255 255 / 0.45);
+    --crm-shadow-brand-surface-inset-strong: inset 0 1px 0 rgb(255 255 255 / 0.78);
+    --crm-shadow-brand-focus: 0 0 0 4px rgb(var(--crm-brand-teal) / 0.14), 0 18px 36px rgb(15 23 42 / 0.10);
+    --crm-shadow-brand-dropdown: 0 26px 60px rgb(15 23 42 / 0.18);
+    --crm-shadow-brand-input-soft: 0 14px 34px rgb(15 23 42 / 0.08);
+    --crm-shadow-brand-popover: 0 28px 70px rgb(15 23 42 / 0.22);
+  }
+
+  [data-theme="dark"] {
+  }
+
   body {
     @apply m-0 min-h-screen bg-brand-gradient-shell font-sans text-brand-text-inverse;
   }
@@ -47,12 +101,104 @@
     @apply rounded-crm-lg border border-white/10 bg-brand-shell-900/60 p-6 text-brand-text-inverse shadow-crm backdrop-blur;
   }
 
-  .tw-button-primary {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-[18px] font-bold text-brand-text-strong no-underline shadow-brand-button transition duration-200 hover:-translate-y-px hover:shadow-lg;
+  .tw-button-primary,
+  .tw-button-secondary,
+  .tw-button-surface,
+  .tw-button-hero-primary,
+  .tw-button-hero-secondary,
+  .tw-button-danger {
+    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold no-underline transition duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2;
   }
 
-  .tw-button-secondary {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-[18px] font-bold text-brand-text-inverse no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
+  .tw-button-primary {
+    @apply border-brand-accent/30 bg-brand-gradient-accent text-brand-text-strong shadow-brand-button hover:border-brand-accent/50 hover:text-brand-text-strong focus-visible:ring-brand-accent/25;
+  }
+
+  .tw-button-secondary,
+  .tw-button-surface {
+    @apply border-brand-surface-borderSoft bg-white/90 text-brand-text-soft shadow-sm hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base focus-visible:ring-brand-accent/20;
+  }
+
+  .tw-button-hero-primary {
+    @apply border-brand-surface-base/50 bg-brand-gradient-accent text-brand-text-strong shadow-brand-button-strong hover:border-brand-surface-base/70 hover:text-brand-text-strong focus-visible:ring-brand-surface-base/25;
+  }
+
+  .tw-button-hero-secondary {
+    @apply border-white/10 bg-brand-shell-900/95 text-brand-text-inverse shadow-brand-dark-inset hover:border-white/20 hover:bg-brand-shell-800 hover:text-brand-text-inverse focus-visible:ring-white/20;
+  }
+
+  .tw-button-danger {
+    @apply border-brand-danger/30 bg-brand-danger text-white shadow-brand-panel hover:border-brand-danger/50 hover:bg-brand-danger/90 hover:text-white focus-visible:ring-brand-danger/25;
+  }
+
+  .tw-control-button,
+  .tw-control-button-muted,
+  .tw-control-button-accent,
+  .tw-import-preview-menu-summary,
+  .tw-pagination-link {
+    @apply inline-flex min-h-[40px] cursor-pointer list-none items-center justify-center gap-2 rounded-[0.8rem] border px-4 text-sm font-semibold no-underline transition duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2;
+  }
+
+  .tw-control-button,
+  .tw-control-button-muted,
+  .tw-import-preview-menu-summary,
+  .tw-pagination-link {
+    @apply border-brand-surface-borderSoft bg-white/95 text-brand-text-soft shadow-sm hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base focus-visible:ring-brand-accent/20;
+  }
+
+  .tw-control-button-accent,
+  .tw-import-preview-menu-summary-accent {
+    @apply border-brand-accent/30 bg-brand-gradient-accent-soft text-brand-text-strong shadow-brand-button hover:border-brand-accent/50 hover:text-brand-text-strong focus-visible:ring-brand-accent/25;
+  }
+
+  .tw-button-icon {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-surface-border bg-white text-brand-text-base no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-accent hover:text-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/25;
+  }
+
+  .tw-button-icon-disabled {
+    @apply inline-flex h-10 w-10 shrink-0 cursor-not-allowed items-center justify-center rounded-full border border-brand-surface-borderSoft bg-brand-surface-soft text-brand-text-muted shadow-none;
+  }
+
+  .tw-dropdown-menu {
+    @apply relative z-0;
+  }
+
+  .tw-dropdown-menu[open] {
+    @apply z-30;
+  }
+
+  .tw-dropdown-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .tw-dropdown-menu > summary::marker {
+    content: "";
+  }
+
+  .tw-dropdown-menu[open] > .tw-control-button,
+  .tw-dropdown-menu[open] > .tw-import-preview-menu-summary {
+    @apply border-brand-surface-border bg-white text-brand-text-base shadow-brand-panel;
+  }
+
+  .tw-dropdown-menu[open] > .tw-control-button-accent,
+  .tw-dropdown-menu[open] > .tw-import-preview-menu-summary-accent {
+    @apply border-brand-accent/50 shadow-brand-panel;
+  }
+
+  .tw-dropdown-panel {
+    @apply absolute right-0 top-full z-20 mt-2 flex flex-col gap-1 rounded-[1rem] border border-brand-surface-borderSoft bg-white/95 p-2 shadow-brand-panel backdrop-blur;
+  }
+
+  .tw-dropdown-panel-wide {
+    @apply min-w-[16rem] gap-3 p-4;
+  }
+
+  .tw-dropdown-link {
+    @apply rounded-[0.85rem] px-3 py-2 text-sm font-medium text-brand-text-muted no-underline transition duration-150 hover:bg-brand-surface-soft hover:text-brand-text-base;
+  }
+
+  .tw-dropdown-link-active {
+    @apply bg-brand-gradient-accent-soft text-brand-text-strong;
   }
 
   .tw-kicker {
@@ -75,8 +221,94 @@
     @apply min-h-[46px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
   }
 
+  .tw-select {
+    @apply min-h-[46px] w-full appearance-none rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 pr-12 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6 4 4 4-4' stroke='%235e6b77' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 0.9rem 0.9rem;
+  }
+
+  .tw-select:hover {
+    @apply border-brand-surface-borderSoft;
+  }
+
+  .tw-select:disabled {
+    @apply cursor-not-allowed bg-brand-surface-soft text-brand-text-muted;
+  }
+
+  .tw-select-multiple {
+    @apply min-h-[9rem] bg-none pr-4;
+  }
+
+  .tw-choice-shell .choices {
+    @apply mb-0 text-sm;
+  }
+
+  .tw-choice-shell .choices__inner {
+    @apply min-h-[46px] rounded-[18px] border border-brand-surface-border bg-white px-4 py-0 text-sm text-brand-text-base shadow-sm transition;
+  }
+
+  .tw-choice-shell .choices__list--single {
+    @apply flex min-h-[44px] items-center px-0 py-0 pr-8;
+  }
+
+  .tw-choice-shell .choices__list--single .choices__item {
+    @apply text-sm text-brand-text-base;
+  }
+
+  .tw-choice-shell .choices[data-type*="select-one"]::after {
+    @apply right-5 mt-[-3px] h-2.5 w-2.5 rotate-45 border-0 border-b-2 border-r-2 border-brand-text-muted transition;
+    content: "";
+  }
+
+  .tw-choice-shell .choices.is-focused .choices__inner,
+  .tw-choice-shell .choices.is-open .choices__inner {
+    @apply border-brand-teal shadow-brand-focus;
+  }
+
+  .tw-choice-shell .choices__list--dropdown,
+  .tw-choice-shell .choices__list[aria-expanded] {
+    @apply z-30 mt-2 overflow-hidden rounded-[20px] border border-brand-surface-border bg-brand-surface-soft p-2 shadow-brand-dropdown;
+  }
+
+  .tw-choice-shell .choices__list--dropdown .choices__item,
+  .tw-choice-shell .choices__list[aria-expanded] .choices__item {
+    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-brand-text-base;
+  }
+
+  .tw-choice-shell .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  .tw-choice-shell .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    @apply bg-brand-teal/10 text-brand-teal;
+  }
+
+  .tw-choice-shell .choices__placeholder {
+    @apply opacity-100 text-brand-text-muted;
+  }
+
+  .tw-choice-shell .choices__input {
+    @apply bg-transparent text-sm text-brand-text-base;
+  }
+
+  .tw-choice-shell .choices__list--multiple {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .tw-choice-shell .choices__list--multiple .choices__item {
+    @apply m-0 inline-flex items-center rounded-full border border-brand-surface-border bg-brand-surface-chrome px-3 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-brand-text-soft;
+  }
+
+  .tw-choice-shell .choices__list--multiple .choices__button {
+    @apply ml-2 border-l border-brand-surface-border/80 pl-2 opacity-70;
+  }
+
+  .tw-choice-shell .choices.is-disabled .choices__inner,
+  .tw-choice-shell .choices.is-disabled .choices__input {
+    @apply cursor-not-allowed bg-brand-surface-soft text-brand-text-muted;
+  }
+
   .tw-notice {
-    @apply rounded-crm-sm border border-brand-accent/15 bg-brand-accent/10 px-4 py-3 text-sm text-brand-text-base;
+    @apply rounded-crm-sm border border-brand-accent/20 bg-brand-accent/10 px-4 py-3 text-sm text-brand-text-base;
   }
 
   .tw-import-hero {
@@ -111,10 +343,6 @@
     @apply min-h-[48px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
   }
 
-  .tw-import-select {
-    @apply min-h-[48px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
-  }
-
   .tw-import-filter-form {
     @apply space-y-4;
   }
@@ -136,15 +364,11 @@
   }
 
   .tw-import-filter-input {
-    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-brand-teal focus:ring-brand-teal/20;
+    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-brand-input-soft focus:border-brand-teal focus:ring-brand-teal/20;
   }
 
   .tw-import-filter-actions {
     @apply flex flex-col gap-3 border-t border-brand-surface-border/90 pt-4 sm:flex-row sm:items-center sm:justify-end;
-  }
-
-  .tw-import-filter-reset {
-    @apply inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border border-brand-surface-border bg-white px-[18px] font-bold text-brand-text-base no-underline transition duration-200 hover:-translate-y-px hover:border-brand-accent hover:text-brand-accent sm:w-auto;
   }
 
   .tw-import-filter-icon {
@@ -167,58 +391,13 @@
     @apply hidden;
   }
 
-  .tw-import-filter-select-shell .choices {
-    @apply mb-0 text-sm;
-  }
-
-  .tw-import-filter-select-shell .choices__inner {
-    @apply min-h-[52px] rounded-[20px] border border-brand-surface-border bg-white/95 px-4 py-0 text-sm text-brand-text-base shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition;
-  }
-
-  .tw-import-filter-select-shell .choices__list--single {
-    @apply flex min-h-[50px] items-center px-0 py-0 pr-8;
-  }
-
-  .tw-import-filter-select-shell .choices__list--single .choices__item {
-    @apply text-sm text-brand-text-base;
-  }
-
-  .tw-import-filter-select-shell .choices[data-type*="select-one"]::after {
-    @apply right-5 mt-[-3px] h-2.5 w-2.5 rotate-45 border-0 border-b-2 border-r-2 border-brand-text-muted transition;
-    content: "";
-  }
-
-  .tw-import-filter-select-shell .choices.is-focused .choices__inner,
-  .tw-import-filter-select-shell .choices.is-open .choices__inner {
-    @apply border-brand-teal shadow-[0_0_0_4px_rgba(19,145,139,0.16),0_18px_36px_rgba(15,23,42,0.1)];
-  }
-
-  .tw-import-filter-select-shell .choices__list--dropdown,
-  .tw-import-filter-select-shell .choices__list[aria-expanded] {
-    @apply z-30 mt-2 overflow-hidden rounded-[20px] border border-brand-surface-border bg-brand-surface-soft p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
-  }
-
-  .tw-import-filter-select-shell .choices__list--dropdown .choices__item,
-  .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item {
-    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-brand-text-base;
-  }
-
-  .tw-import-filter-select-shell .choices__list--dropdown .choices__item--selectable.is-highlighted,
-  .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-    @apply bg-brand-teal/10 text-brand-teal;
-  }
-
-  .tw-import-filter-select-shell .choices__placeholder {
-    @apply opacity-100 text-brand-text-muted;
-  }
-
   .tw-import-filter-date-shell .flatpickr-input[readonly],
   .tw-import-filter-date-shell .flatpickr-input[readonly="readonly"] {
     @apply cursor-pointer bg-white/95;
   }
 
   .tw-import-date-alt {
-    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-brand-teal focus:ring-brand-teal/20;
+    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-brand-input-soft focus:border-brand-teal focus:ring-brand-teal/20;
   }
 
   .tw-import-date-alt:focus {
@@ -226,7 +405,7 @@
   }
 
   .tw-import-datepicker.flatpickr-calendar {
-    @apply rounded-[24px] border border-brand-surface-border bg-brand-surface-soft p-3 shadow-[0_28px_70px_rgba(15,23,42,0.22)];
+    @apply rounded-[24px] border border-brand-surface-border bg-brand-surface-soft p-3 shadow-brand-popover;
   }
 
   .tw-import-datepicker.arrowTop::before,
@@ -339,12 +518,8 @@
     @apply flex flex-wrap items-center gap-3;
   }
 
-  .tw-import-preview-menu {
-    @apply relative;
-  }
-
   .tw-import-preview-menu-summary {
-    @apply inline-flex min-h-[46px] cursor-pointer list-none items-center justify-center rounded-full border border-[#d7c7ac] bg-white px-5 py-3 text-sm font-semibold text-panel-text shadow-sm transition hover:-translate-y-px hover:border-accent hover:text-accent;
+    @apply min-h-[46px] rounded-full px-5 py-3 text-panel-text;
   }
 
   .tw-import-preview-menu-summary::-webkit-details-marker {
@@ -360,15 +535,15 @@
   }
 
   .tw-import-preview-menu-summary-accent {
-    @apply border-accent/35 bg-gradient-to-br from-paper-100 to-[#f1dcc3] text-ink-900;
+    @apply border-brand-accent/40 bg-gradient-to-br from-brand-surface-base to-brand-surface-warm text-brand-text-strong;
   }
 
   .tw-import-preview-menu-panel {
-    @apply absolute right-0 z-30 mt-2 flex min-w-[14rem] flex-col gap-1 rounded-[20px] border border-[#d7c7ac] bg-[#fffdf8] p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
+    @apply min-w-[14rem] rounded-[20px] border-brand-surface-border bg-brand-surface-soft shadow-brand-dropdown;
   }
 
   .tw-import-preview-menu-link {
-    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-panel-text no-underline transition hover:bg-teal/10 hover:text-teal;
+    @apply block rounded-[14px] px-3 py-3 text-sm font-medium text-panel-text no-underline transition hover:bg-teal/10 hover:text-teal;
   }
 
   .tw-import-preview-menu-link.is-active {
@@ -376,7 +551,7 @@
   }
 
   .tw-import-preview-scroll-shell {
-    @apply block w-full max-w-full max-h-[38rem] overflow-x-auto overflow-y-auto rounded-crm-md border border-[#ddcfb6] bg-white/85 scroll-smooth;
+    @apply block w-full max-w-full max-h-[38rem] overflow-x-auto overflow-y-auto rounded-crm-md border border-[#ddcfb6] bg-white/90 scroll-smooth;
   }
 
   .tw-import-preview-table {
@@ -396,15 +571,15 @@
   }
 
   .tw-pagination-link {
-    @apply inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-full border border-[#d7c7ac] bg-white px-4 text-sm font-semibold text-panel-text no-underline transition hover:border-accent hover:text-accent;
+    @apply min-w-[40px] rounded-full px-4 text-panel-text;
   }
 
   .tw-pagination-link-active {
-    @apply border-accent bg-accent text-white hover:text-white;
+    @apply border-brand-accent bg-brand-accent text-white hover:text-white;
   }
 
   .tw-pagination-link-disabled {
-    @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400;
+    @apply cursor-not-allowed border-brand-surface-borderSoft bg-brand-surface-soft text-brand-text-muted;
   }
 
 }
