@@ -9,6 +9,7 @@ from crm.channel_choices import (
     CONTACT_PROFILE_PLATFORM_CHOICES,
     configure_optional_choice_field,
 )
+from crm.forms._styling import apply_crm_widget_classes
 from crm.models import Company, Contact, ContactEmail, ContactPhone, ContactSocialLink
 
 
@@ -36,6 +37,7 @@ class ContactForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        apply_crm_widget_classes(self)
         if self.is_bound:
             selected_company_ids = [
                 value
@@ -74,6 +76,7 @@ class ContactPhoneForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         configure_optional_choice_field(self, "label", CONTACT_PHONE_LABEL_CHOICES)
+        apply_crm_widget_classes(self)
 
 
 class ContactEmailForm(forms.ModelForm):
@@ -87,6 +90,7 @@ class ContactEmailForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         configure_optional_choice_field(self, "label", CONTACT_EMAIL_LABEL_CHOICES)
+        apply_crm_widget_classes(self)
 
 
 class ContactSocialLinkForm(forms.ModelForm):
@@ -104,6 +108,7 @@ class ContactSocialLinkForm(forms.ModelForm):
             "platform",
             CONTACT_PROFILE_PLATFORM_CHOICES,
         )
+        apply_crm_widget_classes(self)
 
 
 ContactPhoneFormSet = inlineformset_factory(

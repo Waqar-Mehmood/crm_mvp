@@ -11,6 +11,7 @@ from crm.channel_choices import (
     COMPANY_PROFILE_PLATFORM_CHOICES,
     configure_optional_choice_field,
 )
+from crm.forms._styling import apply_crm_widget_classes
 from crm.models import Company, CompanyEmail, CompanyPhone, CompanySocialLink, Contact
 
 COMPANY_SIZE_PATTERN = re.compile(r"^\d+(?:-\d+)?$")
@@ -60,6 +61,7 @@ class CompanyForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        apply_crm_widget_classes(self)
         if self.is_bound:
             selected_contact_ids = [
                 value
@@ -118,6 +120,7 @@ class CompanyPhoneForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         configure_optional_choice_field(self, "label", COMPANY_PHONE_LABEL_CHOICES)
+        apply_crm_widget_classes(self)
 
 
 class CompanyEmailForm(forms.ModelForm):
@@ -131,6 +134,7 @@ class CompanyEmailForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         configure_optional_choice_field(self, "label", COMPANY_EMAIL_LABEL_CHOICES)
+        apply_crm_widget_classes(self)
 
 
 class CompanySocialLinkForm(forms.ModelForm):
@@ -148,6 +152,7 @@ class CompanySocialLinkForm(forms.ModelForm):
             "platform",
             COMPANY_PROFILE_PLATFORM_CHOICES,
         )
+        apply_crm_widget_classes(self)
 
 
 CompanyPhoneFormSet = inlineformset_factory(

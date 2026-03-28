@@ -1,7 +1,7 @@
 <div class="grid gap-1">
     <a class="inline-flex items-center gap-3 font-serif text-[clamp(1.55rem,2vw,2rem)] font-bold text-brand-text-inverse no-underline" href="{% if request.user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}">
         {% if site_logo_url %}
-            <img class="block max-h-[52px] w-auto" src="{{ site_logo_url }}" alt="{{ site_logo_alt }}">
+            <img class="brand-logo block max-h-[52px] w-auto" src="{{ site_logo_url }}" alt="{{ site_logo_alt }}">
         {% else %}
             <p class="tw-kicker">CRM database console</p>
             {{ site_brand }}

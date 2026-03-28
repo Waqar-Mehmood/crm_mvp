@@ -39,6 +39,14 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
             ["row", "contact", "title", "email", "phone", "companies", "profiles"],
         )
         self.assertEqual(response.context["table_headers"][0]["label"], "#")
+        self.assertEqual(
+            response.context["filter_ui"]["fields_template"],
+            "crm/components/list_workspace/filter_fields.html",
+        )
+        self.assertEqual(
+            response.context["table_ui"]["row_template"],
+            "crm/components/list_workspace/table_row.html",
+        )
         self.assertNotContains(response, "No email")
         self.assertNotContains(response, "No phone")
         self.assertNotContains(response, "No company links")

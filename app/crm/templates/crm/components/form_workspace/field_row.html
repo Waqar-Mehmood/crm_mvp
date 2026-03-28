@@ -1,0 +1,18 @@
+<div class="grid gap-4 border-t border-brand-surface-border/80 pt-5 first:border-t-0 first:pt-0 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-6">
+    <div class="flex min-w-0 flex-col gap-2">
+        <label class="text-sm font-semibold text-brand-text-base" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% if field.help_text %}
+            <p class="m-0 text-sm leading-6 text-brand-text-muted">{{ field.help_text }}</p>
+        {% endif %}
+    </div>
+    <div class="flex min-w-0 flex-col gap-3">
+        {% if control_template %}
+            {% include control_template with field=field selected_items=selected_items search_url=search_url placeholder=placeholder empty_text=empty_text no_results_text=no_results_text selected_empty_text=selected_empty_text only %}
+        {% else %}
+            {{ field }}
+        {% endif %}
+        {% for error in field.errors %}
+            <p class="tw-notice border-rose/30 bg-rose/10">{{ error }}</p>
+        {% endfor %}
+    </div>
+</div>

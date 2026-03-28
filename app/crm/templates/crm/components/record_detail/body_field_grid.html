@@ -1,0 +1,16 @@
+{% if panel.fields %}
+    <dl class="grid gap-4 md:grid-cols-2">
+        {% for field in panel.fields %}
+            <div class="flex flex-col gap-2 rounded-crm-md border border-brand-surface-borderSoft bg-white/82 p-4 shadow-brand-surface-inset-strong{% if field.span == 2 %} md:col-span-2{% endif %}">
+                <dt class="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-brand-text-subtle">{{ field.label }}</dt>
+                <dd class="m-0 text-sm leading-7 text-brand-text-strong{% if field.nowrap %} truncate whitespace-nowrap{% endif %}"{% if field.title %} title="{{ field.title }}"{% endif %}>{{ field.value }}</dd>
+            </div>
+        {% endfor %}
+    </dl>
+{% endif %}
+{% if panel.note or panel.note_empty_text %}
+    <article class="flex flex-col gap-3 rounded-crm-md border border-brand-surface-borderSoft bg-white/82 p-4 shadow-brand-surface-inset-strong">
+        <p class="m-0 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-brand-text-subtle">{{ panel.note_kicker|default:"Notes" }}</p>
+        <p class="m-0 text-sm leading-7 text-brand-text-muted">{% if panel.note %}{{ panel.note }}{% else %}{{ panel.note_empty_text }}{% endif %}</p>
+    </article>
+{% endif %}

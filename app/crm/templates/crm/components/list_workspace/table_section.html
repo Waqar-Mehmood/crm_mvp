@@ -1,17 +1,45 @@
 <section class="flex flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-[1.35rem] shadow-brand-card sm:p-[1.55rem]">
-    {% include "crm/components/list_workspace/toolbar.html" with kicker=toolbar_kicker title=toolbar_title menus=menus only %}
-    <div class="overflow-x-auto rounded-[1.6rem] border border-brand-surface-borderSoft bg-white/78 shadow-brand-surface-inset-strong">
-        <table class="{{ table_class|default:'w-full min-w-[72rem] border-collapse' }}">
+    {% include "crm/components/list_workspace/toolbar.html" with kicker=ui.toolbar_kicker title=ui.toolbar_title menus=menus only %}
+    <div class="{{ ui.scroll_shell_class|default:'overflow-x-auto rounded-[1.6rem] border border-brand-surface-borderSoft bg-white/78 shadow-brand-surface-inset-strong' }}">
+        <table class="{{ ui.table_class|default:'w-full min-w-[72rem] border-collapse' }}">
             <thead>
                 <tr class="bg-brand-shell-900 text-left">
                     {% for header in table_headers %}
-                        <th class="sticky top-0 px-5 py-4 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-brand-text-inverse/86">{{ header.label }}</th>
+                        <th class="sticky top-0 px-5 py-4 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-brand-text-inverse/86{% if header.header_class %} {{ header.header_class }}{% endif %}"{% if header.aria_sort %} aria-sort="{{ header.aria_sort }}"{% endif %}>
+                            {% if header.is_sortable %}
+                                <a
+                                    class="inline-flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-brand-text-inverse/72 no-underline transition duration-150 hover:text-brand-text-inverse{% if header.is_active %} text-brand-text-inverse{% endif %}"
+                                    href="{{ header.url }}"
+                                    aria-label="{{ header.action_label }}"
+                                    title="{{ header.action_label }}"
+                                >
+                                    <span>{{ header.label }}</span>
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-brand-text-inverse/70{% if header.is_active %} border-white/20 bg-white/10 text-brand-text-inverse{% endif %}">
+                                        {% if header.is_active and header.direction == "asc" %}
+                                            <svg class="h-3 w-3" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                                <path fill="currentColor" d="M12 4a1 1 0 0 1 .7.3l5 5a1 1 0 1 1-1.4 1.4L13 7.42V20a1 1 0 1 1-2 0V7.41l-3.3 3.3a1 1 0 0 1-1.4-1.42l5-5A1 1 0 0 1 12 4Z"></path>
+                                            </svg>
+                                        {% elif header.is_active and header.direction == "desc" %}
+                                            <svg class="h-3 w-3" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                                <path fill="currentColor" d="M12 20a1 1 0 0 1-.7-.3l-5-5a1 1 0 0 1 1.4-1.4L11 16.58V4a1 1 0 1 1 2 0v12.59l3.3-3.3a1 1 0 0 1 1.4 1.42l-5 5A1 1 0 0 1 12 20Z"></path>
+                                            </svg>
+                                        {% else %}
+                                            <svg class="h-3 w-3" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                                <path fill="currentColor" d="M12 4a1 1 0 0 1 .7.3l4 4a1 1 0 1 1-1.4 1.4L13 7.41V17a1 1 0 1 1-2 0V7.42L8.7 9.7a1 1 0 0 1-1.4-1.4l4-4A1 1 0 0 1 12 4Zm4.7 10.3a1 1 0 0 1 0 1.4l-4 4A1 1 0 0 1 12 20a1 1 0 0 1-.7-.3l-4-4a1 1 0 0 1 1.4-1.4l2.3 2.29V17a1 1 0 1 1 2 0v2.59l2.3-2.3a1 1 0 0 1 1.4 0Z"></path>
+                                            </svg>
+                                        {% endif %}
+                                    </span>
+                                </a>
+                            {% else %}
+                                {{ header.label }}
+                            {% endif %}
+                        </th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for row in table_rows %}
-                    {% include row_template with row=row row_index=forloop.counter0 only %}
+                    {% include ui.row_template with row=row row_index=forloop.counter0 only %}
                 {% endfor %}
             </tbody>
         </table>

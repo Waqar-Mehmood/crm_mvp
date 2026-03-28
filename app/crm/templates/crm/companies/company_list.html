@@ -5,16 +5,16 @@
 {% block page_title %}Company atlas{% endblock %}
 {% block page_description %}Browse organizations, territories, and every signal collected across your CRM database from one polished command deck.{% endblock %}
 {% block hero_side %}
-    {% include "crm/components/company_list/hero_metrics.html" with metrics=hero_metrics only %}
-    {% include "crm/components/company_list/action_buttons.html" with actions=hero_actions tone="hero" only %}
+    {% include "crm/components/list_workspace/hero_metrics_strip.html" with metrics=hero_metrics only %}
+    {% include "crm/components/list_workspace/action_stack.html" with actions=hero_actions tone="hero" only %}
 {% endblock %}
 
 {% block content %}
-    {% include "crm/components/company_list/filter_panel.html" with panel=filter_panel only %}
+    {% include "crm/components/list_workspace/filter_disclosure.html" with panel=filter_panel ui=filter_ui only %}
 
     {% if companies %}
-        {% include "crm/components/company_list/table.html" with toolbar_menus=toolbar_menus table_headers=table_headers table_rows=table_rows page_obj=page_obj page_query=page_query only %}
+        {% include "crm/components/list_workspace/table_section.html" with ui=table_ui menus=toolbar_menus table_headers=table_headers table_rows=table_rows page_obj=page_obj page_query=page_query only %}
     {% else %}
-        {% include "crm/components/company_list/empty_state.html" with state=empty_state only %}
+        {% include "crm/components/list_workspace/empty_state.html" with state=empty_state actions_template="crm/components/list_workspace/action_stack.html" action_tone="surface" only %}
     {% endif %}
 {% endblock %}

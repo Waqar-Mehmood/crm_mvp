@@ -1,0 +1,12 @@
+{% if rows %}
+    <ul class="m-0 flex list-none flex-col gap-3 p-0">
+        {% for row in rows %}
+            <li class="flex flex-col gap-1">
+                <div class="text-sm font-semibold text-brand-text-base">{{ row.primary }}</div>
+                <div class="text-sm leading-6 text-brand-text-muted">{{ row.secondary }}</div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ empty_text }}</p>
+{% endif %}

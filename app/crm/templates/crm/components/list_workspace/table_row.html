@@ -1,0 +1,5 @@
+<tr class="border-b border-brand-surface-borderSoft transition duration-150 hover:bg-brand-surface-soft/80 last:border-b-0{% if row_index|divisibleby:2 %} bg-white/30{% else %} bg-white/58{% endif %}">
+    {% for cell in row.cells %}
+        {% include cell.template with cell=cell only %}
+    {% endfor %}
+</tr>

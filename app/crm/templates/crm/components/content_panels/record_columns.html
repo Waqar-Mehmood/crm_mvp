@@ -1,0 +1,8 @@
+<div class="grid gap-4 xl:grid-cols-2">
+    {% for column in columns %}
+        <article class="flex flex-col gap-3 rounded-crm-md border border-brand-surface-borderSoft bg-white/82 p-4 shadow-brand-surface-inset-strong">
+            <p class="m-0 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-brand-text-subtle">{{ column.kicker }}</p>
+            {% include "crm/components/content_panels/inline_record_list.html" with rows=column.rows empty_text=column.empty_text only %}
+        </article>
+    {% endfor %}
+</div>

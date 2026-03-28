@@ -60,6 +60,14 @@ class DashboardViewTests(CRMRoleTestMixin, TestCase):
         self.assertTemplateUsed(response, "crm/dashboard/home.html")
         self.assertContains(response, "Workspace dashboard")
         self.assertContains(response, "leads.csv")
+        self.assertEqual(
+            response.context["dashboard_rows"][0]["panels"][0]["body_template"],
+            "crm/components/content_panels/body_detail_cards.html",
+        )
+        self.assertEqual(
+            response.context["dashboard_rows"][0]["panels"][1]["body_template"],
+            "crm/components/content_panels/body_actions.html",
+        )
         self.assertNotContains(response, "metric-card")
         self.assertNotContains(response, "record-card")
         self.assertNotContains(response, "detail-card")
@@ -73,6 +81,10 @@ class DashboardViewTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, "Business and team coverage")
         self.assertContains(response, "Team member")
         self.assertContains(response, "owner")
+        self.assertEqual(
+            response.context["role_panel"]["body_template"],
+            "crm/components/content_panels/body_stats_and_cards.html",
+        )
 
     def test_team_lead_dashboard_exposes_import_actions(self):
         self.client.force_login(self.team_lead_user)
@@ -83,6 +95,10 @@ class DashboardViewTests(CRMRoleTestMixin, TestCase):
         self.assertContains(response, 'href="/imports/upload/"')
         self.assertContains(response, 'href="/import/google-sheets/"')
         self.assertContains(response, "Delivery queue")
+        self.assertEqual(
+            response.context["role_panel"]["body_template"],
+            "crm/components/content_panels/body_detail_cards.html",
+        )
 
     def test_staff_dashboard_uses_shared_review_queue_and_hides_upload_actions(self):
         self.client.force_login(self.staff_user)

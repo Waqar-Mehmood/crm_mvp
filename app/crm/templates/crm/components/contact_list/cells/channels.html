@@ -1,7 +1,7 @@
 <td class="align-top px-5 py-[14px]">
-    {% if channels %}
+    {% if cell.channels %}
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
-            {% for channel in channels %}
+            {% for channel in cell.channels %}
                 <li class="flex flex-wrap items-center gap-3">
                     <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] {% if channel.tone == 'work' %}border-brand-chip-workBorder bg-brand-chip-workBg text-brand-chip-workText{% elif channel.tone == 'personal' %}border-brand-chip-personalBorder bg-brand-chip-personalBg text-brand-chip-personalText{% else %}border-brand-chip-neutralBorder bg-brand-chip-neutralBg text-brand-chip-neutralText{% endif %}">
                         {% if channel.tone == 'work' %}

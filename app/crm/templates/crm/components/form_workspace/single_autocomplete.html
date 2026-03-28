@@ -1,0 +1,12 @@
+<div
+    class="flex flex-col gap-3 rounded-[1.45rem] border border-brand-surface-borderSoft bg-white/72 p-4 shadow-brand-surface-inset"
+    data-single-autocomplete
+    data-search-url="{{ search_url }}"
+    data-empty-text="{{ empty_text|default:'Start typing to search.' }}"
+    data-no-results-text="{{ no_results_text|default:'No results found.' }}"
+>
+    {{ field }}
+    <div class="flex flex-col gap-2 rounded-[1.15rem] border border-brand-surface-borderSoft bg-white/72 p-3 shadow-brand-surface-inset-strong" data-autocomplete-results>
+        <p class="m-0 text-sm leading-6 text-brand-text-muted" data-autocomplete-results-empty>{{ empty_text|default:'Start typing to search.' }}</p>
+    </div>
+</div>

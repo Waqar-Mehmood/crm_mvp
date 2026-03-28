@@ -1,0 +1,16 @@
+{% if panel.lines %}
+    <ul class="m-0 flex list-none flex-col gap-3 p-0">
+        {% for line in panel.lines %}
+            <li class="flex flex-col gap-2 rounded-crm-md border border-brand-surface-borderSoft bg-white/82 p-4 shadow-brand-surface-inset-strong sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <span class="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-brand-text-subtle">{{ line.label }}</span>
+                {% if line.href %}
+                    <a class="break-all text-sm font-semibold text-brand-accent no-underline transition duration-200 hover:text-brand-accent-strong hover:underline hover:underline-offset-4" href="{{ line.href }}" target="_blank" rel="noreferrer">{{ line.value }}</a>
+                {% else %}
+                    <span class="break-all text-sm leading-7 text-brand-text-strong">{{ line.value }}</span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% elif panel.empty_text %}
+    <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ panel.empty_text }}</p>
+{% endif %}

@@ -14,8 +14,14 @@ from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
-from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
+from crm.auth import (
+    ROLE_STAFF,
+    ROLE_TEAM_LEAD,
+    crm_role_required,
+    user_has_minimum_crm_role,
+)
 from crm.models import ImportFile
 from crm.services.import_components import (
     FileManager,
@@ -78,6 +84,14 @@ IMPORT_STATUS_LABELS = dict(ImportFile.Status.choices)
 IMPORT_SORT_KEYS = frozenset({"file_name", "status", "stored_rows", "updated_at"})
 IMPORT_DEFAULT_SORT = "updated_at"
 IMPORT_DEFAULT_DIRECTION = "desc"
+IMPORT_TABLE_CELL_TEMPLATES = {
+    "row": "crm/components/list_workspace/cells/text.html",
+    "file": "crm/components/import_list/cells/file.html",
+    "status": "crm/components/import_list/cells/status.html",
+    "stored_rows": "crm/components/list_workspace/cells/text.html",
+    "updated_at": "crm/components/list_workspace/cells/text.html",
+    "actions": "crm/components/list_workspace/cells/action_buttons.html",
+}
 LEGACY_STAGED_SOURCE_KEYS = (
     "import_csv_temp_path",
     "import_csv_original_name",
@@ -116,7 +130,26 @@ def _import_ordering(sort_key: str, direction: str) -> tuple[str, ...]:
     return (primary, "-updated_at", "-id")
 
 
-def _build_import_sort_headers(
+def _import_action(label: str, href: str, variant: str = "secondary") -> dict[str, str]:
+    return {
+        "label": label,
+        "href": href,
+        "variant": variant,
+    }
+
+
+def _status_display_label(import_file: object) -> str:
+    label = getattr(import_file, "get_status_display", "")
+    return label() if callable(label) else str(label)
+
+
+def _format_import_timestamp(value) -> str:
+    if not value:
+        return ""
+    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
+
+
+def _build_import_table_headers(
     request: HttpRequest,
     current_sort: str,
     current_direction: str,
@@ -124,18 +157,20 @@ def _build_import_sort_headers(
     import_list_url = reverse("import_file_list")
     headers: list[dict[str, object]] = [
         {
+            "key": "row",
             "label": "#",
             "is_sortable": False,
             "aria_sort": "",
+            "header_class": "w-[1%] whitespace-nowrap",
         }
     ]
     sortable_headers = (
-        ("file_name", "File"),
-        ("status", "Status"),
-        ("stored_rows", "Rows"),
-        ("updated_at", "Updated"),
+        ("file", "file_name", "File"),
+        ("status", "status", "Status"),
+        ("stored_rows", "stored_rows", "Rows"),
+        ("updated_at", "updated_at", "Updated"),
     )
-    for sort_key, label in sortable_headers:
+    for key, sort_key, label in sortable_headers:
         is_active = current_sort == sort_key
         next_direction = "desc" if is_active and current_direction == "asc" else "asc"
         query_string = _query_string(
@@ -145,6 +180,7 @@ def _build_import_sort_headers(
         )
         headers.append(
             {
+                "key": key,
                 "label": label,
                 "is_sortable": True,
                 "is_active": is_active,
@@ -162,12 +198,225 @@ def _build_import_sort_headers(
         )
     headers.append(
         {
+            "key": "actions",
             "label": "Actions",
             "is_sortable": False,
             "aria_sort": "",
+            "header_class": "w-[1%] whitespace-nowrap",
         }
     )
     return headers
+
+
+def _build_import_hero_metrics(page_obj, *, total_imports, filters_active):
+    visible_range = "0-0"
+    if page_obj.paginator.count:
+        visible_range = f"{page_obj.start_index()}-{page_obj.end_index()}"
+
+    return [
+        {
+            "label": "Matching imports" if filters_active else "Import sets",
+            "value": page_obj.paginator.count,
+            "subtext": f"of {total_imports} total" if filters_active else "",
+        },
+        {
+            "label": "Visible rows",
+            "value": visible_range,
+            "subtext": "",
+            "mono": True,
+        },
+    ]
+
+
+def _build_import_hero_actions(can_import):
+    actions = []
+    if can_import:
+        actions.append(_import_action("Upload", reverse("import_upload"), "primary"))
+    actions.append(_import_action("Browse records", reverse("company_list")))
+    return actions
+
+
+def _build_import_filter_panel(
+    *,
+    has_import_records,
+    filters_active,
+    filters,
+    filter_form_hidden_items,
+    active_filters,
+    total_imports,
+    matching_count,
+    filter_reset_url,
+):
+    return {
+        "visible": has_import_records or filters_active,
+        "open": filters_active,
+        "hidden_items": filter_form_hidden_items,
+        "filters": filters,
+        "fields": [],
+        "status_options": ImportFile.Status.choices,
+        "active_filters": active_filters,
+        "matching_count": matching_count,
+        "total_count": total_imports,
+        "reset_url": filter_reset_url,
+    }
+
+
+def _build_import_filter_ui():
+    return {
+        "kicker": "Advanced filters",
+        "title": "Refine import history",
+        "closed_label": "Show filters",
+        "open_label": "Hide filters",
+        "fields_template": "crm/components/import_list/filter_fields.html",
+        "id_prefix": "import",
+        "results_label": "matching imports",
+        "empty_results_subject": "imports in the ledger",
+    }
+
+
+def _build_import_toolbar_menus(*, per_page, per_page_menu_options):
+    return [
+        {
+            "kind": "rows",
+            "label": f"Rows: {per_page}",
+            "options": per_page_menu_options,
+        }
+    ]
+
+
+def _build_import_table_ui():
+    return {
+        "toolbar_kicker": "Import table",
+        "toolbar_title": "Stored file batches",
+        "row_template": "crm/components/list_workspace/table_row.html",
+        "table_class": "w-full min-w-[72rem] border-collapse",
+        "scroll_shell_class": "overflow-x-auto rounded-[1.6rem] border border-brand-surface-borderSoft bg-white/78 shadow-brand-surface-inset-strong",
+    }
+
+
+def _build_import_row_actions(import_file: object) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    preview_source = getattr(import_file, "preview_source", {}) or {}
+    if preview_source.get("available"):
+        actions.append(
+            {
+                "label": "Download source file",
+                "title": "Download source file",
+                "href": reverse("import_file_download", args=[import_file.id]),
+                "icon": "download",
+            }
+        )
+        actions.append(
+            {
+                "label": "Open raw source",
+                "title": "Open raw source",
+                "href": reverse("import_file_raw_source", args=[import_file.id]),
+                "icon": "code",
+            }
+        )
+    else:
+        actions.extend(
+            [
+                {
+                    "label": "Stored source unavailable",
+                    "title": "Stored source unavailable",
+                    "icon": "download",
+                    "disabled": True,
+                },
+                {
+                    "label": "Stored source unavailable",
+                    "title": "Stored source unavailable",
+                    "icon": "code",
+                    "disabled": True,
+                },
+            ]
+        )
+
+    actions.append(
+        {
+            "label": "View imported data",
+            "title": "View imported data",
+            "href": reverse("import_file_detail", args=[import_file.id]),
+            "icon": "table",
+        }
+    )
+    return actions
+
+
+def _build_import_table_rows(import_files, table_headers, row_number_offset):
+    rows = []
+    for index, import_file in enumerate(import_files, start=row_number_offset + 1):
+        progress = ""
+        if getattr(import_file, "status", "") != "completed":
+            progress = f"{getattr(import_file, 'processed_rows', 0)} / {getattr(import_file, 'total_rows', 0)}"
+
+        cells = {
+            "row": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["row"],
+                "text": index,
+            },
+            "file": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["file"],
+                "label": import_file.file_name,
+            },
+            "status": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["status"],
+                "label": _status_display_label(import_file),
+                "subtext": progress,
+            },
+            "stored_rows": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["stored_rows"],
+                "text": getattr(import_file, "stored_rows", ""),
+            },
+            "updated_at": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["updated_at"],
+                "text": _format_import_timestamp(getattr(import_file, "updated_at", None)),
+            },
+            "actions": {
+                "template": IMPORT_TABLE_CELL_TEMPLATES["actions"],
+                "actions": _build_import_row_actions(import_file),
+            },
+        }
+
+        rows.append(
+            {
+                "cells": [
+                    {"key": header["key"], **cells[header["key"]]}
+                    for header in table_headers
+                ]
+            }
+        )
+
+    return rows
+
+
+def _build_import_empty_state(
+    *,
+    filters_active,
+    has_import_records,
+    active_filters,
+    filter_reset_url,
+    can_import,
+):
+    if filters_active and has_import_records:
+        return {
+            "kicker": "No filtered imports",
+            "title": "No imports matched the current filters.",
+            "description": "Adjust the active filters or clear them to return to the full import ledger.",
+            "active_filters": active_filters,
+            "actions": [_import_action("Clear filters", filter_reset_url, "primary")],
+        }
+
+    actions = []
+    if can_import:
+        actions.append(_import_action("Upload your first file", reverse("import_upload"), "primary"))
+    return {
+        "kicker": "No uploads yet",
+        "title": "Your import ledger is still empty.",
+        "description": "Bring in the first CSV to unlock the mapping workflow and start filling companies, contacts, and source rows.",
+        "active_filters": [],
+        "actions": actions,
+    }
 
 
 def _default_import_display_name(original_name: str) -> str:
@@ -573,6 +822,7 @@ def _raw_preview_export_base_name(
 def import_file_list(request):
     state = _import_file_list_state(request)
     import_list_url = reverse("import_file_list")
+    can_import = user_has_minimum_crm_role(request.user, ROLE_TEAM_LEAD)
     per_page_menu_options = []
     for option in PAGE_SIZE_OPTIONS:
         query_string = _query_string(
@@ -591,6 +841,42 @@ def import_file_list(request):
 
     page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
     import_files = _attach_import_source_state(list(page_obj.object_list))
+    row_number_offset = page_obj.start_index() - 1 if page_obj.paginator.count else 0
+    hero_metrics = _build_import_hero_metrics(
+        page_obj,
+        total_imports=state["total_imports"],
+        filters_active=state["filters_active"],
+    )
+    hero_actions = _build_import_hero_actions(can_import)
+    filter_panel = _build_import_filter_panel(
+        has_import_records=state["has_import_records"],
+        filters_active=state["filters_active"],
+        filters=state["filters"],
+        filter_form_hidden_items=state["filter_form_hidden_items"],
+        active_filters=state["active_filters"],
+        total_imports=state["total_imports"],
+        matching_count=page_obj.paginator.count,
+        filter_reset_url=state["filter_reset_url"],
+    )
+    filter_ui = _build_import_filter_ui()
+    toolbar_menus = _build_import_toolbar_menus(
+        per_page=state["per_page"],
+        per_page_menu_options=per_page_menu_options,
+    )
+    table_headers = _build_import_table_headers(
+        request,
+        state["sort"],
+        state["direction"],
+    )
+    table_ui = _build_import_table_ui()
+    table_rows = _build_import_table_rows(import_files, table_headers, row_number_offset)
+    empty_state = _build_import_empty_state(
+        filters_active=state["filters_active"],
+        has_import_records=state["has_import_records"],
+        active_filters=state["active_filters"],
+        filter_reset_url=state["filter_reset_url"],
+        can_import=can_import,
+    )
     return render(
         request,
         "crm/imports/import_file_list.html",
@@ -598,13 +884,18 @@ def import_file_list(request):
             "import_files": import_files,
             "page_obj": page_obj,
             "page_query": _page_query(request),
-            "row_number_offset": page_obj.start_index() - 1 if page_obj.paginator.count else 0,
+            "row_number_offset": row_number_offset,
+            "crm_can_import": can_import,
+            "hero_metrics": hero_metrics,
+            "hero_actions": hero_actions,
+            "filter_panel": filter_panel,
+            "filter_ui": filter_ui,
+            "toolbar_menus": toolbar_menus,
+            "table_ui": table_ui,
+            "table_rows": table_rows,
+            "empty_state": empty_state,
             "per_page_menu_options": per_page_menu_options,
-            "table_headers": _build_import_sort_headers(
-                request,
-                state["sort"],
-                state["direction"],
-            ),
+            "table_headers": table_headers,
             **state,
         },
     )

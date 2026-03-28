@@ -5,30 +5,32 @@
 {% block page_title %}This page does not exist{% endblock %}
 {% block page_description %}The address you requested could not be matched inside {{ site_brand }}. Check the URL or use one of the routes below to recover quickly.{% endblock %}
 {% block hero_side %}
-    <div class="metric-grid">
-        <article class="metric-card">
-            <p class="metric-label">Status</p>
-            <strong class="metric-value is-mono">404</strong>
+    <div class="grid gap-4 sm:grid-cols-2">
+        <article class="flex min-h-[5.35rem] flex-col justify-between gap-2 rounded-[1.35rem] border border-white/7 bg-brand-shell-900/95 px-5 py-[1.05rem] shadow-brand-dark-inset backdrop-blur-md">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/42">Status</p>
+            <strong class="font-mono text-[1.86rem] font-semibold leading-none tracking-[-0.035em] text-brand-text-inverse">404</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Missing path</p>
-            <strong class="metric-value is-mono">{{ request_path }}</strong>
+        <article class="flex min-h-[5.35rem] flex-col justify-between gap-2 rounded-[1.35rem] border border-white/7 bg-brand-shell-900/95 px-5 py-[1.05rem] shadow-brand-dark-inset backdrop-blur-md">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/42">Missing path</p>
+            <strong class="truncate font-mono text-[1.15rem] font-semibold leading-none tracking-[-0.03em] text-brand-text-inverse" title="{{ request_path }}">{{ request_path }}</strong>
         </article>
     </div>
 {% endblock %}
 
 {% block content %}
-    <section class="empty-state">
-        <p class="section-kicker">Page unavailable</p>
-        <h2>The route <span class="path-chip">{{ request_path }}</span> was not found.</h2>
-        <p>Use the main navigation if you are already signed in, or return to the login screen to re-enter the CRM workspace.</p>
-        <div class="action-stack">
+    <section class="flex flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-6 shadow-brand-panel sm:p-8">
+        <div class="max-w-[42rem]">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-brand-text-subtle">Page unavailable</p>
+            <h2 class="m-0 pt-2 font-serif text-[1.72rem] leading-[1.05] text-brand-text-heading">The route <span class="inline-flex items-center rounded-full border border-brand-surface-borderSoft bg-white px-3 py-1 text-sm font-semibold text-brand-text-soft">{{ request_path }}</span> was not found.</h2>
+            <p class="m-0 pt-4 text-sm leading-7 text-brand-text-muted">Use the main navigation if you are already signed in, or return to the login screen to re-enter the CRM workspace.</p>
+        </div>
+        <div class="flex flex-col gap-4">
             {% if request.user.is_authenticated %}
-                <a class="button-link" href="{% url 'company_list' %}">Back to companies</a>
+                <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-strong no-underline shadow-brand-button-strong transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" href="{% url 'company_list' %}">Back to companies</a>
             {% else %}
-                <a class="button-link" href="{% url 'login' %}">Go to login</a>
+                <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-strong no-underline shadow-brand-button-strong transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" href="{% url 'login' %}">Go to login</a>
             {% endif %}
-            <a class="button-link is-secondary" href="/">Open home</a>
+            <a class="inline-flex w-full items-center justify-center rounded-full border border-brand-surface-borderSoft bg-white/88 px-6 py-3 text-[1rem] font-semibold tracking-[-0.01em] text-brand-text-soft no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base" href="/">Open home</a>
         </div>
     </section>
 {% endblock %}

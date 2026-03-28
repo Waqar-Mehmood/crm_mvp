@@ -1,0 +1,9 @@
+{% if panel.items %}
+    <div class="flex flex-col gap-4">
+        {% for item in panel.items %}
+            {% include "crm/components/content_panels/detail_card.html" with item=item only %}
+        {% endfor %}
+    </div>
+{% elif panel.empty_text %}
+    <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ panel.empty_text }}</p>
+{% endif %}

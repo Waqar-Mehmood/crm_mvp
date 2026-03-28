@@ -47,7 +47,7 @@ class BrandingMediaTests(CRMRoleTestMixin, TestCase):
         response = self.client.get(reverse("login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="brand-logo"')
+        self.assertContains(response, 'class="brand-logo', html=False)
         self.assertContains(response, "/media/branding/logo")
         self.assertContains(response, 'alt="The Zulfis logo"')
 

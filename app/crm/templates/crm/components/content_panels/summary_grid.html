@@ -1,0 +1,5 @@
+<section class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+        {% include "crm/components/content_panels/summary_card.html" with card=card only %}
+    {% endfor %}
+</section>

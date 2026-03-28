@@ -1,0 +1,5 @@
+{% if panel.actions %}
+    {% include "crm/components/list_workspace/action_stack.html" with actions=panel.actions tone="surface" only %}
+{% elif panel.empty_text %}
+    <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ panel.empty_text }}</p>
+{% endif %}

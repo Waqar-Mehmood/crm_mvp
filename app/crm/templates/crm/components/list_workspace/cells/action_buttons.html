@@ -1,0 +1,11 @@
+<td class="align-top px-5 py-[14px]">
+    <div class="flex items-center gap-2">
+        {% for action in cell.actions %}
+            {% if action.disabled %}
+                {% include "crm/components/list_workspace/action_icon_button_disabled.html" with action=action only %}
+            {% else %}
+                {% include "crm/components/list_workspace/action_icon_button.html" with action=action only %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</td>

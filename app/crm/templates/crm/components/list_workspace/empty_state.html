@@ -7,5 +7,7 @@
     {% if state.active_filters %}
         {% include "crm/components/list_workspace/active_filter_chips.html" with active_filters=state.active_filters only %}
     {% endif %}
-    {% include actions_template with actions=state.actions tone=action_tone only %}
+    {% if state.actions %}
+        {% include actions_template with actions=state.actions tone=action_tone only %}
+    {% endif %}
 </section>

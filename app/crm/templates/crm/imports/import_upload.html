@@ -1,7 +1,7 @@
 {% extends "crm/base.html" %}
+{% load static %}
 
 {% block title %}Import Sources | {{ site_brand }}{% endblock %}
-{% block page_shell_class %}page-shell space-y-6{% endblock %}
 {% block hero_panel_class %}tw-import-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,30rem)] lg:items-start{% endblock %}
 {% block eyebrow %}Import intake{% endblock %}
 {% block page_title %}Upload a source file{% endblock %}
@@ -56,7 +56,7 @@
                 <p class="rounded-crm-sm border border-rose/30 bg-rose/10 px-4 py-3 text-sm text-panel-text">{{ error }}</p>
             {% endif %}
 
-            <form method="post" enctype="multipart/form-data" class="space-y-5">
+            <form method="post" enctype="multipart/form-data" class="space-y-5" data-import-upload>
                 {% csrf_token %}
                 <div class="space-y-3">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -66,17 +66,17 @@
                         </div>
                     </div>
                     <!-- Hidden file input, triggered by the button -->
-                    <input class="hidden" type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.json" multiple>
-                    <button class="tw-button-secondary w-full" type="button" id="add-more-files">Choose files</button>
+                    <input class="hidden" type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.json" multiple data-import-upload-input>
+                    <button class="tw-button-secondary w-full" type="button" id="add-more-files" data-import-upload-trigger>Choose files</button>
                 </div>
 
                 <section aria-live="polite" aria-atomic="true" class="space-y-3 rounded-crm-md border border-[#ddcfb6] bg-white/60 p-4">
                     <div class="space-y-1">
                         <p class="tw-import-kicker">Selected files</p>
-                        <h3 id="selected-files-heading" class="text-lg font-semibold text-panel-text">Selected files (0)</h3>
+                        <h3 id="selected-files-heading" class="text-lg font-semibold text-panel-text" data-import-upload-heading>Selected files (0)</h3>
                     </div>
-                    <p id="selected-files-empty" class="rounded-crm-sm border border-dashed border-[#ddcfb6] bg-white/70 px-4 py-3 text-sm text-panel-muted">No files selected yet.</p>
-                    <div id="selected-files-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                    <p id="selected-files-empty" class="rounded-crm-sm border border-dashed border-[#ddcfb6] bg-white/70 px-4 py-3 text-sm text-panel-muted" data-import-upload-empty>No files selected yet.</p>
+                    <div id="selected-files-list" class="space-y-2 max-h-48 overflow-y-auto pr-1" data-import-upload-list></div>
                 </section>
 
                 <p class="rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text">Use one source type per run: upload one or more files, or paste a single Google Sheets URL.</p>
@@ -100,103 +100,5 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script>
-        (() => {
-            const fileInput = document.getElementById("csv_file");
-            const addMoreButton = document.getElementById("add-more-files");
-            const selectedHeading = document.getElementById("selected-files-heading");
-            const selectedList = document.getElementById("selected-files-list");
-            const emptyState = document.getElementById("selected-files-empty");
-
-            if (!fileInput || !addMoreButton || !selectedHeading || !selectedList || !emptyState) {
-                return;
-            }
-
-            const selectedFiles = new Map();
-
-            const fileKey = (file) => `${file.name}-${file.size}-${file.lastModified}`;
-
-            const formatBytes = (bytes) => {
-                if (!Number.isFinite(bytes) || bytes <= 0) {
-                    return "0 B";
-                }
-
-                const units = ["B", "KB", "MB", "GB"];
-                let value = bytes;
-                let unitIndex = 0;
-                while (value >= 1024 && unitIndex < units.length - 1) {
-                    value /= 1024;
-                    unitIndex += 1;
-                }
-                const precision = value >= 10 || unitIndex === 0 ? 0 : 1;
-                return `${value.toFixed(precision)} ${units[unitIndex]}`;
-            };
-
-            const syncInputFiles = () => {
-                const dataTransfer = new DataTransfer();
-                selectedFiles.forEach((file) => dataTransfer.items.add(file));
-                fileInput.files = dataTransfer.files;
-            };
-
-            const removeFile = (key) => {
-                selectedFiles.delete(key);
-                syncInputFiles();
-                renderSelectedFiles();
-            };
-
-            const renderSelectedFiles = () => {
-                const files = Array.from(selectedFiles.entries());
-                selectedHeading.textContent = `Selected files (${files.length})`;
-                selectedList.replaceChildren();
-                emptyState.hidden = files.length > 0;
-
-                files.forEach(([key, file]) => {
-                    const row = document.createElement("div");
-                    row.className = "flex items-center justify-between gap-3 rounded-lg border border-[#ddcfb6] bg-white/90 p-2.5 shadow-sm";
-
-                    const copy = document.createElement("div");
-                    copy.className = "min-w-0";
-
-                    const name = document.createElement("strong");
-                    name.className = "block truncate text-sm font-semibold text-panel-text";
-                    name.textContent = file.name;
-
-                    const meta = document.createElement("p");
-                    meta.className = "mt-0.5 text-xs text-panel-muted";
-                    meta.textContent = formatBytes(file.size);
-                    copy.append(name, meta);
-
-                    const removeButton = document.createElement("button");
-                    removeButton.type = "button";
-                    removeButton.className = "text-rose text-sm font-semibold transition hover:text-rose/70 px-2 py-1";
-                    removeButton.textContent = "Remove";
-                    removeButton.addEventListener("click", () => removeFile(key));
-
-                    row.append(copy, removeButton);
-                    selectedList.append(row);
-                });
-
-                if (files.length > 0) {
-                    addMoreButton.textContent = "Add more files";
-                } else {
-                    addMoreButton.textContent = "Choose files";
-                }
-            };
-
-            fileInput.addEventListener("change", () => {
-                Array.from(fileInput.files || []).forEach((file) => {
-                    const key = fileKey(file);
-                    if (!selectedFiles.has(key)) {
-                        selectedFiles.set(key, file);
-                    }
-                });
-                syncInputFiles();
-                renderSelectedFiles();
-            });
-
-            addMoreButton.addEventListener("click", () => fileInput.click());
-
-            renderSelectedFiles();
-        })();
-    </script>
+    <script type="module" src="{% static 'crm/js/import_workspace/importUpload.js' %}"></script>
 {% endblock %}

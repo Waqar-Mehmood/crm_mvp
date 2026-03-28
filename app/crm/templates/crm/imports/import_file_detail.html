@@ -1,12 +1,12 @@
 {% extends "crm/base.html" %}
+{% load static %}
 
 {% block title %}{{ import_file.file_name }} | Import Detail{% endblock %}
-{% block page_shell_class %}page-shell space-y-6{% endblock %}
 {% block hero_panel_class %}tw-import-hero grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] lg:items-start{% endblock %}
 {% block hero_copy_class %}space-y-4 text-paper-100{% endblock %}
 {% block hero_side_class %}space-y-4{% endblock %}
 {% block eyebrow_class %}tw-hero-eyebrow{% endblock %}
-{% block page_title_class %}page-title{% endblock %}
+{% block page_title_class %}m-0 font-serif text-5xl leading-none text-brand-text-inverse md:text-6xl{% endblock %}
 {% block page_copy_class %}max-w-3xl text-base leading-8 text-paper-100/80{% endblock %}
 {% block eyebrow %}Stored import detail{% endblock %}
 {% block page_title %}Import detail{% endblock %}
@@ -40,7 +40,7 @@
 
 {% block content %}
     {% if import_file.status == "queued" or import_file.status == "running" %}
-        <section class="tw-import-card space-y-5">
+        <section class="tw-import-card space-y-5" data-import-auto-refresh data-import-auto-refresh-interval="4000">
             <div>
                 <p class="tw-import-kicker">Import status</p>
                 <h2 class="mt-2 font-serif text-3xl text-ink-900">Background import in progress</h2>
@@ -236,8 +236,6 @@
 
 {% block page_scripts %}
     {% if import_file.status == "queued" or import_file.status == "running" %}
-        <script>
-            window.setTimeout(() => window.location.reload(), 4000);
-        </script>
+        <script type="module" src="{% static 'crm/js/import_workspace/importDetail.js' %}"></script>
     {% endif %}
 {% endblock %}

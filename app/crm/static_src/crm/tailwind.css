@@ -2,7 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-brand-gradient-shell font-sans text-brand-text-inverse;
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
 @layer components {
+  .tw-site-shell {
+    @apply relative z-[1] mx-auto w-full max-w-[1440px] px-5 pb-14 pt-7 md:px-6;
+  }
+
+  .tw-aurora {
+    @apply pointer-events-none fixed rounded-full opacity-40 mix-blend-screen blur-[24px];
+  }
+
+  .tw-aurora-one {
+    @apply right-[5vw] top-12 h-[22rem] w-[22rem] bg-[radial-gradient(circle,rgba(209,125,47,0.55)_0%,rgba(209,125,47,0)_72%)] [animation:drift_18s_ease-in-out_infinite];
+  }
+
+  .tw-aurora-two {
+    @apply bottom-[-8rem] left-[-6rem] h-[28rem] w-[28rem] bg-[radial-gradient(circle,rgba(29,139,138,0.44)_0%,rgba(29,139,138,0)_72%)] [animation:drift_24s_ease-in-out_infinite_reverse];
+  }
+
   .tw-shell-card {
     @apply rounded-crm-lg border border-white/10 bg-brand-shell-900/60 shadow-crm backdrop-blur;
   }
@@ -287,48 +323,12 @@
     @apply transition-colors hover:bg-[#f5ede0];
   }
 
-  .tw-import-sort-link {
-    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-paper-100/80 no-underline transition hover:text-paper-100;
-  }
-
-  .tw-import-sort-link-active {
-    @apply text-paper-100;
-  }
-
-  .tw-import-sort-icon {
-    @apply inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/5 text-paper-100/70;
-  }
-
-  .tw-import-sort-link-active .tw-import-sort-icon {
-    @apply border-white/20 bg-white/10 text-paper-100;
-  }
-
-  .tw-import-sort-icon svg {
-    @apply h-3 w-3;
-  }
-
   .tw-import-kicker {
     @apply m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-panel-muted;
   }
 
   .tw-import-link {
     @apply font-semibold text-accent no-underline transition hover:text-accent-strong;
-  }
-
-  .tw-import-actions {
-    @apply flex items-center gap-2;
-  }
-
-  .tw-import-action-button {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d7c7ac] bg-white text-panel-text no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-accent hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent/25;
-  }
-
-  .tw-import-action-button svg {
-    @apply h-[1.05rem] w-[1.05rem];
-  }
-
-  .tw-import-action-button-disabled {
-    @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 shadow-none hover:translate-y-0 hover:border-slate-200 hover:text-slate-400 focus:ring-0;
   }
 
   .tw-import-empty {
@@ -407,29 +407,21 @@
     @apply cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400;
   }
 
-  .form-layout.list-filter-form {
-    @apply space-y-5;
-  }
-
-  .list-filter-control {
-    @apply min-h-[48px] w-full rounded-[18px] border border-[#d9ccb5] bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
-  }
-
-  .filter-actions.list-filter-actions {
-    @apply flex flex-col gap-3 sm:flex-row;
-  }
-
-  .list-filter-submit {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-gradient-to-br from-paper-100 to-[#f1dcc3] px-[18px] font-bold text-ink-900 transition duration-200 hover:-translate-y-px hover:shadow-lg sm:w-auto;
-  }
-
-  .button-link.is-secondary.list-filter-reset {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-[#d7c7ac] bg-white px-[18px] font-bold text-panel-text no-underline transition duration-200 hover:-translate-y-px hover:border-accent hover:text-accent sm:w-auto;
-  }
 }
 
 @layer utilities {
   .crm-surface {
     @apply rounded-crm-lg border border-white/10 bg-white/[0.04] backdrop-blur;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.06);
   }
 }

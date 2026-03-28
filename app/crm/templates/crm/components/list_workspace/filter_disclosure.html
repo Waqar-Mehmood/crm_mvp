@@ -2,12 +2,12 @@
     <details class="group/filter rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-[1.35rem] shadow-brand-card sm:p-[1.55rem]" data-animated-disclosure{% if panel.open %} open{% endif %}>
         <summary class="flex cursor-pointer list-none flex-col gap-4 rounded-[1.5rem] px-4 py-3 outline-none transition duration-200 hover:translate-y-[-1px] group-open/filter:mb-6 group-open/filter:border-b group-open/filter:border-white/65 group-open/filter:pb-6 focus-visible:ring-2 focus-visible:ring-brand-teal/20 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
-                <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ kicker }}</p>
-                <h2 class="m-0 pt-2 text-[1.3rem] font-semibold leading-tight text-brand-text-base">{{ title }}</h2>
+                <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ ui.kicker }}</p>
+                <h2 class="m-0 pt-2 text-[1.3rem] font-semibold leading-tight text-brand-text-base">{{ ui.title }}</h2>
             </div>
             <span class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[0.8rem] border border-brand-surface-border bg-white px-4 text-sm font-semibold text-brand-text-soft shadow-sm transition duration-200 group-hover/filter:border-brand-surface-borderSoft group-hover/filter:text-brand-text-base">
-                <span class="group-open/filter:hidden">{{ closed_label|default:"Show filters" }}</span>
-                <span class="hidden group-open/filter:inline">{{ open_label|default:"Hide filters" }}</span>
+                <span class="group-open/filter:hidden">{{ ui.closed_label|default:"Show filters" }}</span>
+                <span class="hidden group-open/filter:inline">{{ ui.open_label|default:"Hide filters" }}</span>
                 <svg class="h-3 w-3 transition duration-200 group-open/filter:rotate-180" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                     <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
                 </svg>
@@ -19,7 +19,7 @@
                     {% for item in panel.hidden_items %}
                         <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
                     {% endfor %}
-                    {% include fields_template with panel=panel fields=panel.fields only %}
+                    {% include ui.fields_template with panel=panel fields=panel.fields id_prefix=ui.id_prefix only %}
                     <div class="flex flex-col gap-3 border-t border-white/55 pt-5 sm:flex-row sm:justify-end">
                         <input class="inline-flex min-h-[48px] cursor-pointer items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-5 text-sm font-semibold text-brand-text-strong shadow-brand-button transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" type="submit" value="{{ submit_label|default:'Apply filters' }}">
                         <a class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-brand-surface-borderSoft bg-white/88 px-5 text-sm font-semibold text-brand-text-soft no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base" href="{{ panel.reset_url }}">{{ reset_label|default:"Reset" }}</a>
@@ -27,17 +27,17 @@
                 </form>
                 <div class="flex flex-col gap-4 rounded-[1.35rem] border border-brand-surface-borderSoft bg-white/58 p-4 shadow-brand-surface-inset-strong">
                     <div class="min-w-0">
-                        <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ results_kicker|default:"Current result set" }}</p>
-                        <h2 class="m-0 pt-2 text-[1.8rem] font-semibold leading-none text-brand-text-soft">{{ panel.matching_count }} {{ results_label }}</h2>
+                        <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ ui.results_kicker|default:"Current result set" }}</p>
+                        <h2 class="m-0 pt-2 text-[1.8rem] font-semibold leading-none text-brand-text-soft">{{ panel.matching_count }} {{ ui.results_label }}</h2>
                     </div>
                     {% if panel.active_filters %}
                         {% include "crm/components/list_workspace/active_filter_chips.html" with active_filters=panel.active_filters only %}
                     {% else %}
                         <p class="m-0 text-sm leading-7 text-brand-text-muted">
-                            {% if empty_results_copy %}
-                                {{ empty_results_copy }}
+                            {% if ui.empty_results_copy %}
+                                {{ ui.empty_results_copy }}
                             {% else %}
-                                Showing all {{ panel.total_contacts }} {{ empty_results_subject }}.
+                                Showing all {{ panel.total_count }} {{ ui.empty_results_subject }}.
                             {% endif %}
                         </p>
                     {% endif %}

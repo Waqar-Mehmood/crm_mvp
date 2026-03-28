@@ -24,10 +24,10 @@ from crm.auth import (
 from crm.models import Company, Contact, ImportFile, ImportRow
 
 RECENT_ITEMS_LIMIT = 5
-DETAIL_CARDS_PARTIAL = "crm/components/dashboard/panel_detail_cards.html"
-STATS_AND_CARDS_PARTIAL = "crm/components/dashboard/panel_stats_and_cards.html"
-ACTION_BUTTONS_PARTIAL = "crm/components/dashboard/panel_actions.html"
-RECORD_COLUMNS_PARTIAL = "crm/components/dashboard/panel_record_columns.html"
+DETAIL_CARDS_TEMPLATE = "crm/components/content_panels/body_detail_cards.html"
+STATS_AND_CARDS_TEMPLATE = "crm/components/content_panels/body_stats_and_cards.html"
+ACTION_BUTTONS_TEMPLATE = "crm/components/content_panels/body_actions.html"
+RECORD_COLUMNS_TEMPLATE = "crm/components/content_panels/body_record_columns.html"
 
 
 def _get_dashboard_flags(user):
@@ -108,7 +108,7 @@ def _dashboard_panel(
     columns=None,
     actions=None,
     empty_text="",
-    content_partial=DETAIL_CARDS_PARTIAL,
+    body_template=DETAIL_CARDS_TEMPLATE,
 ):
     return {
         "kicker": kicker,
@@ -120,7 +120,7 @@ def _dashboard_panel(
         "columns": columns or [],
         "actions": actions or [],
         "empty_text": empty_text,
-        "content_partial": content_partial,
+        "body_template": body_template,
     }
 
 
@@ -429,7 +429,7 @@ def _build_quick_actions(scope_label, can_import):
         "Quick actions",
         scope_label,
         actions=actions,
-        content_partial=ACTION_BUTTONS_PARTIAL,
+        body_template=ACTION_BUTTONS_TEMPLATE,
     )
 
 
@@ -450,7 +450,7 @@ def _build_recent_imports_panel(recent_imports):
             link_label="Open import detail",
         ),
         empty_text="No import batches have been stored yet.",
-        content_partial=DETAIL_CARDS_PARTIAL,
+        body_template=DETAIL_CARDS_TEMPLATE,
     )
 
 
@@ -471,7 +471,7 @@ def _build_import_health_panel(totals, follow_up_imports):
             link_label="Review rows",
         ),
         empty_text="No batches currently have stored rows waiting for follow-up.",
-        content_partial=STATS_AND_CARDS_PARTIAL,
+        body_template=STATS_AND_CARDS_TEMPLATE,
     )
 
 
@@ -491,7 +491,7 @@ def _build_recent_records_panel(recent_companies, recent_contacts):
                 "empty_text": "No contacts have been added yet.",
             },
         ],
-        content_partial=RECORD_COLUMNS_PARTIAL,
+        body_template=RECORD_COLUMNS_TEMPLATE,
     )
 
 
@@ -507,7 +507,7 @@ def _build_team_activity_panel(flags, team_section):
         stats=team_section["role_counts"],
         items=_build_team_member_cards(team_section["recent_members"]),
         empty_text="No team members with CRM roles are currently available.",
-        content_partial=STATS_AND_CARDS_PARTIAL,
+        body_template=STATS_AND_CARDS_TEMPLATE,
     )
 
 
@@ -530,7 +530,7 @@ def _build_shared_queue_panel(flags, follow_up_imports):
             link_label="Open review rows",
         ),
         empty_text="The shared queue is clear right now.",
-        content_partial=DETAIL_CARDS_PARTIAL,
+        body_template=DETAIL_CARDS_TEMPLATE,
     )
 
 

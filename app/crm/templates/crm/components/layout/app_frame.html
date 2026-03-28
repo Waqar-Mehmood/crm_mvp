@@ -7,13 +7,13 @@
     <title>{% block title %}{{ site_brand }}{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'crm/favicon.svg' %}">
     <link rel="stylesheet" href="{% static 'crm/tailwind.css' %}">
-    <link rel="stylesheet" href="{% static 'crm/site.css' %}">
     {% block extra_styles %}{% endblock %}
 </head>
-<body{% if crm_dev_live_reload_enabled %} data-dev-reload-enabled="true" data-dev-reload-url="{{ crm_dev_live_reload_url }}" data-dev-reload-interval="{{ crm_dev_live_reload_interval_ms }}"{% endif %}>
-    <div class="aurora aurora-one"></div>
-    <div class="aurora aurora-two"></div>
-    <div class="site-shell">
+<body class="relative overflow-x-hidden" {% if crm_dev_live_reload_enabled %}data-dev-reload-enabled="true" data-dev-reload-url="{{ crm_dev_live_reload_url }}" data-dev-reload-interval="{{ crm_dev_live_reload_interval_ms }}"{% endif %}>
+    <div class="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] [background-size:40px_40px] [mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.42),transparent_80%)]"></div>
+    <div class="tw-aurora tw-aurora-one"></div>
+    <div class="tw-aurora tw-aurora-two"></div>
+    <div class="tw-site-shell">
         {% include "crm/components/layout/site_header.html" %}
 
         <main class="{% block page_shell_class %}mt-[26px] flex flex-col gap-6{% endblock %}">
@@ -35,7 +35,7 @@
             {% block content %}{% endblock %}
         </main>
     </div>
-    <script src="{% static 'crm/base.js' %}"></script>
+    <script type="module" src="{% static 'crm/js/app.js' %}"></script>
     {% block page_scripts %}{% endblock %}
 </body>
 </html>

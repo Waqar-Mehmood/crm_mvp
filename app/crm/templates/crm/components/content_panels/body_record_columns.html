@@ -1,0 +1,5 @@
+{% if panel.columns %}
+    {% include "crm/components/content_panels/record_columns.html" with columns=panel.columns only %}
+{% elif panel.empty_text %}
+    <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ panel.empty_text }}</p>
+{% endif %}

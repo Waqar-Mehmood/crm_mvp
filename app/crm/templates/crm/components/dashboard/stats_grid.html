@@ -1,8 +1,0 @@
-<dl class="grid gap-4 sm:grid-cols-2">
-    {% for stat in stats %}
-        <div class="flex flex-col gap-2 rounded-[1.5rem] border border-[#ede4d6] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-            <dt class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-400">{{ stat.label }}</dt>
-            <dd class="m-0 text-[1.9rem] font-semibold leading-none text-slate-800">{{ stat.value }}</dd>
-        </div>
-    {% endfor %}
-</dl>

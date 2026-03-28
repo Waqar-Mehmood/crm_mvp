@@ -551,7 +551,16 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
         self.assertNotContains(response, "<th>ID</th>", html=False)
         self.assertEqual(response.context["table_headers"][0]["label"], "#")
         self.assertEqual(response.context["row_number_offset"], 0)
-        self.assertContains(response, "<td>1</td>", html=False)
+        self.assertEqual(
+            response.context["filter_ui"]["fields_template"],
+            "crm/components/import_list/filter_fields.html",
+        )
+        self.assertEqual(
+            response.context["table_ui"]["row_template"],
+            "crm/components/list_workspace/table_row.html",
+        )
+        self.assertEqual(response.context["toolbar_menus"][0]["kind"], "rows")
+        self.assertContains(response, ">1</td>", html=False)
         self.assertContains(response, "hidden-path-import.csv")
         self.assertContains(response, reverse("import_file_download", args=[import_file.id]))
         self.assertContains(response, reverse("import_file_raw_source", args=[import_file.id]))
@@ -577,7 +586,7 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["page_obj"].number, 2)
         self.assertEqual(response.context["row_number_offset"], 10)
-        self.assertContains(response, "<td>11</td>", html=False)
+        self.assertContains(response, ">11</td>", html=False)
         self.assertContains(response, "completed-11.csv")
 
     def test_import_list_rows_menu_changes_page_size_and_preserves_filters_and_sort(self):
@@ -894,12 +903,12 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
 
         self.assertContains(
             default_response,
-            '<details class="group space-y-2" data-animated-disclosure>',
+            'data-animated-disclosure',
             html=False,
         )
         self.assertContains(
             filtered_response,
-            '<details class="group space-y-2" data-animated-disclosure open>',
+            'data-animated-disclosure open',
             html=False,
         )
         self.assertContains(default_response, "Show filters")
@@ -909,12 +918,17 @@ class ImportFileVisibilityTests(CRMRoleTestMixin, TestCase):
         self.assertContains(default_response, 'crm/vendor/flatpickr/flatpickr.min.css', html=False)
         self.assertContains(default_response, 'crm/vendor/choices/choices.min.js', html=False)
         self.assertContains(default_response, 'crm/vendor/flatpickr/flatpickr.min.js', html=False)
-        self.assertContains(default_response, 'class="tw-import-filter-form"', html=False)
         self.assertContains(default_response, 'class="tw-import-filter-grid"', html=False)
         self.assertContains(default_response, 'data-import-status-select', html=False)
         self.assertContains(default_response, 'data-import-date-field', html=False)
-        self.assertContains(default_response, 'class="tw-import-filter-actions"', html=False)
-        self.assertContains(default_response, 'class="tw-button-primary w-full sm:w-auto"', html=False)
+        self.assertEqual(
+            default_response.context["filter_ui"]["fields_template"],
+            "crm/components/import_list/filter_fields.html",
+        )
+        self.assertEqual(
+            default_response.context["table_ui"]["row_template"],
+            "crm/components/list_workspace/table_row.html",
+        )
 
     def test_import_detail_hides_stored_source_path(self):
         source_path = "/tmp/imports/hidden-path-import.csv"
@@ -1053,12 +1067,12 @@ class ImportUploadStorageTests(CRMRoleTestMixin, TestCase):
         response = self.client.get(reverse("import_file_detail", args=[import_file.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<h1 class=\"page-title\">Import detail</h1>", html=True)
+        self.assertContains(response, ">Import detail</h1>", html=False)
         self.assertContains(response, "File name")
         self.assertContains(response, import_file.file_name)
         self.assertNotContains(
             response,
-            f"<h1 class=\"page-title\">{import_file.file_name}</h1>",
+            f">{import_file.file_name}</h1>",
             html=False,
         )
 

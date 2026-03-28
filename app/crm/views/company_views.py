@@ -87,17 +87,20 @@ COMPANY_FILTER_KEYS = frozenset(
     }
 )
 COMPANY_TABLE_CELL_TEMPLATES = {
-    "row": "crm/components/company_list/cells/text.html",
-    "company": "crm/components/company_list/cells/company.html",
-    "industry": "crm/components/company_list/cells/text.html",
-    "address": "crm/components/company_list/cells/text.html",
-    "size": "crm/components/company_list/cells/text.html",
-    "revenue": "crm/components/company_list/cells/text.html",
+    "row": "crm/components/list_workspace/cells/text.html",
+    "company": "crm/components/list_workspace/cells/single_link.html",
+    "industry": "crm/components/list_workspace/cells/text.html",
+    "address": "crm/components/list_workspace/cells/text.html",
+    "size": "crm/components/list_workspace/cells/text.html",
+    "revenue": "crm/components/list_workspace/cells/text.html",
     "location": "crm/components/company_list/cells/location.html",
     "phones": "crm/components/company_list/cells/channel_list.html",
     "emails": "crm/components/company_list/cells/channel_list.html",
-    "profiles": "crm/components/company_list/cells/links.html",
+    "profiles": "crm/components/list_workspace/cells/stacked_links.html",
 }
+DETAIL_CARDS_TEMPLATE = "crm/components/content_panels/body_detail_cards.html"
+DETAIL_FIELD_GRID_TEMPLATE = "crm/components/record_detail/body_field_grid.html"
+DETAIL_CHANNEL_LIST_TEMPLATE = "crm/components/record_detail/body_channel_list.html"
 
 
 def _company_detail_queryset():
@@ -132,13 +135,83 @@ def _company_form_bundle(request, company):
 
 
 def _company_form_context(company, bundle, is_edit_mode):
+    selected_contacts = list(bundle["form"].fields["contacts"].queryset)
     return {
         "company": company,
         "form": bundle["form"],
-        "selected_contacts": list(bundle["form"].fields["contacts"].queryset),
+        "selected_contacts": [
+            {
+                "id": contact.id,
+                "label": contact.full_name,
+                "meta": " | ".join(
+                    value for value in (contact.title, contact.email, contact.phone) if value
+                ),
+            }
+            for contact in selected_contacts
+        ],
         "phone_formset": bundle["phone_formset"],
         "email_formset": bundle["email_formset"],
         "social_link_formset": bundle["social_link_formset"],
+        "company_industry_search_url": reverse("company_industry_search"),
+        "company_contact_search_url": reverse("company_contact_search"),
+        "hero_metrics": [
+            {
+                "label": "Mode",
+                "value": "Edit" if is_edit_mode else "Create",
+                "subtext": "",
+                "mono": True,
+            },
+            {
+                "label": "Related forms",
+                "value": 3,
+                "subtext": "",
+            },
+        ],
+        "hero_actions": [
+            _company_action(
+                "Back to company" if is_edit_mode else "Back to companies",
+                reverse("company_detail", args=[company.pk]) if is_edit_mode else reverse("company_list"),
+                "primary",
+            ),
+            *(
+                [_company_action("View detail", reverse("company_detail", args=[company.pk]))]
+                if is_edit_mode
+                else []
+            ),
+            _company_action("Open contacts", reverse("contact_list")),
+        ],
+        "channel_sections": [
+            {
+                "formset": bundle["phone_formset"],
+                "title": "Phone lines",
+                "row_kicker": "Phone row",
+                "existing_label": "Existing line",
+                "new_label": "New line",
+                "remove_label": "phone row",
+                "empty_text": "No phone lines added yet.",
+                "add_label": "Add phone",
+            },
+            {
+                "formset": bundle["email_formset"],
+                "title": "Email inboxes",
+                "row_kicker": "Email row",
+                "existing_label": "Existing inbox",
+                "new_label": "New inbox",
+                "remove_label": "email row",
+                "empty_text": "No email inboxes added yet.",
+                "add_label": "Add email",
+            },
+            {
+                "formset": bundle["social_link_formset"],
+                "title": "Public profiles",
+                "row_kicker": "Profile row",
+                "existing_label": "Existing profile",
+                "new_label": "New profile",
+                "remove_label": "profile row",
+                "empty_text": "No public profiles added yet.",
+                "add_label": "Add profile",
+            },
+        ],
         "is_edit_mode": is_edit_mode,
         "form_title": "Edit company" if is_edit_mode else "New company",
         "form_description": (
@@ -152,6 +225,118 @@ def _company_form_context(company, bundle, is_edit_mode):
             if is_edit_mode
             else reverse("company_list")
         ),
+    }
+
+
+def _build_company_detail_context(company, *, can_manage_records):
+    contacts = list(company.contacts.all())
+    phones = list(company.phones.all())
+    emails = list(company.emails.all())
+    profiles = list(company.social_links.all())
+
+    return {
+        "hero_metrics": [
+            {"label": "Linked contacts", "value": len(contacts), "subtext": ""},
+            {
+                "label": "Channels",
+                "value": len(phones) + len(emails) + len(profiles),
+                "subtext": "",
+            },
+        ],
+        "hero_actions": [
+            _company_action("Back to companies", reverse("company_list"), "primary"),
+            *(
+                [_company_action("Edit company", reverse("company_edit", args=[company.id]))]
+                if can_manage_records
+                else []
+            ),
+            _company_action("Open contacts", reverse("contact_list")),
+        ],
+        "top_panels": [
+            {
+                "kicker": "Profile summary",
+                "title": "Company snapshot",
+                "body_template": DETAIL_FIELD_GRID_TEMPLATE,
+                "fields": [
+                    {"label": "Industry", "value": company.industry or "Not tagged"},
+                    {"label": "Company size", "value": company.company_size or "Unknown"},
+                    {"label": "Revenue", "value": company.revenue or "Undisclosed"},
+                    {"label": "Created", "value": company.created_at.strftime("%Y-%m-%d %H:%M")},
+                    {"label": "City", "value": company.city or "No city"},
+                    {"label": "State", "value": company.state or "No state"},
+                    {"label": "Zip code", "value": company.zip_code or "No zip code"},
+                    {"label": "Country", "value": company.country or "No country"},
+                ],
+                "note_kicker": "Street address",
+                "note": company.address,
+                "note_empty_text": "No street address stored.",
+            },
+            {
+                "kicker": "Relationships",
+                "title": "Linked contacts",
+                "body_template": DETAIL_CARDS_TEMPLATE,
+                "items": [
+                    {
+                        "kicker": "Contact",
+                        "title": contact.full_name,
+                        "meta": contact.title or "No title captured",
+                        "body": " · ".join(value for value in (contact.email, contact.phone) if value)
+                        or "No primary email or phone stored.",
+                        "link": {
+                            "href": reverse("contact_detail", args=[contact.id]),
+                            "label": "Open contact",
+                        },
+                    }
+                    for contact in contacts
+                ],
+                "empty_text": "No contacts are linked to this company yet.",
+            },
+        ],
+        "bottom_panels": [
+            {
+                "kicker": "Channels",
+                "title": "Phone lines",
+                "body_template": DETAIL_CHANNEL_LIST_TEMPLATE,
+                "lines": [
+                    {
+                        "label": humanize_channel_value((phone.label or "").strip().lower()) or "Direct",
+                        "value": phone.phone,
+                    }
+                    for phone in phones
+                ],
+                "empty_text": "No company phone numbers are stored yet.",
+            },
+            {
+                "kicker": "Channels",
+                "title": "Email inboxes",
+                "body_template": DETAIL_CHANNEL_LIST_TEMPLATE,
+                "lines": [
+                    {
+                        "label": humanize_channel_value((email.label or "").strip().lower()) or "Inbox",
+                        "value": email.email,
+                    }
+                    for email in emails
+                ],
+                "empty_text": "No company email addresses are stored yet.",
+            },
+        ],
+        "profile_panel": {
+            "kicker": "Channels",
+            "title": "Public profiles",
+            "body_template": DETAIL_CARDS_TEMPLATE,
+            "items": [
+                {
+                    "kicker": humanize_channel_value((link.platform or "").strip().lower()) or "Website",
+                    "title": link.url,
+                    "link": {
+                        "href": link.url,
+                        "label": "Visit profile",
+                    },
+                }
+                for link in profiles
+            ],
+            "empty_text": "No public profile links are stored yet.",
+        },
     }
 
 
@@ -352,8 +537,21 @@ def _build_company_filter_panel(
         ),
         "active_filters": active_filters,
         "matching_count": matching_count,
-        "total_contacts": total_companies,
+        "total_count": total_companies,
         "reset_url": filter_reset_url,
+    }
+
+
+def _build_company_filter_ui():
+    return {
+        "kicker": "Advanced filters",
+        "title": "Refine company records",
+        "closed_label": "Show filters",
+        "open_label": "Hide filters",
+        "fields_template": "crm/components/list_workspace/filter_fields.html",
+        "id_prefix": "company",
+        "results_label": "matching companies",
+        "empty_results_subject": "companies in the CRM directory",
     }
 
 
@@ -397,6 +595,14 @@ def _build_company_toolbar_menus(
             ],
         },
     ]
+
+
+def _build_company_table_ui():
+    return {
+        "toolbar_kicker": "Directory table",
+        "toolbar_title": "Company records",
+        "row_template": "crm/components/list_workspace/table_row.html",
+    }
 
 
 def _normalize_company_channels(items, *, value_attr, fallback_label):
@@ -458,6 +664,7 @@ def _build_company_table_rows(companies, table_headers, row_number_offset):
                 "template": COMPANY_TABLE_CELL_TEMPLATES["company"],
                 "href": reverse("company_detail", args=[company.id]),
                 "label": company.name,
+                "external": False,
             },
             "industry": {
                 "template": COMPANY_TABLE_CELL_TEMPLATES["industry"],
@@ -846,6 +1053,7 @@ def company_list(request):
         country_options=state["country_options"],
         revenue_options=state["revenue_options"],
     )
+    filter_ui = _build_company_filter_ui()
     toolbar_menus = _build_company_toolbar_menus(
         per_page=state["per_page"],
         per_page_menu_options=per_page_menu_options,
@@ -856,6 +1064,7 @@ def company_list(request):
         export_csv_query=_export_query(request, "csv"),
         export_xlsx_query=_export_query(request, "xlsx"),
     )
+    table_ui = _build_company_table_ui()
     empty_state = _build_company_empty_state(
         filters_active=state["filters_active"],
         has_company_records=state["has_company_records"],
@@ -882,7 +1091,9 @@ def company_list(request):
             "hero_metrics": hero_metrics,
             "hero_actions": hero_actions,
             "filter_panel": filter_panel,
+            "filter_ui": filter_ui,
             "toolbar_menus": toolbar_menus,
+            "table_ui": table_ui,
             "table_headers": table_headers,
             "table_rows": table_rows,
             "empty_state": empty_state,
@@ -893,15 +1104,13 @@ def company_list(request):
 @crm_role_required(ROLE_STAFF)
 def company_detail(request, company_id):
     company = get_object_or_404(_company_detail_queryset(), pk=company_id)
+    can_manage_records = user_has_minimum_crm_role(request.user, ROLE_TEAM_LEAD)
     return render(
         request,
         "crm/companies/company_detail.html",
         {
             "company": company,
-            "contact_count": len(company.contacts.all()),
-            "phone_count": len(company.phones.all()),
-            "email_count": len(company.emails.all()),
-            "profile_count": len(company.social_links.all()),
+            **_build_company_detail_context(company, can_manage_records=can_manage_records),
         },
     )
 

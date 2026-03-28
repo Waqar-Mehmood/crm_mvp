@@ -66,14 +66,17 @@ CONTACT_FILTER_KEYS = frozenset(
     }
 )
 CONTACT_TABLE_CELL_TEMPLATES = {
-    "row": "crm/components/contact_list/cells/text.html",
-    "contact": "crm/components/contact_list/cells/contact.html",
-    "title": "crm/components/contact_list/cells/text.html",
+    "row": "crm/components/list_workspace/cells/text.html",
+    "contact": "crm/components/list_workspace/cells/single_link.html",
+    "title": "crm/components/list_workspace/cells/text.html",
     "email": "crm/components/contact_list/cells/channels.html",
     "phone": "crm/components/contact_list/cells/channels.html",
-    "companies": "crm/components/contact_list/cells/links.html",
-    "profiles": "crm/components/contact_list/cells/links.html",
+    "companies": "crm/components/list_workspace/cells/stacked_links.html",
+    "profiles": "crm/components/list_workspace/cells/stacked_links.html",
 }
+DETAIL_CARDS_TEMPLATE = "crm/components/content_panels/body_detail_cards.html"
+DETAIL_FIELD_GRID_TEMPLATE = "crm/components/record_detail/body_field_grid.html"
+DETAIL_CHANNEL_LIST_TEMPLATE = "crm/components/record_detail/body_channel_list.html"
 
 
 def _contact_detail_queryset():
@@ -212,8 +215,21 @@ def _build_contact_filter_panel(
         "fields": _contact_filter_fields(filters),
         "active_filters": active_filters,
         "matching_count": matching_count,
-        "total_contacts": total_contacts,
+        "total_count": total_contacts,
         "reset_url": filter_reset_url,
+    }
+
+
+def _build_contact_filter_ui():
+    return {
+        "kicker": "Advanced filters",
+        "title": "Refine contact records",
+        "closed_label": "Show filters",
+        "open_label": "Hide filters",
+        "fields_template": "crm/components/list_workspace/filter_fields.html",
+        "id_prefix": "contact",
+        "results_label": "matching contacts",
+        "empty_results_subject": "contacts in the CRM roster",
     }
 
 
@@ -257,6 +273,14 @@ def _build_contact_toolbar_menus(
             ],
         },
     ]
+
+
+def _build_contact_table_ui():
+    return {
+        "toolbar_kicker": "Roster table",
+        "toolbar_title": "Contact records",
+        "row_template": "crm/components/list_workspace/table_row.html",
+    }
 
 
 def _normalize_contact_channels(items, *, fallback_value, value_attr, fallback_label):
@@ -325,7 +349,7 @@ def _build_contact_table_rows(contacts, table_headers, row_number_offset):
             },
             "contact": {
                 "template": CONTACT_TABLE_CELL_TEMPLATES["contact"],
-                "name": contact.full_name,
+                "label": contact.full_name,
                 "href": reverse("contact_detail", args=[contact.id]),
                 "notes": contact.notes,
             },
@@ -434,13 +458,89 @@ def _contact_form_bundle(request, contact):
 
 
 def _contact_form_context(contact, bundle, is_edit_mode):
+    selected_companies = list(bundle["form"].fields["companies"].queryset)
     return {
         "contact": contact,
         "form": bundle["form"],
-        "selected_companies": list(bundle["form"].fields["companies"].queryset),
+        "selected_companies": [
+            {
+                "id": company.id,
+                "label": company.name,
+                "meta": " | ".join(
+                    value
+                    for value in (
+                        company.industry,
+                        ", ".join(
+                            value for value in (company.city, company.state, company.country) if value
+                        ),
+                    )
+                    if value
+                ),
+            }
+            for company in selected_companies
+        ],
         "phone_formset": bundle["phone_formset"],
         "email_formset": bundle["email_formset"],
         "social_link_formset": bundle["social_link_formset"],
+        "contact_company_search_url": reverse("contact_company_search"),
+        "hero_metrics": [
+            {
+                "label": "Mode",
+                "value": "Edit" if is_edit_mode else "Create",
+                "subtext": "",
+                "mono": True,
+            },
+            {
+                "label": "Related forms",
+                "value": 3,
+                "subtext": "",
+            },
+        ],
+        "hero_actions": [
+            _contact_action(
+                "Back to contact" if is_edit_mode else "Back to contacts",
+                reverse("contact_detail", args=[contact.pk]) if is_edit_mode else reverse("contact_list"),
+                "primary",
+            ),
+            *(
+                [_contact_action("View detail", reverse("contact_detail", args=[contact.pk]))]
+                if is_edit_mode
+                else []
+            ),
+            _contact_action("Open companies", reverse("company_list")),
+        ],
+        "channel_sections": [
+            {
+                "formset": bundle["phone_formset"],
+                "title": "Phone lines",
+                "row_kicker": "Phone row",
+                "existing_label": "Existing line",
+                "new_label": "New line",
+                "remove_label": "phone row",
+                "empty_text": "No phone lines added yet.",
+                "add_label": "Add phone",
+            },
+            {
+                "formset": bundle["email_formset"],
+                "title": "Email addresses",
+                "row_kicker": "Email row",
+                "existing_label": "Existing inbox",
+                "new_label": "New inbox",
+                "remove_label": "email row",
+                "empty_text": "No email addresses added yet.",
+                "add_label": "Add email",
+            },
+            {
+                "formset": bundle["social_link_formset"],
+                "title": "Public profiles",
+                "row_kicker": "Profile row",
+                "existing_label": "Existing profile",
+                "new_label": "New profile",
+                "remove_label": "profile row",
+                "empty_text": "No public profiles added yet.",
+                "add_label": "Add profile",
+            },
+        ],
         "is_edit_mode": is_edit_mode,
         "form_title": "Edit contact" if is_edit_mode else "New contact",
         "form_description": (
@@ -454,6 +554,126 @@ def _contact_form_context(contact, bundle, is_edit_mode):
             if is_edit_mode
             else reverse("contact_list")
         ),
+    }
+
+
+def _build_contact_detail_context(contact, *, can_manage_records):
+    companies = list(contact.companies.all())
+    phones = list(contact.phones.all())
+    emails = list(contact.emails.all())
+    profiles = list(contact.social_links.all())
+
+    return {
+        "hero_metrics": [
+            {"label": "Linked companies", "value": len(companies), "subtext": ""},
+            {
+                "label": "Channels",
+                "value": len(phones) + len(emails) + len(profiles),
+                "subtext": "",
+            },
+        ],
+        "hero_actions": [
+            _contact_action("Back to contacts", reverse("contact_list"), "primary"),
+            *(
+                [_contact_action("Edit contact", reverse("contact_edit", args=[contact.id]))]
+                if can_manage_records
+                else []
+            ),
+            _contact_action("Open companies", reverse("company_list")),
+        ],
+        "top_panels": [
+            {
+                "kicker": "Profile summary",
+                "title": "Contact snapshot",
+                "body_template": DETAIL_FIELD_GRID_TEMPLATE,
+                "fields": [
+                    {
+                        "label": "Title",
+                        "value": contact.title or "No title captured",
+                        "span": 2,
+                        "nowrap": True,
+                        "title": contact.title or "No title captured",
+                    },
+                    {
+                        "label": "Primary email",
+                        "value": contact.email or "No primary email",
+                        "span": 2,
+                        "nowrap": True,
+                        "title": contact.email or "No primary email",
+                    },
+                    {"label": "Primary phone", "value": contact.phone or "No primary phone"},
+                    {"label": "Created", "value": contact.created_at.strftime("%Y-%m-%d %H:%M")},
+                ],
+                "note_kicker": "Internal notes",
+                "note": contact.notes,
+                "note_empty_text": "No internal notes are stored for this contact yet.",
+            },
+            {
+                "kicker": "Relationships",
+                "title": "Linked companies",
+                "body_template": DETAIL_CARDS_TEMPLATE,
+                "items": [
+                    {
+                        "kicker": "Company",
+                        "title": company.name,
+                        "meta": company.industry or "No industry tagged",
+                        "body": ", ".join(value for value in (company.city, company.state, company.country) if value)
+                        or "No location captured",
+                        "link": {
+                            "href": reverse("company_detail", args=[company.id]),
+                            "label": "Open company",
+                        },
+                    }
+                    for company in companies
+                ],
+                "empty_text": "No companies are linked to this contact yet.",
+            },
+        ],
+        "bottom_panels": [
+            {
+                "kicker": "Channels",
+                "title": "Email addresses",
+                "body_template": DETAIL_CHANNEL_LIST_TEMPLATE,
+                "lines": [
+                    {
+                        "label": humanize_channel_value((email.label or "").strip().lower()) or "Inbox",
+                        "value": email.email,
+                    }
+                    for email in emails
+                ],
+                "empty_text": "No additional email addresses are stored yet.",
+            },
+            {
+                "kicker": "Channels",
+                "title": "Phone lines",
+                "body_template": DETAIL_CHANNEL_LIST_TEMPLATE,
+                "lines": [
+                    {
+                        "label": humanize_channel_value((phone.label or "").strip().lower()) or "Line",
+                        "value": phone.phone,
+                    }
+                    for phone in phones
+                ],
+                "empty_text": "No additional phone numbers are stored yet.",
+            },
+        ],
+        "profile_panel": {
+            "kicker": "Channels",
+            "title": "Public profiles",
+            "body_template": DETAIL_CARDS_TEMPLATE,
+            "items": [
+                {
+                    "kicker": humanize_channel_value((link.platform or "").strip().lower()) or "Profile",
+                    "title": link.url,
+                    "link": {
+                        "href": link.url,
+                        "label": "Visit profile",
+                    },
+                }
+                for link in profiles
+            ],
+            "empty_text": "No public profile links are stored yet.",
+        },
     }
 
 
@@ -712,6 +932,7 @@ def contact_list(request):
         matching_count=page_obj.paginator.count,
         filter_reset_url=filter_reset_url,
     )
+    filter_ui = _build_contact_filter_ui()
     toolbar_menus = _build_contact_toolbar_menus(
         per_page=state["per_page"],
         per_page_menu_options=per_page_menu_options,
@@ -722,6 +943,7 @@ def contact_list(request):
         export_csv_query=_export_query(request, "csv"),
         export_xlsx_query=_export_query(request, "xlsx"),
     )
+    table_ui = _build_contact_table_ui()
     empty_state = _build_contact_empty_state(
         filters_active=state["filters_active"],
         has_contact_records=state["has_contact_records"],
@@ -748,7 +970,9 @@ def contact_list(request):
             "hero_metrics": hero_metrics,
             "hero_actions": hero_actions,
             "filter_panel": filter_panel,
+            "filter_ui": filter_ui,
             "toolbar_menus": toolbar_menus,
+            "table_ui": table_ui,
             "table_headers": table_headers,
             "table_rows": table_rows,
             "empty_state": empty_state,
@@ -759,15 +983,13 @@ def contact_list(request):
 @crm_role_required(ROLE_STAFF)
 def contact_detail(request, contact_id):
     contact = get_object_or_404(_contact_detail_queryset(), pk=contact_id)
+    can_manage_records = user_has_minimum_crm_role(request.user, ROLE_TEAM_LEAD)
     return render(
         request,
         "crm/contacts/contact_detail.html",
         {
             "contact": contact,
-            "company_count": len(contact.companies.all()),
-            "phone_count": len(contact.phones.all()),
-            "email_count": len(contact.emails.all()),
-            "profile_count": len(contact.social_links.all()),
+            **_build_contact_detail_context(contact, can_manage_records=can_manage_records),
         },
     )
 

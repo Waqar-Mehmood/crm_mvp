@@ -1,0 +1,7 @@
+<article class="flex h-full flex-col gap-5 rounded-crm-lg border border-brand-surface-borderSoft bg-brand-gradient-surface p-5 text-brand-text-base shadow-brand-panel sm:p-6">
+    {% include "crm/components/content_panels/panel_header.html" with panel=panel only %}
+    {% if panel.intro %}
+        <p class="m-0 text-sm leading-7 text-brand-text-muted">{{ panel.intro }}</p>
+    {% endif %}
+    {% include panel.body_template with panel=panel only %}
+</article>

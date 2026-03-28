@@ -1,0 +1,74 @@
+<article class="flex h-full flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-5 shadow-brand-panel sm:p-6" data-formset-section>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-brand-text-subtle">Related channels</p>
+            <h2 class="m-0 pt-2 font-serif text-[2rem] leading-none text-brand-text-base">{{ section.title }}</h2>
+        </div>
+        <button class="inline-flex min-h-[42px] items-center justify-center rounded-full border border-brand-surface-borderSoft bg-white/88 px-4 text-sm font-semibold text-brand-text-soft no-underline shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base" type="button" data-formset-add>{{ section.add_label }}</button>
+    </div>
+    <div
+        class="flex flex-col gap-4"
+        data-dynamic-formset
+        data-empty-text="{{ section.empty_text }}"
+        data-existing-label="{{ section.existing_label }}"
+        data-new-label="{{ section.new_label }}"
+    >
+        {{ section.formset.management_form }}
+        {% for error in section.formset.non_form_errors %}
+            <p class="tw-notice border-rose/30 bg-rose/10">{{ error }}</p>
+        {% endfor %}
+        <div class="grid gap-4" data-formset-rows>
+            {% for row_form in section.formset %}
+                <article class="flex flex-col gap-4 rounded-[1.5rem] border border-brand-surface-borderSoft bg-white/84 p-4 shadow-brand-surface-inset-strong" data-formset-row>
+                    {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="flex flex-col gap-2">
+                        <p class="m-0 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-brand-text-subtle">{{ section.row_kicker }}</p>
+                        <h3 class="m-0 text-base font-semibold text-brand-text-strong" data-formset-row-title>{% if row_form.instance.pk %}{{ section.existing_label }}{% else %}{{ section.new_label }}{% endif %}</h3>
+                    </div>
+                    {% for error in row_form.non_field_errors %}
+                        <p class="tw-notice border-rose/30 bg-rose/10">{{ error }}</p>
+                    {% endfor %}
+                    <div class="grid gap-4 md:grid-cols-2">
+                        {% for field in row_form.visible_fields %}
+                            {% if field.name != "DELETE" %}
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-semibold text-brand-text-base" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% for error in field.errors %}
+                                        <p class="tw-notice border-rose/30 bg-rose/10">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if row_form.DELETE %}
+                        <label class="inline-flex items-center gap-3 text-sm font-medium text-brand-text-muted">{{ row_form.DELETE }} Remove this {{ section.remove_label }}</label>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+        <p class="m-0 rounded-[1.25rem] border border-dashed border-brand-surface-border bg-white/58 px-4 py-3 text-sm leading-6 text-brand-text-muted{% if section.formset.forms %} hidden{% endif %}" data-formset-empty-state>{{ section.empty_text }}</p>
+        <template data-formset-template>
+            <article class="flex flex-col gap-4 rounded-[1.5rem] border border-brand-surface-borderSoft bg-white/84 p-4 shadow-brand-surface-inset-strong" data-formset-row>
+                {% for hidden in section.formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <div class="flex flex-col gap-2">
+                    <p class="m-0 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-brand-text-subtle">{{ section.row_kicker }}</p>
+                    <h3 class="m-0 text-base font-semibold text-brand-text-strong" data-formset-row-title>{{ section.new_label }}</h3>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    {% for field in section.formset.empty_form.visible_fields %}
+                        {% if field.name != "DELETE" %}
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-brand-text-base" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% if section.formset.empty_form.DELETE %}
+                    <label class="inline-flex items-center gap-3 text-sm font-medium text-brand-text-muted">{{ section.formset.empty_form.DELETE }} Remove this {{ section.remove_label }}</label>
+                {% endif %}
+            </article>
+        </template>
+    </div>
+</article>

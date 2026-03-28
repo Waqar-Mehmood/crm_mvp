@@ -5,52 +5,50 @@
 {% block page_title %}Sign in to {{ site_brand }}{% endblock %}
 {% block page_description %}Use your existing Django account to access the CRM workspace. Companies, contacts, and imports are available only after login.{% endblock %}
 {% block hero_side %}
-    <div class="metric-grid">
-        <article class="metric-card">
-            <p class="metric-label">Access mode</p>
-            <strong class="metric-value is-mono">Session login</strong>
+    <div class="grid gap-4 sm:grid-cols-2">
+        <article class="flex min-h-[5.35rem] flex-col justify-between gap-2 rounded-[1.35rem] border border-white/7 bg-brand-shell-900/95 px-5 py-[1.05rem] shadow-brand-dark-inset backdrop-blur-md">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/42">Access mode</p>
+            <strong class="font-mono text-[1.86rem] font-semibold leading-none tracking-[-0.035em] text-brand-text-inverse">Session login</strong>
         </article>
-        <article class="metric-card">
-            <p class="metric-label">Protected areas</p>
-            <strong class="metric-value is-mono">All CRM pages</strong>
+        <article class="flex min-h-[5.35rem] flex-col justify-between gap-2 rounded-[1.35rem] border border-white/7 bg-brand-shell-900/95 px-5 py-[1.05rem] shadow-brand-dark-inset backdrop-blur-md">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/42">Protected areas</p>
+            <strong class="font-mono text-[1.86rem] font-semibold leading-none tracking-[-0.035em] text-brand-text-inverse">All CRM pages</strong>
         </article>
     </div>
 {% endblock %}
 
 {% block content %}
-    <section class="split-layout auth-layout">
-        <article class="support-card">
-            <p class="section-kicker">Access policy</p>
-            <h2>Authenticated users can browse the CRM.</h2>
-            <p>Team leads and above can also upload and map imports. Django admin remains available separately at <span class="path-chip">/admin/</span>.</p>
+    <section class="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+        <article class="flex flex-col gap-4 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-6 text-brand-text-base shadow-brand-panel sm:p-7">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-brand-text-subtle">Access policy</p>
+            <h2 class="m-0 font-serif text-[2rem] leading-none text-brand-text-base">Authenticated users can browse the CRM.</h2>
+            <p class="m-0 text-sm leading-7 text-brand-text-muted">Team leads and above can also upload and map imports. Django admin remains available separately at <span class="inline-flex items-center rounded-full border border-brand-surface-borderSoft bg-white px-3 py-1 text-xs font-semibold text-brand-text-soft">/admin/</span>.</p>
             {% if form.errors %}
-                <p class="notice is-error">Your username or password did not match. Try again.</p>
+                <p class="tw-notice border-rose/30 bg-rose/10">Your username or password did not match. Try again.</p>
             {% endif %}
         </article>
 
-        <article class="form-card">
-            <div class="panel-head">
-                <div>
-                    <p class="section-kicker">Account login</p>
-                    <h2>Welcome back</h2>
-                </div>
+        <article class="flex flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-6 text-brand-text-base shadow-brand-panel sm:p-7">
+            <div>
+                <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-brand-text-subtle">Account login</p>
+                <h2 class="m-0 pt-2 font-serif text-[2rem] leading-none text-brand-text-base">Welcome back</h2>
             </div>
 
-            <form method="post" class="form-layout">
+            <form method="post" class="flex flex-col gap-5">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next }}">
 
-                <div class="field">
-                    <label for="id_username">Username</label>
-                    <input type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-brand-text-base" for="id_username">Username</label>
+                    <input class="tw-input" type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required>
                 </div>
 
-                <div class="field">
-                    <label for="id_password">Password</label>
-                    <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-brand-text-base" for="id_password">Password</label>
+                    <input class="tw-input" type="password" name="password" id="id_password" autocomplete="current-password" required>
                 </div>
 
-                <button type="submit">Log in</button>
+                <button class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-5 text-sm font-semibold text-brand-text-strong shadow-brand-button transition duration-200 hover:-translate-y-px hover:border-brand-accent/50" type="submit">Log in</button>
             </form>
         </article>
     </section>

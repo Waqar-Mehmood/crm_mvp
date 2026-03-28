@@ -1,11 +1,11 @@
 <td class="align-top px-5 py-[14px]">
-    {% if primary or secondary %}
+    {% if cell.primary or cell.secondary %}
         <div class="flex flex-col gap-1">
-            {% if primary %}
-                <div class="text-sm font-medium leading-6 text-brand-text-base">{{ primary }}</div>
+            {% if cell.primary %}
+                <div class="text-sm font-medium leading-6 text-brand-text-base">{{ cell.primary }}</div>
             {% endif %}
-            {% if secondary %}
-                <div class="text-sm leading-6 text-brand-text-subtle">{{ secondary }}</div>
+            {% if cell.secondary %}
+                <div class="text-sm leading-6 text-brand-text-subtle">{{ cell.secondary }}</div>
             {% endif %}
         </div>
     {% endif %}

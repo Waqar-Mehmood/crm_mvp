@@ -1,0 +1,4 @@
+{% if panel.stats %}
+    {% include "crm/components/content_panels/stats_grid.html" with stats=panel.stats only %}
+{% endif %}
+{% include "crm/components/content_panels/detail_cards.html" with panel=panel only %}
