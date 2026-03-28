@@ -33,7 +33,9 @@ The Zulfis CRM is a Django-based customer relationship management app for managi
 
 - Docker
 - Docker Compose
-- A machine-level local HTTPS proxy already configured to route `https://app.thezulfis.local` to the `crm-web` container on the `local_proxy` network
+- A machine-level local HTTPS proxy already configured to route:
+  - `https://app.thezulfis.local` to the `crm-web` container on the `local_proxy` network
+  - `https://db.app.thezulfis.local` to the `crm-adminer` container on the `local_proxy` network
 
 ### 1. Create the shared Docker network
 
@@ -88,10 +90,20 @@ Local URLs:
 - `https://app.thezulfis.local/contacts/`
 - `https://app.thezulfis.local/imports/`
 - `https://app.thezulfis.local/admin/`
+- `https://db.app.thezulfis.local/` for Adminer with local auto-login
 
 Database UI:
 
-- `http://localhost:8080` for Adminer
+- `https://db.app.thezulfis.local/` for local HTTPS Adminer access with automatic login
+- `http://localhost:${ADMINER_PORT:-18080}` as a fallback direct Adminer URL
+
+Adminer notes:
+
+- Local Adminer auto-login uses the same `POSTGRES_*` values from the repo `.env`.
+- The HTTPS host `db.app.thezulfis.local` proxies to `crm-adminer:8080` on the shared `local_proxy` network.
+- The direct Adminer fallback port defaults to `18080` on this machine to avoid a host-port conflict with another local project; you can still override it with `ADMINER_PORT` if needed.
+- If you ever need the manual Adminer login screen instead of auto-login, open:
+  - `http://localhost:${ADMINER_PORT:-18080}/?manual=1`
 
 ## Common Commands
 

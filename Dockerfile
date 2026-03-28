@@ -19,7 +19,8 @@ COPY app/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app /app
-RUN TAILWIND_PROJECT_ROOT=/app /frontend/node_modules/.bin/postcss /app/crm/static_src/crm/tailwind.css -o /app/crm/static/crm/tailwind.css
+RUN TAILWIND_PROJECT_ROOT=/app /frontend/node_modules/.bin/postcss /app/crm/static_src/crm/tailwind.css --config /frontend -o /app/crm/static/crm/tailwind.css
 
-# Rebuild static assets on boot so a fresh checkout works with DEBUG=False.
-CMD ["bash", "-lc", "python -m django --version && python manage.py collectstatic --noinput && if [ \"$DEBUG\" = \"True\" ]; then exec gunicorn config.wsgi:application --reload --timeout ${GUNICORN_TIMEOUT:-300} --bind 0.0.0.0:8000; else exec gunicorn config.wsgi:application --timeout ${GUNICORN_TIMEOUT:-300} --bind 0.0.0.0:8000; fi"]
+# Rebuild Tailwind on boot so bind-mounted source or a fresh checkout cannot serve
+# the unprocessed source stylesheet in production.
+CMD ["bash", "-lc", "TAILWIND_PROJECT_ROOT=/app /frontend/node_modules/.bin/postcss /app/crm/static_src/crm/tailwind.css --config /frontend -o /app/crm/static/crm/tailwind.css && python -m django --version && python manage.py collectstatic --noinput && if [ \"$DEBUG\" = \"True\" ]; then exec gunicorn config.wsgi:application --reload --timeout ${GUNICORN_TIMEOUT:-300} --bind 0.0.0.0:8000; else exec gunicorn config.wsgi:application --timeout ${GUNICORN_TIMEOUT:-300} --bind 0.0.0.0:8000; fi"]

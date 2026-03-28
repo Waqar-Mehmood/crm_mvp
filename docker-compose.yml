@@ -48,12 +48,26 @@ services:
       default:
 
   adminer:
-    image: adminer:latest
+    build:
+      context: .
+      dockerfile: docker/adminer/Dockerfile
+    environment:
+      ADMINER_AUTOLOGIN: "true"
+      ADMINER_DEFAULT_SERVER: ${POSTGRES_HOST:-db}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "8080:8080"
+      - "${ADMINER_PORT:-18080}:8080"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      default:
+      local_proxy:
+        aliases:
+          - crm-adminer
 
 networks:
   local_proxy:
