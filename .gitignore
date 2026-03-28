@@ -21,6 +21,7 @@ app/crm/static/crm_spa/
 
 # Docker and local service data
 postgres_data/
+backups/
 
 # Django-generated runtime files
 app/data/uploads/

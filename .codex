@@ -1,0 +1,27 @@
+# Repo-local Codex marker and workflow defaults
+# This file is a project convention for humans and future automation.
+# It does not change Django, Tailwind, or Codex behavior by itself.
+
+project: crm_mvp
+marker: true
+purpose:
+  - local-workflow-marker
+  - repo-specific-codex-convention
+
+stack:
+  backend: django
+  frontend: django-templates-tailwind
+  styling: tailwind-single-source
+  database: postgres
+
+codex_defaults:
+  response_language: english
+  primary_test_gate: bash scripts/test_gate.sh shared
+  full_test_gate: bash scripts/test_gate.sh full
+  db_backup_dir: backups/database
+
+notes:
+  - Use this file as a quick repo identity marker for Codex work.
+  - Add small project-specific workflow defaults here when they help repeated work.
+  - Do not store secrets in this file.
+  - If future scripts read this file, keep the keys stable and human-readable.
