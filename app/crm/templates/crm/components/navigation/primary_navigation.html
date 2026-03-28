@@ -1,0 +1,12 @@
+{% url 'home' as home_url %}
+{% url 'company_list' as company_list_url %}
+{% url 'contact_list' as contact_list_url %}
+{% url 'import_file_list' as import_file_list_url %}
+{% with current_url_name=request.resolver_match.url_name|default:'' %}
+    <nav class="flex flex-wrap items-center gap-3" aria-label="Primary">
+        {% include "crm/components/navigation/primary_navigation_item.html" with href=home_url label="Dashboard" current_url_name=current_url_name active_names="|home|" only %}
+        {% include "crm/components/navigation/primary_navigation_item.html" with href=company_list_url label="Companies" current_url_name=current_url_name active_names="|company_list|company_detail|company_create|company_edit|" only %}
+        {% include "crm/components/navigation/primary_navigation_item.html" with href=contact_list_url label="Contacts" current_url_name=current_url_name active_names="|contact_list|contact_detail|contact_create|contact_edit|" only %}
+        {% include "crm/components/navigation/primary_navigation_item.html" with href=import_file_list_url label="Imports" current_url_name=current_url_name active_names="|import_file_list|import_file_detail|import_file_raw_source|import_upload|import_map_headers|import_google_sheets|" only %}
+    </nav>
+{% endwith %}

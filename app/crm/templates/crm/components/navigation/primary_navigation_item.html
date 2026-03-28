@@ -1,0 +1,8 @@
+{% with active_token='|'|add:current_url_name|add:'|' %}
+    <a
+        class="tw-nav-pill{% if active_token in active_names %} tw-nav-pill-active{% endif %}"
+        href="{{ href }}"
+    >
+        {{ label }}
+    </a>
+{% endwith %}

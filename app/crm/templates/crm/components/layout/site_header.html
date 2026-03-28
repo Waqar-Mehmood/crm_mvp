@@ -1,0 +1,11 @@
+<header class="tw-shell-card flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+    {% include "crm/components/logo.html" %}
+    {% if request.user.is_authenticated %}
+        <div class="flex flex-col gap-4 lg:items-end xl:flex-row xl:items-center">
+            {% if crm_can_browse %}
+                {% include "crm/components/navigation/primary_navigation.html" %}
+            {% endif %}
+            {% include "crm/components/navigation/session_controls.html" %}
+        </div>
+    {% endif %}
+</header>

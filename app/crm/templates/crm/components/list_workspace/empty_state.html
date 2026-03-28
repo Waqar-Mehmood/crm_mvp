@@ -1,0 +1,11 @@
+<section class="flex flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-6 shadow-brand-card sm:p-8">
+    <div class="max-w-[42rem]">
+        <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ state.kicker }}</p>
+        <h2 class="m-0 pt-2 font-serif text-[1.72rem] leading-[1.05] text-brand-text-heading">{{ state.title }}</h2>
+        <p class="m-0 pt-4 text-sm leading-7 text-brand-text-muted">{{ state.description }}</p>
+    </div>
+    {% if state.active_filters %}
+        {% include "crm/components/list_workspace/active_filter_chips.html" with active_filters=state.active_filters only %}
+    {% endif %}
+    {% include actions_template with actions=state.actions tone=action_tone only %}
+</section>

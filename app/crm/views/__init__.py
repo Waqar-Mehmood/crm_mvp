@@ -6,6 +6,7 @@ within the package.
 """
 
 from .dashboard_views import dashboard_home
+from .dev_views import dev_reload_token
 from .company_views import (
     company_contact_search,
     company_create,
@@ -33,6 +34,7 @@ from .import_views import (
 
 __all__ = [
     "dashboard_home",
+    "dev_reload_token",
     "company_contact_search",
     "company_create",
     "company_detail",

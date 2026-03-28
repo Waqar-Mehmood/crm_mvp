@@ -1,0 +1,9 @@
+{% if messages %}
+    <section class="flex flex-col gap-3" aria-label="Notifications">
+        {% for message in messages %}
+            <p class="tw-notice{% if message.tags == 'error' %} border-brand-danger/30 bg-brand-danger/10{% elif message.tags == 'success' %} border-brand-teal/30 bg-brand-teal/10{% endif %}">
+                {{ message }}
+            </p>
+        {% endfor %}
+    </section>
+{% endif %}

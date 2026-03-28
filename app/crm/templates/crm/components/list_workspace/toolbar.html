@@ -1,0 +1,17 @@
+<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div class="min-w-0">
+        <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ kicker }}</p>
+        <h2 class="m-0 pt-2 font-serif text-[1.72rem] leading-[1.05] text-brand-text-heading">{{ title }}</h2>
+    </div>
+    <div class="flex flex-wrap items-center gap-3 xl:pt-1">
+        {% for menu in menus %}
+            {% if menu.kind == "rows" %}
+                {% include "crm/components/list_workspace/menus/rows_menu.html" with menu=menu only %}
+            {% elif menu.kind == "columns" %}
+                {% include "crm/components/list_workspace/menus/columns_menu.html" with menu=menu only %}
+            {% elif menu.kind == "export" %}
+                {% include "crm/components/list_workspace/menus/export_menu.html" with menu=menu only %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

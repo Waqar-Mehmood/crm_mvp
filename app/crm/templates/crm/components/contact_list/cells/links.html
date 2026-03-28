@@ -1,0 +1,11 @@
+<td class="align-top px-5 py-[14px]">
+    {% if links %}
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+            {% for link in links %}
+                <li>
+                    <a class="text-sm font-semibold text-brand-accent no-underline underline-offset-[0.18em] transition duration-150 hover:text-brand-accent-strong hover:underline" href="{{ link.href }}"{% if link.external %} target="_blank" rel="noreferrer"{% endif %}>{{ link.label }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</td>

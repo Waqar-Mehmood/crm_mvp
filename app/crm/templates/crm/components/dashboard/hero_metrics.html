@@ -1,0 +1,9 @@
+<div class="grid gap-4 sm:grid-cols-2">
+    {% for metric in metrics %}
+        <article class="flex flex-col gap-2 rounded-[1.6rem] border border-white/10 bg-ink-900/55 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
+            <p class="m-0 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-paper-100/55">{{ metric.label }}</p>
+            <strong class="text-[2rem] font-semibold leading-none text-paper-100">{{ metric.value }}</strong>
+            <span class="text-sm leading-6 text-paper-100/72">{{ metric.subtext }}</span>
+        </article>
+    {% endfor %}
+</div>

@@ -60,6 +60,9 @@ class DashboardViewTests(CRMRoleTestMixin, TestCase):
         self.assertTemplateUsed(response, "crm/dashboard/home.html")
         self.assertContains(response, "Workspace dashboard")
         self.assertContains(response, "leads.csv")
+        self.assertNotContains(response, "metric-card")
+        self.assertNotContains(response, "record-card")
+        self.assertNotContains(response, "detail-card")
 
     def test_owner_dashboard_shows_team_activity_section(self):
         self.client.force_login(self.owner_user)

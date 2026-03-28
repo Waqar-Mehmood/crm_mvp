@@ -1,0 +1,23 @@
+<details class="group/columns relative">
+    <summary class="inline-flex min-h-[40px] cursor-pointer list-none items-center justify-center gap-2 rounded-[0.8rem] border border-brand-surface-borderSoft bg-white/92 px-4 text-sm font-semibold text-brand-text-soft shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base">
+        <span>{{ menu.label }}</span>
+        <svg class="h-3 w-3 transition duration-200 group-open/columns:rotate-180" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+        </svg>
+    </summary>
+    <form method="get" class="absolute right-0 z-20 mt-2 flex min-w-[16rem] flex-col gap-3 rounded-[1rem] border border-brand-surface-borderSoft bg-white/96 p-4 shadow-brand-panel backdrop-blur" data-column-picker-form>
+        {% for item in menu.hidden_items %}
+            <input type="hidden" name="{{ item.0 }}" value="{{ item.1 }}">
+        {% endfor %}
+        <input type="hidden" name="columns" value="{{ menu.output_value }}" data-columns-output>
+        <div class="flex flex-col gap-2">
+            {% for option in menu.options %}
+                <label class="flex items-center gap-3 rounded-[0.9rem] px-2 py-2 text-sm text-brand-text-soft hover:bg-brand-surface-soft">
+                    <input type="checkbox" value="{{ option.key }}" data-column-option {% if option.checked %}checked{% endif %}>
+                    <span>{{ option.label }}</span>
+                </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="inline-flex min-h-[42px] items-center justify-center rounded-[0.95rem] border border-brand-accent/30 bg-brand-gradient-accent px-4 text-sm font-semibold text-brand-text-strong shadow-brand-button transition duration-200 hover:-translate-y-px hover:border-brand-accent/50">Apply columns</button>
+    </form>
+</details>

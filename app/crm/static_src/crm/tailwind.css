@@ -4,35 +4,43 @@
 
 @layer components {
   .tw-shell-card {
-    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] shadow-crm backdrop-blur;
+    @apply rounded-crm-lg border border-white/10 bg-brand-shell-900/60 shadow-crm backdrop-blur;
   }
 
   .tw-panel {
-    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] p-6 text-paper-100 shadow-crm backdrop-blur;
+    @apply rounded-crm-lg border border-white/10 bg-brand-shell-900/60 p-6 text-brand-text-inverse shadow-crm backdrop-blur;
   }
 
   .tw-button-primary {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-gradient-to-br from-paper-100 to-[#f1dcc3] px-[18px] font-bold text-ink-900 no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
+    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-brand-accent/30 bg-brand-gradient-accent px-[18px] font-bold text-brand-text-strong no-underline shadow-brand-button transition duration-200 hover:-translate-y-px hover:shadow-lg;
   }
 
   .tw-button-secondary {
-    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-[18px] font-bold text-paper-100 no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
+    @apply inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-[18px] font-bold text-brand-text-inverse no-underline transition duration-200 hover:-translate-y-px hover:shadow-lg;
   }
 
   .tw-kicker {
-    @apply m-0 text-[0.74rem] font-bold uppercase tracking-[0.16em] text-paper-100/70;
+    @apply m-0 text-[0.74rem] font-bold uppercase tracking-[0.16em] text-brand-text-inverse/70;
+  }
+
+  .tw-nav-pill {
+    @apply inline-flex min-h-[46px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-brand-text-inverse/80 no-underline transition duration-200 hover:-translate-y-px hover:border-white/20 hover:bg-white/[0.08] hover:text-brand-text-inverse;
+  }
+
+  .tw-nav-pill-active {
+    @apply border-brand-surface-base/50 bg-gradient-to-br from-brand-surface-base to-brand-surface-warm text-brand-text-strong hover:text-brand-text-strong;
   }
 
   .tw-input {
-    @apply min-h-[46px] w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+    @apply min-h-[46px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
   }
 
   .tw-notice {
-    @apply rounded-crm-sm border border-accent/15 bg-accent/10 px-4 py-3 text-sm text-panel-text;
+    @apply rounded-crm-sm border border-brand-accent/15 bg-brand-accent/10 px-4 py-3 text-sm text-brand-text-base;
   }
 
   .tw-import-hero {
-    @apply rounded-crm-lg border border-white/10 bg-gradient-to-r from-teal/30 via-ink-900/80 to-accent/20 p-6 shadow-crm backdrop-blur md:p-8;
+    @apply rounded-crm-lg border border-white/10 bg-brand-gradient-hero p-6 shadow-crm backdrop-blur md:p-8;
   }
 
   .tw-import-grid {
@@ -40,31 +48,31 @@
   }
 
   .tw-import-card {
-    @apply rounded-crm-lg border border-[#ddcfb6]/80 bg-gradient-to-br from-paper-100 to-[#efe5d0] p-6 text-panel-text shadow-crm-soft;
+    @apply rounded-crm-lg border border-brand-surface-border/80 bg-gradient-to-br from-brand-surface-base to-brand-surface-warm p-6 text-brand-text-base shadow-brand-card;
   }
 
   .tw-import-subcard {
-    @apply rounded-crm-md border border-[#ddcfb6] bg-white/70 p-5 shadow-sm;
+    @apply rounded-crm-md border border-brand-surface-border bg-white/70 p-5 shadow-sm;
   }
 
   .tw-import-dark-card {
-    @apply rounded-crm-lg border border-white/10 bg-white/[0.04] p-6 text-paper-100 shadow-crm backdrop-blur;
+    @apply rounded-crm-lg border border-white/10 bg-brand-shell-900/60 p-6 text-brand-text-inverse shadow-crm backdrop-blur;
   }
 
   .tw-import-metric {
-    @apply rounded-crm-md border border-white/10 bg-ink-900/70 p-4 text-paper-100 shadow-crm-soft;
+    @apply rounded-crm-md border border-white/10 bg-brand-shell-900/70 p-4 text-brand-text-inverse shadow-crm-soft;
   }
 
   .tw-import-result-card {
-    @apply rounded-crm-md border border-slate-200/80 bg-white/80 p-5 shadow-sm;
+    @apply rounded-crm-md border border-brand-surface-border/80 bg-white/80 p-5 text-brand-text-base shadow-sm;
   }
 
   .tw-import-input {
-    @apply min-h-[48px] w-full rounded-[18px] border border-[#d9ccb5] bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+    @apply min-h-[48px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
   }
 
   .tw-import-select {
-    @apply min-h-[48px] w-full rounded-[18px] border border-[#d9ccb5] bg-white px-4 py-3 text-sm text-panel-text shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
+    @apply min-h-[48px] w-full rounded-[18px] border border-brand-surface-border bg-white px-4 py-3 text-sm text-brand-text-base shadow-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20;
   }
 
   .tw-import-filter-form {
@@ -80,7 +88,7 @@
   }
 
   .tw-import-filter-label {
-    @apply block pl-1 text-sm font-semibold text-panel-text;
+    @apply block pl-1 text-sm font-semibold text-brand-text-base;
   }
 
   .tw-import-filter-shell {
@@ -88,19 +96,19 @@
   }
 
   .tw-import-filter-input {
-    @apply min-h-[52px] rounded-[20px] border-[#d7c7ac] bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-teal focus:ring-teal/20;
+    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-brand-teal focus:ring-brand-teal/20;
   }
 
   .tw-import-filter-actions {
-    @apply flex flex-col gap-3 border-t border-[#ddcfb6]/90 pt-4 sm:flex-row sm:items-center sm:justify-end;
+    @apply flex flex-col gap-3 border-t border-brand-surface-border/90 pt-4 sm:flex-row sm:items-center sm:justify-end;
   }
 
   .tw-import-filter-reset {
-    @apply inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border border-[#d7c7ac] bg-white px-[18px] font-bold text-panel-text no-underline transition duration-200 hover:-translate-y-px hover:border-accent hover:text-accent sm:w-auto;
+    @apply inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border border-brand-surface-border bg-white px-[18px] font-bold text-brand-text-base no-underline transition duration-200 hover:-translate-y-px hover:border-brand-accent hover:text-brand-accent sm:w-auto;
   }
 
   .tw-import-filter-icon {
-    @apply pointer-events-none absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#f3ead8] text-panel-muted transition;
+    @apply pointer-events-none absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-brand-surface-chrome text-brand-text-muted transition;
   }
 
   .tw-import-filter-icon svg {
@@ -108,7 +116,7 @@
   }
 
   .tw-import-filter-shell:focus-within .tw-import-filter-icon {
-    @apply bg-teal/10 text-teal;
+    @apply bg-brand-teal/10 text-brand-teal;
   }
 
   .tw-import-filter-date-input::-webkit-calendar-picker-indicator {
@@ -124,7 +132,7 @@
   }
 
   .tw-import-filter-select-shell .choices__inner {
-    @apply min-h-[52px] rounded-[20px] border border-[#d7c7ac] bg-white/95 px-4 py-0 text-sm text-panel-text shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition;
+    @apply min-h-[52px] rounded-[20px] border border-brand-surface-border bg-white/95 px-4 py-0 text-sm text-brand-text-base shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition;
   }
 
   .tw-import-filter-select-shell .choices__list--single {
@@ -132,36 +140,36 @@
   }
 
   .tw-import-filter-select-shell .choices__list--single .choices__item {
-    @apply text-sm text-panel-text;
+    @apply text-sm text-brand-text-base;
   }
 
   .tw-import-filter-select-shell .choices[data-type*="select-one"]::after {
-    @apply right-5 mt-[-3px] h-2.5 w-2.5 rotate-45 border-0 border-b-2 border-r-2 border-[#79644a] transition;
+    @apply right-5 mt-[-3px] h-2.5 w-2.5 rotate-45 border-0 border-b-2 border-r-2 border-brand-text-muted transition;
     content: "";
   }
 
   .tw-import-filter-select-shell .choices.is-focused .choices__inner,
   .tw-import-filter-select-shell .choices.is-open .choices__inner {
-    @apply border-teal shadow-[0_0_0_4px_rgba(19,145,139,0.16),0_18px_36px_rgba(15,23,42,0.1)];
+    @apply border-brand-teal shadow-[0_0_0_4px_rgba(19,145,139,0.16),0_18px_36px_rgba(15,23,42,0.1)];
   }
 
   .tw-import-filter-select-shell .choices__list--dropdown,
   .tw-import-filter-select-shell .choices__list[aria-expanded] {
-    @apply z-30 mt-2 overflow-hidden rounded-[20px] border border-[#d7c7ac] bg-[#fffdf8] p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
+    @apply z-30 mt-2 overflow-hidden rounded-[20px] border border-brand-surface-border bg-brand-surface-soft p-2 shadow-[0_26px_60px_rgba(15,23,42,0.18)];
   }
 
   .tw-import-filter-select-shell .choices__list--dropdown .choices__item,
   .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item {
-    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-panel-text;
+    @apply rounded-[14px] px-3 py-3 text-sm font-medium text-brand-text-base;
   }
 
   .tw-import-filter-select-shell .choices__list--dropdown .choices__item--selectable.is-highlighted,
   .tw-import-filter-select-shell .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-    @apply bg-teal/10 text-teal;
+    @apply bg-brand-teal/10 text-brand-teal;
   }
 
   .tw-import-filter-select-shell .choices__placeholder {
-    @apply opacity-100 text-panel-muted;
+    @apply opacity-100 text-brand-text-muted;
   }
 
   .tw-import-filter-date-shell .flatpickr-input[readonly],
@@ -170,15 +178,15 @@
   }
 
   .tw-import-date-alt {
-    @apply min-h-[52px] rounded-[20px] border-[#d7c7ac] bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-teal focus:ring-teal/20;
+    @apply min-h-[52px] rounded-[20px] border-brand-surface-border bg-white/95 pr-12 shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:border-brand-teal focus:ring-brand-teal/20;
   }
 
   .tw-import-date-alt:focus {
-    @apply border-teal ring-2 ring-teal/20;
+    @apply border-brand-teal ring-2 ring-brand-teal/20;
   }
 
   .tw-import-datepicker.flatpickr-calendar {
-    @apply rounded-[24px] border border-[#d7c7ac] bg-[#fffdf8] p-3 shadow-[0_28px_70px_rgba(15,23,42,0.22)];
+    @apply rounded-[24px] border border-brand-surface-border bg-brand-surface-soft p-3 shadow-[0_28px_70px_rgba(15,23,42,0.22)];
   }
 
   .tw-import-datepicker.arrowTop::before,
@@ -193,29 +201,29 @@
   }
 
   .tw-import-datepicker .flatpickr-month {
-    @apply text-panel-text;
+    @apply text-brand-text-base;
   }
 
   .tw-import-datepicker .flatpickr-current-month {
-    @apply flex items-center gap-1 py-1 text-[0.95rem] font-semibold text-panel-text;
+    @apply flex items-center gap-1 py-1 text-[0.95rem] font-semibold text-brand-text-base;
   }
 
   .tw-import-datepicker .flatpickr-current-month .flatpickr-monthDropdown-months,
   .tw-import-datepicker .flatpickr-current-month input.cur-year {
-    @apply rounded-[12px] border border-transparent bg-[#f4ebd7] px-2 py-1 text-panel-text;
+    @apply rounded-[12px] border border-transparent bg-brand-surface-chrome px-2 py-1 text-brand-text-base;
   }
 
   .tw-import-datepicker .flatpickr-prev-month,
   .tw-import-datepicker .flatpickr-next-month {
-    @apply relative top-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-panel-text transition hover:bg-teal/10 hover:text-teal;
+    @apply relative top-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-text-base transition hover:bg-brand-teal/10 hover:text-brand-teal;
   }
 
   .tw-import-datepicker .flatpickr-weekdays {
-    @apply mb-1 rounded-[16px] bg-[#f4ebd7] px-2 py-1;
+    @apply mb-1 rounded-[16px] bg-brand-surface-chrome px-2 py-1;
   }
 
   .tw-import-datepicker span.flatpickr-weekday {
-    @apply text-[0.72rem] font-bold uppercase tracking-[0.14em] text-panel-muted;
+    @apply text-[0.72rem] font-bold uppercase tracking-[0.14em] text-brand-text-muted;
   }
 
   .tw-import-datepicker .dayContainer {
@@ -223,25 +231,25 @@
   }
 
   .tw-import-datepicker .flatpickr-day {
-    @apply rounded-[14px] border-transparent text-panel-text transition;
+    @apply rounded-[14px] border-transparent text-brand-text-base transition;
   }
 
   .tw-import-datepicker .flatpickr-day.today {
-    @apply border border-teal/30 text-teal;
+    @apply border border-brand-teal/30 text-brand-teal;
   }
 
   .tw-import-datepicker .flatpickr-day:hover {
-    @apply border-transparent bg-teal/10 text-teal;
+    @apply border-transparent bg-brand-teal/10 text-brand-teal;
   }
 
   .tw-import-datepicker .flatpickr-day.selected,
   .tw-import-datepicker .flatpickr-day.startRange,
   .tw-import-datepicker .flatpickr-day.endRange {
-    @apply border-transparent bg-gradient-to-br from-teal to-accent text-white;
+    @apply border-transparent bg-gradient-to-br from-brand-teal to-brand-accent text-white;
   }
 
   .tw-import-datepicker .flatpickr-day.inRange {
-    @apply border-transparent bg-teal/10 text-teal;
+    @apply border-transparent bg-brand-teal/10 text-brand-teal;
   }
 
   .tw-import-datepicker .flatpickr-day.flatpickr-disabled,

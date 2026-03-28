@@ -1,0 +1,18 @@
+<details class="group/rows relative">
+    <summary class="inline-flex min-h-[40px] cursor-pointer list-none items-center justify-center gap-2 rounded-[0.8rem] border border-brand-surface-borderSoft bg-white/92 px-4 text-sm font-semibold text-brand-text-soft shadow-sm transition duration-200 hover:-translate-y-px hover:border-brand-surface-border hover:bg-white hover:text-brand-text-base">
+        <span>{{ menu.label }}</span>
+        <svg class="h-3 w-3 transition duration-200 group-open/rows:rotate-180" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+        </svg>
+    </summary>
+    <div class="absolute right-0 z-20 mt-2 flex min-w-[9rem] flex-col gap-1 rounded-[1rem] border border-brand-surface-borderSoft bg-white/96 p-2 shadow-brand-panel backdrop-blur">
+        {% for option in menu.options %}
+            <a class="flex items-center justify-between rounded-[0.85rem] px-3 py-2 text-sm font-medium no-underline transition duration-150 {% if option.is_active %}bg-brand-gradient-accent-soft text-brand-text-strong{% else %}text-brand-text-muted hover:bg-brand-surface-soft hover:text-brand-text-base{% endif %}" href="{{ option.url }}">
+                <span>{{ option.label }}</span>
+                {% if option.is_active %}
+                    <span class="text-[0.88rem] font-bold">✓</span>
+                {% endif %}
+            </a>
+        {% endfor %}
+    </div>
+</details>

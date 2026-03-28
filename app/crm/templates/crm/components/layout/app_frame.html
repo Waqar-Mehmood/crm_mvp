@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ site_brand }}{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'crm/favicon.svg' %}">
+    <link rel="stylesheet" href="{% static 'crm/tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'crm/site.css' %}">
+    {% block extra_styles %}{% endblock %}
+</head>
+<body{% if crm_dev_live_reload_enabled %} data-dev-reload-enabled="true" data-dev-reload-url="{{ crm_dev_live_reload_url }}" data-dev-reload-interval="{{ crm_dev_live_reload_interval_ms }}"{% endif %}>
+    <div class="aurora aurora-one"></div>
+    <div class="aurora aurora-two"></div>
+    <div class="site-shell">
+        {% include "crm/components/layout/site_header.html" %}
+
+        <main class="{% block page_shell_class %}mt-[26px] flex flex-col gap-6{% endblock %}">
+            <section class="{% block hero_panel_class %}relative grid gap-7 overflow-hidden rounded-[2.15rem] border border-white/10 bg-brand-gradient-hero px-[30px] pb-[28px] pt-[30px] shadow-crm sm:px-[34px] sm:pb-[32px] sm:pt-[34px] lg:grid-cols-[minmax(0,1.38fr)_minmax(360px,0.92fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,1.42fr)_minmax(420px,0.9fr)]{% endblock %}">
+                <div class="{% block hero_copy_class %}relative z-[1] flex min-w-0 flex-col gap-[1.15rem] lg:max-w-[39rem] lg:pt-1{% endblock %}">
+                    <p class="{% block eyebrow_class %}m-0 text-[0.76rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/58{% endblock %}">{% block eyebrow %}Data observatory{% endblock %}</p>
+                    <h1 class="{% block page_title_class %}m-0 font-serif text-5xl leading-none text-brand-text-inverse md:text-6xl{% endblock %}">{% block page_title %}{{ site_brand }}{% endblock %}</h1>
+                    <p class="{% block page_copy_class %}m-0 max-w-[33rem] pt-2 text-[1.02rem] leading-[1.72] text-brand-text-inverse/78{% endblock %}">{% block page_description %}A sharper view across companies, contacts, and imports.{% endblock %}</p>
+                    {% block hero_meta %}{% endblock %}
+                </div>
+                <div class="{% block hero_side_class %}relative z-[1] flex flex-col gap-4 lg:justify-start lg:pt-1{% endblock %}">
+                    {% block hero_side %}{% endblock %}
+                </div>
+                <div class="pointer-events-none absolute -bottom-16 -right-16 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(209,125,47,0.24)_0%,rgba(209,125,47,0)_72%)]"></div>
+            </section>
+
+            {% include "crm/components/notifications.html" %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{% static 'crm/base.js' %}"></script>
+    {% block page_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
+from django.urls import reverse
 
 from crm.auth import (
     ROLE_MANAGER,
@@ -31,6 +32,8 @@ def branding(request):
         site_logo_alt = branding_settings.logo_alt_text or site_brand
 
     crm_role = get_user_crm_role(getattr(request, "user", None))
+    dev_live_reload_enabled = settings.DEBUG
+    dev_live_reload_url = reverse("dev_reload_token") if dev_live_reload_enabled else ""
 
     return {
         "site_brand": site_brand,
@@ -46,4 +49,7 @@ def branding(request):
             ROLE_TEAM_LEAD,
         ),
         "crm_can_admin": user_has_minimum_crm_role(getattr(request, "user", None), ROLE_MANAGER),
+        "crm_dev_live_reload_enabled": dev_live_reload_enabled,
+        "crm_dev_live_reload_url": dev_live_reload_url,
+        "crm_dev_live_reload_interval_ms": 1500,
     }

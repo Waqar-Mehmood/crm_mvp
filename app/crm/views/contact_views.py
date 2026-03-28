@@ -8,7 +8,8 @@ from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required
+from crm.auth import ROLE_STAFF, ROLE_TEAM_LEAD, crm_role_required, user_has_minimum_crm_role
+from crm.channel_choices import humanize_channel_value
 from crm.forms.contacts import (
     ContactEmailFormSet,
     ContactForm,
@@ -64,6 +65,15 @@ CONTACT_FILTER_KEYS = frozenset(
         "created_to",
     }
 )
+CONTACT_TABLE_CELL_TEMPLATES = {
+    "row": "crm/components/contact_list/cells/text.html",
+    "contact": "crm/components/contact_list/cells/contact.html",
+    "title": "crm/components/contact_list/cells/text.html",
+    "email": "crm/components/contact_list/cells/channels.html",
+    "phone": "crm/components/contact_list/cells/channels.html",
+    "companies": "crm/components/contact_list/cells/links.html",
+    "profiles": "crm/components/contact_list/cells/links.html",
+}
 
 
 def _contact_detail_queryset():
@@ -73,6 +83,332 @@ def _contact_detail_queryset():
         "emails",
         "social_links",
     )
+
+
+def _contact_action(label, href, variant="secondary"):
+    return {
+        "label": label,
+        "href": href,
+        "variant": variant,
+    }
+
+
+def _contact_toggle_options(value):
+    return [
+        {"value": "", "label": "Any", "selected": value == ""},
+        {"value": "yes", "label": "Yes", "selected": value == "yes"},
+        {"value": "no", "label": "No", "selected": value == "no"},
+    ]
+
+
+def _contact_filter_fields(filters):
+    return [
+        {
+            "name": "q",
+            "label": "Search",
+            "type": "text",
+            "value": filters["q"],
+            "placeholder": "Search names, titles, company, email, phone",
+            "wrapper_class": "md:col-span-2",
+        },
+        {
+            "name": "title",
+            "label": "Title",
+            "type": "text",
+            "value": filters["title"],
+            "placeholder": "Contains title",
+        },
+        {
+            "name": "company",
+            "label": "Company",
+            "type": "text",
+            "value": filters["company"],
+            "placeholder": "Contains company name",
+        },
+        {
+            "name": "has_email",
+            "label": "Has email",
+            "type": "select",
+            "options": _contact_toggle_options(filters["has_email"]),
+        },
+        {
+            "name": "has_phone",
+            "label": "Has phone",
+            "type": "select",
+            "options": _contact_toggle_options(filters["has_phone"]),
+        },
+        {
+            "name": "has_company",
+            "label": "Has company",
+            "type": "select",
+            "options": _contact_toggle_options(filters["has_company"]),
+        },
+        {
+            "name": "has_profile",
+            "label": "Has profile",
+            "type": "select",
+            "options": _contact_toggle_options(filters["has_profile"]),
+        },
+        {
+            "name": "created_from",
+            "label": "Created from",
+            "type": "date",
+            "value": filters["created_from"],
+        },
+        {
+            "name": "created_to",
+            "label": "Created to",
+            "type": "date",
+            "value": filters["created_to"],
+        },
+    ]
+
+
+def _build_contact_hero_metrics(page_obj, *, total_contacts, filters_active):
+    visible_range = "0-0"
+    if page_obj.paginator.count:
+        visible_range = f"{page_obj.start_index()}-{page_obj.end_index()}"
+
+    metrics = [
+        {
+            "label": "Matching contacts" if filters_active else "Contacts",
+            "value": page_obj.paginator.count,
+            "subtext": f"of {total_contacts} total" if filters_active else "",
+        },
+        {
+            "label": "Visible rows",
+            "value": visible_range,
+            "subtext": "",
+            "mono": True,
+        },
+    ]
+    return metrics
+
+
+def _build_contact_hero_actions(can_manage_records):
+    actions = []
+    if can_manage_records:
+        actions.append(_contact_action("New contact", reverse("contact_create"), "primary"))
+    actions.append(_contact_action("Open companies", reverse("company_list"), "primary"))
+    actions.append(_contact_action("Import ledger", reverse("import_file_list")))
+    return actions
+
+
+def _build_contact_filter_panel(
+    *,
+    has_contact_records,
+    filters_active,
+    filters,
+    filter_form_hidden_items,
+    active_filters,
+    total_contacts,
+    matching_count,
+    filter_reset_url,
+):
+    return {
+        "visible": has_contact_records or filters_active,
+        "open": filters_active,
+        "hidden_items": filter_form_hidden_items,
+        "fields": _contact_filter_fields(filters),
+        "active_filters": active_filters,
+        "matching_count": matching_count,
+        "total_contacts": total_contacts,
+        "reset_url": filter_reset_url,
+    }
+
+
+def _build_contact_toolbar_menus(
+    *,
+    per_page,
+    per_page_menu_options,
+    column_picker_hidden_items,
+    selected_columns_query,
+    column_options,
+    visible_columns,
+    export_csv_query,
+    export_xlsx_query,
+):
+    return [
+        {
+            "kind": "rows",
+            "label": f"Rows: {per_page}",
+            "options": per_page_menu_options,
+        },
+        {
+            "kind": "columns",
+            "label": "Columns",
+            "hidden_items": column_picker_hidden_items,
+            "output_value": selected_columns_query,
+            "options": [
+                {
+                    "key": option["key"],
+                    "label": option["label"],
+                    "checked": option["key"] in visible_columns,
+                }
+                for option in column_options
+            ],
+        },
+        {
+            "kind": "export",
+            "label": "Export",
+            "links": [
+                {"label": "Export as CSV", "url": f"?{export_csv_query}"},
+                {"label": "Export as Excel", "url": f"?{export_xlsx_query}"},
+            ],
+        },
+    ]
+
+
+def _normalize_contact_channels(items, *, fallback_value, value_attr, fallback_label):
+    normalized = []
+    items = list(items)
+    if items:
+        for item in items:
+            raw_label = (getattr(item, "label", "") or "").strip().lower()
+            normalized.append(
+                {
+                    "label": humanize_channel_value(raw_label) or fallback_label,
+                    "value": getattr(item, value_attr),
+                    "tone": raw_label if raw_label in {"work", "personal"} else "default",
+                }
+            )
+        return normalized
+
+    if fallback_value:
+        return [
+            {
+                "label": fallback_label,
+                "value": fallback_value,
+                "tone": "default",
+            }
+        ]
+    return []
+
+
+def _normalize_contact_links(items, *, label_attr, href_attr, fallback_label, internal=False):
+    normalized = []
+    for item in items:
+        label_value = getattr(item, label_attr)
+        normalized.append(
+            {
+                "label": humanize_channel_value(label_value) or fallback_label,
+                "href": getattr(item, href_attr),
+                "external": not internal,
+            }
+        )
+    return normalized
+
+
+def _build_contact_table_headers(visible_columns):
+    return [
+        {
+            "key": key,
+            "label": "#" if key == "row" else label,
+        }
+        for key, label in CONTACT_COLUMN_OPTIONS
+        if key in visible_columns
+    ]
+
+
+def _build_contact_table_rows(contacts, table_headers, row_number_offset):
+    rows = []
+    for index, contact in enumerate(contacts, start=row_number_offset + 1):
+        companies = list(contact.companies.all())
+        emails = list(contact.emails.all())
+        phones = list(contact.phones.all())
+        social_links = list(contact.social_links.all())
+
+        cells = {
+            "row": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["row"],
+                "text": index,
+            },
+            "contact": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["contact"],
+                "name": contact.full_name,
+                "href": reverse("contact_detail", args=[contact.id]),
+                "notes": contact.notes,
+            },
+            "title": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["title"],
+                "text": contact.title,
+            },
+            "email": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["email"],
+                "channels": _normalize_contact_channels(
+                    emails,
+                    fallback_value=contact.email,
+                    value_attr="email",
+                    fallback_label="Inbox",
+                ),
+            },
+            "phone": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["phone"],
+                "channels": _normalize_contact_channels(
+                    phones,
+                    fallback_value=contact.phone,
+                    value_attr="phone",
+                    fallback_label="Line",
+                ),
+            },
+            "companies": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["companies"],
+                "links": [
+                    {
+                        "label": company.name,
+                        "href": reverse("company_detail", args=[company.id]),
+                        "external": False,
+                    }
+                    for company in companies
+                ],
+            },
+            "profiles": {
+                "template": CONTACT_TABLE_CELL_TEMPLATES["profiles"],
+                "links": _normalize_contact_links(
+                    social_links,
+                    label_attr="platform",
+                    href_attr="url",
+                    fallback_label="Open profile",
+                ),
+            },
+        }
+
+        rows.append(
+            {
+                "cells": [
+                    {"key": header["key"], **cells[header["key"]]}
+                    for header in table_headers
+                ]
+            }
+        )
+
+    return rows
+
+
+def _build_contact_empty_state(*, filters_active, has_contact_records, active_filters, filter_reset_url, can_import):
+    if filters_active and has_contact_records:
+        return {
+            "kicker": "No matching results",
+            "title": "No contacts matched the current filters.",
+            "description": "Change the active filters or clear them to return to the full contact roster.",
+            "active_filters": active_filters,
+            "actions": [
+                _contact_action("Clear filters", filter_reset_url, "primary"),
+                _contact_action("Open companies", reverse("company_list")),
+            ],
+        }
+
+    actions = []
+    if can_import:
+        actions.append(_contact_action("Import contacts", reverse("import_upload"), "primary"))
+    actions.append(_contact_action("Review imports", reverse("import_file_list")))
+    return {
+        "kicker": "Nothing to review",
+        "title": "No contacts are available yet.",
+        "description": "Once a CSV import lands, this roster becomes a polished people directory with contact channels and company relationships.",
+        "active_filters": [],
+        "actions": actions,
+    }
 
 
 def _contact_form_bundle(request, contact):
@@ -344,6 +680,55 @@ def contact_list(request):
         filter_reset_url = f"{filter_reset_url}?{filter_reset_query}"
 
     page_obj = _paginate(request, state["queryset"], per_page=state["per_page"])
+    row_number_offset = page_obj.start_index() - 1 if page_obj.paginator.count else 0
+    table_headers = _build_contact_table_headers(state["visible_columns"])
+    table_rows = _build_contact_table_rows(page_obj.object_list, table_headers, row_number_offset)
+    hero_metrics = _build_contact_hero_metrics(
+        page_obj,
+        total_contacts=state["total_contacts"],
+        filters_active=state["filters_active"],
+    )
+    can_manage_records = user_has_minimum_crm_role(request.user, ROLE_TEAM_LEAD)
+    hero_actions = _build_contact_hero_actions(can_manage_records)
+    filter_form_hidden_items = _query_items(
+        request,
+        remove_keys=CONTACT_FILTER_KEYS | {"page", "export"},
+    )
+    column_picker_hidden_items = _query_items(
+        request,
+        remove_keys={"columns", "page", "export"},
+    )
+    per_page_hidden_items = _query_items(
+        request,
+        remove_keys={"per_page", "page", "export"},
+    )
+    filter_panel = _build_contact_filter_panel(
+        has_contact_records=state["has_contact_records"],
+        filters_active=state["filters_active"],
+        filters=state["filters"],
+        filter_form_hidden_items=filter_form_hidden_items,
+        active_filters=state["active_filters"],
+        total_contacts=state["total_contacts"],
+        matching_count=page_obj.paginator.count,
+        filter_reset_url=filter_reset_url,
+    )
+    toolbar_menus = _build_contact_toolbar_menus(
+        per_page=state["per_page"],
+        per_page_menu_options=per_page_menu_options,
+        column_picker_hidden_items=column_picker_hidden_items,
+        selected_columns_query=state["selected_columns_query"],
+        column_options=state["column_options"],
+        visible_columns=state["visible_columns"],
+        export_csv_query=_export_query(request, "csv"),
+        export_xlsx_query=_export_query(request, "xlsx"),
+    )
+    empty_state = _build_contact_empty_state(
+        filters_active=state["filters_active"],
+        has_contact_records=state["has_contact_records"],
+        active_filters=state["active_filters"],
+        filter_reset_url=filter_reset_url,
+        can_import=can_manage_records,
+    )
     return render(
         request,
         "crm/contacts/contact_list.html",
@@ -354,21 +739,19 @@ def contact_list(request):
             "page_query": _page_query(request),
             "export_csv_query": _export_query(request, "csv"),
             "export_xlsx_query": _export_query(request, "xlsx"),
-            "row_number_offset": page_obj.start_index() - 1 if page_obj.paginator.count else 0,
+            "row_number_offset": row_number_offset,
             "per_page_menu_options": per_page_menu_options,
-            "filter_form_hidden_items": _query_items(
-                request,
-                remove_keys=CONTACT_FILTER_KEYS | {"page", "export"},
-            ),
-            "column_picker_hidden_items": _query_items(
-                request,
-                remove_keys={"columns", "page", "export"},
-            ),
-            "per_page_hidden_items": _query_items(
-                request,
-                remove_keys={"per_page", "page", "export"},
-            ),
+            "filter_form_hidden_items": filter_form_hidden_items,
+            "column_picker_hidden_items": column_picker_hidden_items,
+            "per_page_hidden_items": per_page_hidden_items,
             "filter_reset_url": filter_reset_url,
+            "hero_metrics": hero_metrics,
+            "hero_actions": hero_actions,
+            "filter_panel": filter_panel,
+            "toolbar_menus": toolbar_menus,
+            "table_headers": table_headers,
+            "table_rows": table_rows,
+            "empty_state": empty_state,
         },
     )
 

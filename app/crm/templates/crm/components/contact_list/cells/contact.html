@@ -1,0 +1,8 @@
+<td class="align-top px-5 py-[14px]">
+    <div class="flex flex-col gap-1">
+        <a class="text-sm font-semibold text-brand-accent no-underline underline-offset-[0.18em] transition duration-150 hover:text-brand-accent-strong hover:underline" href="{{ href }}">{{ name }}</a>
+        {% if notes %}
+            <div class="text-sm leading-6 text-brand-text-subtle">{{ notes }}</div>
+        {% endif %}
+    </div>
+</td>

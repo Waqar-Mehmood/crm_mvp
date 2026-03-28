@@ -1,0 +1,9 @@
+{% if active_filters %}
+    <div class="flex flex-wrap gap-2">
+        {% for filter in active_filters %}
+            <span class="inline-flex items-center rounded-full border border-brand-surface-borderSoft bg-white/78 px-3 py-1.5 text-xs font-medium text-brand-text-muted shadow-sm">
+                <strong class="mr-1 font-semibold text-brand-text-base">{{ filter.label }}:</strong> {{ filter.value }}
+            </span>
+        {% endfor %}
+    </div>
+{% endif %}

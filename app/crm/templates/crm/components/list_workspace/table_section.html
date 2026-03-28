@@ -1,0 +1,20 @@
+<section class="flex flex-col gap-5 rounded-[2rem] border border-brand-surface-borderSoft bg-brand-gradient-surface p-[1.35rem] shadow-brand-card sm:p-[1.55rem]">
+    {% include "crm/components/list_workspace/toolbar.html" with kicker=toolbar_kicker title=toolbar_title menus=menus only %}
+    <div class="overflow-x-auto rounded-[1.6rem] border border-brand-surface-borderSoft bg-white/78 shadow-brand-surface-inset-strong">
+        <table class="{{ table_class|default:'w-full min-w-[72rem] border-collapse' }}">
+            <thead>
+                <tr class="bg-brand-shell-900 text-left">
+                    {% for header in table_headers %}
+                        <th class="sticky top-0 px-5 py-4 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-brand-text-inverse/86">{{ header.label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_rows %}
+                    {% include row_template with row=row row_index=forloop.counter0 only %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "crm/includes/pagination.html" %}
+</section>

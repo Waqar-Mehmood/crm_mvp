@@ -1,0 +1,16 @@
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {% for field in fields %}
+        <div class="flex flex-col gap-2 {{ field.wrapper_class|default:'' }}">
+            <label class="text-sm font-semibold text-brand-text-soft" for="contact-{{ field.name }}">{{ field.label }}</label>
+            {% if field.type == "select" %}
+                <select id="contact-{{ field.name }}" name="{{ field.name }}" class="min-h-[50px] rounded-[1rem] border border-brand-surface-border bg-white/94 px-4 text-sm text-brand-text-base shadow-sm outline-none transition duration-200 focus:border-brand-teal/40 focus:ring-4 focus:ring-brand-teal/10">
+                    {% for option in field.options %}
+                        <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            {% else %}
+                <input id="contact-{{ field.name }}" type="{{ field.type }}" name="{{ field.name }}" value="{{ field.value }}" placeholder="{{ field.placeholder|default:'' }}" class="min-h-[50px] rounded-[1rem] border border-brand-surface-border bg-white/94 px-4 text-sm text-brand-text-base shadow-sm outline-none transition duration-200 placeholder:text-slate-400 focus:border-brand-teal/40 focus:ring-4 focus:ring-brand-teal/10">
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
