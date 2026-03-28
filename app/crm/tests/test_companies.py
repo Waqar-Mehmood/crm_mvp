@@ -34,10 +34,11 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
             response.context["visible_columns"],
             ["row", "company", "industry", "address", "size", "revenue", "location", "phones", "emails", "profiles"],
         )
-        self.assertContains(response, "<th>#</th>", html=True)
-        self.assertContains(response, "<th>Address</th>", html=True)
-        self.assertNotContains(response, "<th>ID</th>", html=True)
-        self.assertNotContains(response, "<th>Created</th>", html=True)
+        self.assertEqual(
+            [header["key"] for header in response.context["table_headers"]],
+            ["row", "company", "industry", "address", "size", "revenue", "location", "phones", "emails", "profiles"],
+        )
+        self.assertEqual(response.context["table_headers"][0]["label"], "#")
         self.assertNotContains(response, "No street address")
         self.assertNotContains(response, "Unknown")
         self.assertNotContains(response, "Undisclosed")
@@ -95,25 +96,16 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
         default_response = self.client.get(reverse("company_list"))
         filtered_response = self.client.get(reverse("company_list"), {"industry": "SaaS"})
 
-        self.assertContains(
-            default_response,
-            '<details class="form-card filter-card company-filter-card filter-disclosure" data-animated-disclosure>',
-            html=False,
-        )
-        self.assertContains(
-            filtered_response,
-            '<details class="form-card filter-card company-filter-card filter-disclosure" data-animated-disclosure open>',
-            html=False,
-        )
+        self.assertContains(default_response, "data-animated-disclosure")
+        self.assertContains(filtered_response, "data-animated-disclosure open")
         self.assertContains(default_response, "Show filters")
         self.assertContains(filtered_response, "Hide filters")
         self.assertNotContains(default_response, ">Clear filters<", html=False)
         self.assertContains(default_response, ">Reset<", html=False)
-        self.assertContains(default_response, 'class="form-layout list-filter-form"', html=False)
-        self.assertContains(default_response, 'class="list-filter-control"', html=False)
-        self.assertContains(default_response, 'class="filter-actions list-filter-actions"', html=False)
-        self.assertContains(default_response, 'class="list-filter-submit"', html=False)
-        self.assertContains(default_response, 'class="button-link is-secondary list-filter-reset"', html=False)
+        self.assertContains(default_response, 'name="q"', html=False)
+        self.assertContains(default_response, 'name="industry"', html=False)
+        self.assertContains(default_response, 'name="created_to"', html=False)
+        self.assertContains(default_response, 'value="Apply filters"', html=False)
 
     def test_company_column_picker_uses_requested_columns_only(self):
         response = self.client.get(
@@ -123,9 +115,10 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["visible_columns"], ["row", "company", "address"])
-        self.assertContains(response, "<th>Address</th>", html=True)
-        self.assertNotContains(response, "<th>Industry</th>", html=True)
-        self.assertNotContains(response, "<th>Revenue</th>", html=True)
+        self.assertEqual(
+            [header["key"] for header in response.context["table_headers"]],
+            ["row", "company", "address"],
+        )
 
     def test_company_row_numbers_continue_across_pages_and_per_page_changes(self):
         paged_response = self.client.get(
@@ -138,15 +131,10 @@ class AdvancedFilterTests(AdvancedFilterTestMixin, TestCase):
         }
 
         self.assertEqual(paged_response.context["page_obj"].start_index(), 11)
-        self.assertContains(paged_response, "<td>11</td>", html=True)
+        self.assertEqual(paged_response.context["table_rows"][0]["cells"][0]["text"], 11)
         self.assertContains(paged_response, "Rows: 10")
-        self.assertContains(paged_response, 'class="button-link is-secondary rows-menu-toggle toolbar-menu-toggle"', html=False)
-        self.assertContains(paged_response, 'class="button-link is-secondary table-menu-toggle toolbar-menu-toggle"', html=False)
-        self.assertContains(
-            paged_response,
-            'class="button-link is-secondary export-menu-toggle toolbar-menu-toggle toolbar-menu-toggle-accent"',
-            html=False,
-        )
+        self.assertContains(paged_response, ">Columns<", html=False)
+        self.assertContains(paged_response, ">Export<", html=False)
         self.assertTrue(per_page_menu[10]["is_active"])
         self.assertIn("state=CA", per_page_menu[50]["url"])
         self.assertIn("columns=row%2Ccompany", per_page_menu[50]["url"])

@@ -1,0 +1,11 @@
+<div class="grid gap-4 sm:grid-cols-2">
+    {% for metric in metrics %}
+        <article class="flex min-h-[5.35rem] flex-col justify-between gap-2 rounded-[1.35rem] border border-white/7 bg-brand-shell-900/95 px-5 py-[1.05rem] shadow-brand-dark-inset backdrop-blur-md">
+            <p class="m-0 text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-brand-text-inverse/42">{{ metric.label }}</p>
+            <strong class="text-[2.02rem] font-semibold leading-none tracking-[-0.02em] text-brand-text-inverse{% if metric.mono %} font-mono text-[1.86rem] tracking-[-0.035em]{% endif %}">{{ metric.value }}</strong>
+            {% if metric.subtext %}
+                <span class="text-[0.8rem] leading-5 text-brand-text-inverse/62">{{ metric.subtext }}</span>
+            {% endif %}
+        </article>
+    {% endfor %}
+</div>

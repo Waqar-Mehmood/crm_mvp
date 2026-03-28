@@ -23,6 +23,10 @@
     @apply m-0 text-[0.74rem] font-bold uppercase tracking-[0.16em] text-brand-text-inverse/70;
   }
 
+  .tw-hero-eyebrow {
+    @apply m-0 block text-[0.74rem] font-bold uppercase tracking-[0.16em] text-brand-text-inverse/70;
+  }
+
   .tw-nav-pill {
     @apply inline-flex min-h-[46px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-brand-text-inverse/80 no-underline transition duration-200 hover:-translate-y-px hover:border-white/20 hover:bg-white/[0.08] hover:text-brand-text-inverse;
   }

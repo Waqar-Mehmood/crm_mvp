@@ -1,0 +1,8 @@
+<td class="align-top px-5 py-[14px]">
+    <div class="flex flex-col gap-1">
+        {% include "crm/components/list_workspace/link.html" with href=href label=label external=external only %}
+        {% if notes %}
+            <div class="text-sm leading-6 text-brand-text-subtle">{{ notes }}</div>
+        {% endif %}
+    </div>
+</td>

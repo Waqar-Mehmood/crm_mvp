@@ -1,0 +1,11 @@
+<td class="align-top px-5 py-[14px]">
+    {% if links %}
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+            {% for link in links %}
+                <li>
+                    {% include "crm/components/list_workspace/link.html" with href=link.href label=link.label external=link.external only %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</td>

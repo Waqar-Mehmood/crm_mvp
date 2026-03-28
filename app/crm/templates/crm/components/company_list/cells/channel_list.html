@@ -1,0 +1,11 @@
+<td class="align-top px-5 py-[14px]">
+    {% if channels %}
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+            {% for channel in channels %}
+                <li class="text-sm leading-6 text-brand-text-base">
+                    <span class="font-medium text-brand-text-muted">{{ channel.label }}:</span> {{ channel.value }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</td>
